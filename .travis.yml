@@ -3,8 +3,16 @@ language: go
 go:
   - "1.10"
 
+before_install:
+  - GLIDE_TAG=v0.13.1
+  - GLIDE_DOWNLOAD="https://github.com/Masterminds/glide/releases/download/$GLIDE_TAG/glide-$GLIDE_TAG-linux-amd64.tar.gz"
+  - curl -L $GLIDE_DOWNLOAD | tar -xvz
+  - export PATH=$PATH:$PWD/linux-amd64/
+
 script:
   - make build test-unit
+  - export PATH=$PATH:$PWD/linux-amd64/
+  - ./hack/update-deps.sh
 
 notifications:
   irc: "chat.freenode.net#openshift-dev"
