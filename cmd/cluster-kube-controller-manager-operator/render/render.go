@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -39,6 +40,8 @@ type renderOpts struct {
 	assetOutputDir     string
 	configOverrideFile string
 	configOutputFile   string
+
+	skipSchedulerBootstrapManifest bool
 }
 
 func NewRenderCommand() *cobra.Command {
@@ -77,6 +80,9 @@ func NewRenderCommand() *cobra.Command {
 	cmd.Flags().StringVar(&renderOpts.configOverrideFile, "config-override-file", "", "A sparse KubeControllerManagerConfig.kubecontrolplane."+
 		"config.openshift.io/v1 file (default: kube-controller-manager-config-overrides.yaml in the asset-input-dir)")
 	cmd.Flags().StringVar(&renderOpts.configOutputFile, "config-output-file", "", "Output path for the KubeControllerManagerConfig yaml file.")
+
+	// TODO: Remove this when the render command exists in scheduler operator
+	cmd.Flags().BoolVar(&renderOpts.skipSchedulerBootstrapManifest, "skip-scheduler", false, "Skip copying the scheduler manifests.")
 
 	return cmd
 }
@@ -147,8 +153,15 @@ func (r *renderOpts) Run() error {
 	var err error
 	renderConfig.PostBootstrapKubeControllerManagerConfig, err = r.configFromDefaultsPlusOverride(filepath.Join(r.templatesDir, "config", "config-overrides.yaml"))
 
+	skipSchedulerPredicate := func(f os.FileInfo) bool {
+		if !r.skipSchedulerBootstrapManifest {
+			return true
+		}
+		return f.Name() != "kube-scheduler-pod.yaml"
+	}
+
 	// load and render templates
-	if renderConfig.Assets, err = assets.LoadFilesRecursively(r.assetInputDir); err != nil {
+	if renderConfig.Assets, err = assets.LoadFilesRecursively(r.assetInputDir, skipSchedulerPredicate); err != nil {
 		return fmt.Errorf("failed loading assets from %q: %v", r.assetInputDir, err)
 	}
 	for _, manifestDir := range []string{"bootstrap-manifests", "manifests"} {
