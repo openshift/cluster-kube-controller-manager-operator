@@ -34,7 +34,7 @@ spec:
     livenessProbe:
       httpGet:
         scheme: HTTP
-        port: 8444
+        port: 10252
         path: healthz
   volumes:
   - hostPath:
