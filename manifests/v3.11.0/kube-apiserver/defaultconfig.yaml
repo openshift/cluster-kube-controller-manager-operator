@@ -1,2 +1,39 @@
 apiVersion: kubecontrolplane.config.openshift.io/v1
-kind: KubeAPIServerConfig
+kind: KubeControllerManagerConfig
+serviceServingCert:
+  certFile: service-signer.crt
+extendedArguments:
+  enable-dynamic-provisioning:
+  - "true"
+  allocate-node-cidrs:
+  - "true"
+  cloud-provider:
+  - "metal" # TODO: override this through the installer
+  configure-cloud-routes:
+  - "false"
+  cluster-cidr:
+  - "10.2.0.0/16"
+  service-cluster-ip-range:
+  - "10.3.0.0/16"
+  use-service-account-credentials:
+  - "true"
+  leader-elect:
+  - "true"
+  leader-elect-retry-period:
+  - "3s"
+  leader-elect-resource-lock:
+  - "configmaps"
+  controllers:
+  - "*"
+  - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
+  - "-bootstrapsigner"
+  - "-tokencleaner"
+  - "-horizontalpodautoscaling"
+  node-monitor-grace-period:
+  - "5m" # TODO: set to 2m for AWS like kube-core does
+  pod-eviction-timeout:
+  - "5m" # TODO: set to 220s for AWS like kube-core does
+  experimental-cluster-signing-duration:
+  - "720h"
+  port:
+  - "10252"

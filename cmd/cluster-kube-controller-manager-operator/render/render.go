@@ -1,11 +1,13 @@
 package render
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
@@ -151,7 +153,7 @@ func (r *renderOpts) Run() error {
 
 	// create post-poststrap configuration
 	var err error
-	renderConfig.PostBootstrapKubeControllerManagerConfig, err = r.configFromDefaultsPlusOverride(filepath.Join(r.templatesDir, "config", "config-overrides.yaml"))
+	renderConfig.PostBootstrapKubeControllerManagerConfig, err = r.configFromDefaultsPlusOverride(&renderConfig, filepath.Join(r.templatesDir, "config", "config-overrides.yaml"))
 
 	skipSchedulerPredicate := func(f os.FileInfo) bool {
 		if !r.skipSchedulerBootstrapManifest {
@@ -175,7 +177,7 @@ func (r *renderOpts) Run() error {
 	}
 
 	// create bootstrap configuration
-	mergedConfig, err := r.configFromDefaultsPlusOverride(filepath.Join(r.templatesDir, "config", "bootstrap-config-overrides.yaml"))
+	mergedConfig, err := r.configFromDefaultsPlusOverride(&renderConfig, filepath.Join(r.templatesDir, "config", "bootstrap-config-overrides.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed to generated bootstrap config: %v", err)
 	}
@@ -186,18 +188,19 @@ func (r *renderOpts) Run() error {
 	return nil
 }
 
-func (r *renderOpts) configFromDefaultsPlusOverride(tlsOverride string) ([]byte, error) {
-	defaultConfig := v311_00_assets.MustAsset(filepath.Join(bootstrapVersion, "kube-controller-manager", "defaultconfig.yaml"))
-	bootstrapOverrides, err := ioutil.ReadFile(tlsOverride)
+func (r *renderOpts) configFromDefaultsPlusOverride(data *Config, tlsOverride string) ([]byte, error) {
+	defaultConfig := v311_00_assets.MustAsset(filepath.Join(bootstrapVersion, "kube-apiserver", "defaultconfig.yaml"))
+	bootstrapOverrides, err := readFileTemplate(tlsOverride, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config override file %q: %v", tlsOverride, err)
 	}
 	configs := [][]byte{defaultConfig, bootstrapOverrides}
 	if len(r.configOverrideFile) > 0 {
-		overrides, err := ioutil.ReadFile(r.configOverrideFile)
+		overrides, err := readFileTemplate(r.configOverrideFile, data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config overrides at %q: %v", r.configOverrideFile, err)
 		}
+
 		configs = append(configs, overrides)
 	}
 	mergedConfig, err := resourcemerge.MergeProcessConfig(nil, configs...)
@@ -210,4 +213,22 @@ func (r *renderOpts) configFromDefaultsPlusOverride(tlsOverride string) ([]byte,
 	}
 
 	return yml, nil
+}
+
+func readFileTemplate(fname string, data interface{}) ([]byte, error) {
+	tpl, err := ioutil.ReadFile(fname)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load %q: %v", fname, err)
+	}
+
+	tmpl, err := template.New(fname).Parse(string(tpl))
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

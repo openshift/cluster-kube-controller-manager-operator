@@ -3,7 +3,7 @@
 // manifests/v3.11.0/kube-apiserver/cm.yaml
 // manifests/v3.11.0/kube-apiserver/defaultconfig.yaml
 // manifests/v3.11.0/kube-apiserver/deployment.yaml
-// manifests/v3.11.0/kube-apiserver/ns.yaml
+// manifests/v3.11.0/kube-apiserver/openshift-kube-controller-manager-ns.yaml
 // manifests/v3.11.0/kube-apiserver/public-info-role.yaml
 // manifests/v3.11.0/kube-apiserver/public-info-rolebinding.yaml
 // manifests/v3.11.0/kube-apiserver/public-info.yaml
@@ -78,7 +78,44 @@ func v3110KubeApiserverCmYaml() (*asset, error) {
 }
 
 var _v3110KubeApiserverDefaultconfigYaml = []byte(`apiVersion: kubecontrolplane.config.openshift.io/v1
-kind: KubeAPIServerConfig
+kind: KubeControllerManagerConfig
+serviceServingCert:
+  certFile: service-signer.crt
+extendedArguments:
+  enable-dynamic-provisioning:
+  - "true"
+  allocate-node-cidrs:
+  - "true"
+  cloud-provider:
+  - "metal" # TODO: override this through the installer
+  configure-cloud-routes:
+  - "false"
+  cluster-cidr:
+  - "10.2.0.0/16"
+  service-cluster-ip-range:
+  - "10.3.0.0/16"
+  use-service-account-credentials:
+  - "true"
+  leader-elect:
+  - "true"
+  leader-elect-retry-period:
+  - "3s"
+  leader-elect-resource-lock:
+  - "configmaps"
+  controllers:
+  - "*"
+  - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
+  - "-bootstrapsigner"
+  - "-tokencleaner"
+  - "-horizontalpodautoscaling"
+  node-monitor-grace-period:
+  - "5m" # TODO: set to 2m for AWS like kube-core does
+  pod-eviction-timeout:
+  - "5m" # TODO: set to 220s for AWS like kube-core does
+  experimental-cluster-signing-duration:
+  - "720h"
+  port:
+  - "10252"
 `)
 
 func v3110KubeApiserverDefaultconfigYamlBytes() ([]byte, error) {
@@ -200,24 +237,24 @@ func v3110KubeApiserverDeploymentYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110KubeApiserverNsYaml = []byte(`apiVersion: v1
+var _v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml = []byte(`apiVersion: v1
 kind: Namespace
 metadata:
   name: openshift-kube-controller-manager
   labels:
     openshift.io/run-level: "0"`)
 
-func v3110KubeApiserverNsYamlBytes() ([]byte, error) {
-	return _v3110KubeApiserverNsYaml, nil
+func v3110KubeApiserverOpenshiftKubeControllerManagerNsYamlBytes() ([]byte, error) {
+	return _v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml, nil
 }
 
-func v3110KubeApiserverNsYaml() (*asset, error) {
-	bytes, err := v3110KubeApiserverNsYamlBytes()
+func v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml() (*asset, error) {
+	bytes, err := v3110KubeApiserverOpenshiftKubeControllerManagerNsYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "v3.11.0/kube-apiserver/ns.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "v3.11.0/kube-apiserver/openshift-kube-controller-manager-ns.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -424,15 +461,15 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v3.11.0/kube-apiserver/cm.yaml":                      v3110KubeApiserverCmYaml,
-	"v3.11.0/kube-apiserver/defaultconfig.yaml":           v3110KubeApiserverDefaultconfigYaml,
-	"v3.11.0/kube-apiserver/deployment.yaml":              v3110KubeApiserverDeploymentYaml,
-	"v3.11.0/kube-apiserver/ns.yaml":                      v3110KubeApiserverNsYaml,
-	"v3.11.0/kube-apiserver/public-info-role.yaml":        v3110KubeApiserverPublicInfoRoleYaml,
-	"v3.11.0/kube-apiserver/public-info-rolebinding.yaml": v3110KubeApiserverPublicInfoRolebindingYaml,
-	"v3.11.0/kube-apiserver/public-info.yaml":             v3110KubeApiserverPublicInfoYaml,
-	"v3.11.0/kube-apiserver/sa.yaml":                      v3110KubeApiserverSaYaml,
-	"v3.11.0/kube-apiserver/svc.yaml":                     v3110KubeApiserverSvcYaml,
+	"v3.11.0/kube-apiserver/cm.yaml":                                   v3110KubeApiserverCmYaml,
+	"v3.11.0/kube-apiserver/defaultconfig.yaml":                        v3110KubeApiserverDefaultconfigYaml,
+	"v3.11.0/kube-apiserver/deployment.yaml":                           v3110KubeApiserverDeploymentYaml,
+	"v3.11.0/kube-apiserver/openshift-kube-controller-manager-ns.yaml": v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml,
+	"v3.11.0/kube-apiserver/public-info-role.yaml":                     v3110KubeApiserverPublicInfoRoleYaml,
+	"v3.11.0/kube-apiserver/public-info-rolebinding.yaml":              v3110KubeApiserverPublicInfoRolebindingYaml,
+	"v3.11.0/kube-apiserver/public-info.yaml":                          v3110KubeApiserverPublicInfoYaml,
+	"v3.11.0/kube-apiserver/sa.yaml":                                   v3110KubeApiserverSaYaml,
+	"v3.11.0/kube-apiserver/svc.yaml":                                  v3110KubeApiserverSvcYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -478,15 +515,15 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v3.11.0": {nil, map[string]*bintree{
 		"kube-apiserver": {nil, map[string]*bintree{
-			"cm.yaml":                      {v3110KubeApiserverCmYaml, map[string]*bintree{}},
-			"defaultconfig.yaml":           {v3110KubeApiserverDefaultconfigYaml, map[string]*bintree{}},
-			"deployment.yaml":              {v3110KubeApiserverDeploymentYaml, map[string]*bintree{}},
-			"ns.yaml":                      {v3110KubeApiserverNsYaml, map[string]*bintree{}},
-			"public-info-role.yaml":        {v3110KubeApiserverPublicInfoRoleYaml, map[string]*bintree{}},
-			"public-info-rolebinding.yaml": {v3110KubeApiserverPublicInfoRolebindingYaml, map[string]*bintree{}},
-			"public-info.yaml":             {v3110KubeApiserverPublicInfoYaml, map[string]*bintree{}},
-			"sa.yaml":                      {v3110KubeApiserverSaYaml, map[string]*bintree{}},
-			"svc.yaml":                     {v3110KubeApiserverSvcYaml, map[string]*bintree{}},
+			"cm.yaml":                                   {v3110KubeApiserverCmYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":                        {v3110KubeApiserverDefaultconfigYaml, map[string]*bintree{}},
+			"deployment.yaml":                           {v3110KubeApiserverDeploymentYaml, map[string]*bintree{}},
+			"openshift-kube-controller-manager-ns.yaml": {v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml, map[string]*bintree{}},
+			"public-info-role.yaml":                     {v3110KubeApiserverPublicInfoRoleYaml, map[string]*bintree{}},
+			"public-info-rolebinding.yaml":              {v3110KubeApiserverPublicInfoRolebindingYaml, map[string]*bintree{}},
+			"public-info.yaml":                          {v3110KubeApiserverPublicInfoYaml, map[string]*bintree{}},
+			"sa.yaml":                                   {v3110KubeApiserverSaYaml, map[string]*bintree{}},
+			"svc.yaml":                                  {v3110KubeApiserverSvcYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
