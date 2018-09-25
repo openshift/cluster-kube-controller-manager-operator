@@ -17,7 +17,7 @@ spec:
     imagePullPolicy: {{ .ImagePullPolicy }}
     command: ["/bin/bash", "-c"]
     args:
-    - exec hyperkube kube-controller-manager --config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+    - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
