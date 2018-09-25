@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+  metadata:
+    name: system:openshift:operator:cluster-kube-controller-manager-operator
+  roleRef:
+    kind: ClusterRole
+    name: cluster-admin
+  subjects:
+  - kind: ServiceAccount
+    namespace: openshift-core-operators
+    name: openshift-cluster-kube-controller-manager-operator
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    namespace: openshift-core-operators
+    name: openshift-cluster-kube-controller-manager-operator-config
+  data:
+    config.yaml: |
+      apiVersion: operator.openshift.io/v1alpha1
+      kind: GenericOperatorConfig
