@@ -1,0 +1,14 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kubecontrollermanageroperatorconfigs.kubecontrollermanager.operator.openshift.io
+spec:
+  scope: Cluster
+  group: kubecontrollermanager.operator.openshift.io
+  version: v1alpha1
+  names:
+    kind: KubeApiserverOperatorConfig
+    plural: kubecontrollermanageroperatorconfigs
+    singular: kubecontrollermanageroperatorconfig
+  subresources:
+    status: {}
