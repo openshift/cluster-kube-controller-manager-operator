@@ -13,6 +13,7 @@ import (
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 
+	"github.com/openshift/cluster-kube-controller-manager-operator/cmd/cluster-kube-controller-manager-operator/render"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/operator"
 )
 
@@ -43,6 +44,7 @@ func NewSSCSCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(operator.NewOperator())
+	cmd.AddCommand(render.NewRenderCommand())
 
 	return cmd
 }
