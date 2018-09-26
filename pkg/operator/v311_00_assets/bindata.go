@@ -79,15 +79,11 @@ func v3110KubeApiserverCmYaml() (*asset, error) {
 
 var _v3110KubeApiserverDefaultconfigYaml = []byte(`apiVersion: kubecontrolplane.config.openshift.io/v1
 kind: KubeControllerManagerConfig
-serviceServingCert:
-  certFile: service-signer.crt
 extendedArguments:
   enable-dynamic-provisioning:
   - "true"
   allocate-node-cidrs:
   - "true"
-  cloud-provider:
-  - "metal" # TODO: override this through the installer
   configure-cloud-routes:
   - "false"
   cluster-cidr:
