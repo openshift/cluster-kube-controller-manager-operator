@@ -31,7 +31,7 @@ spec:
         imagePullPolicy: {{ .ImagePullPolicy }}
         command: ["/bin/bash", "-c"]
         args:
-        - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+        - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig --master=https://kubernetes.default.svc
         securityContext:
           runAsNonRoot: true
           runAsUser: 65534
@@ -48,7 +48,6 @@ spec:
         - mountPath: /etc/kubernetes/config
           name: config
           readOnly: true
-      hostNetwork: true
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:

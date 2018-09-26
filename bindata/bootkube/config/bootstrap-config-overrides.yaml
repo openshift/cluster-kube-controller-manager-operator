@@ -1,10 +1,6 @@
 apiVersion: kubecontrolplane.config.openshift.io/v1
 kind: KubeControllerManagerConfig
-serviceServingCert:
-  certFile: service-signer.crt
 extendedArguments:
-  cloud-config:
-  - "/etc/kubernetes/cloud/config"
   root-ca-file:
   - "/etc/kubernetes/secrets/root-ca.crt"
   service-account-private-key-file:
