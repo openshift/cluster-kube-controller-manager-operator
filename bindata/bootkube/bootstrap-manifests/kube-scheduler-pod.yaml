@@ -16,7 +16,7 @@ spec:
     imagePullPolicy: {{ .ImagePullPolicy }}
     command: ["/bin/bash", "-c"]
     args:
-    - exec hyperkube scheduler --kubeconfig=/etc/kubernetes/secrets/kubeconfig --config=/etc/kubernetes/config/scheduler.yaml
+    - exec hyperkube scheduler --kubeconfig=/etc/kubernetes/secrets/kubeconfig --leader-elect=true
     volumeMounts:
     - mountPath: /etc/kubernetes/secrets
       name: secrets
