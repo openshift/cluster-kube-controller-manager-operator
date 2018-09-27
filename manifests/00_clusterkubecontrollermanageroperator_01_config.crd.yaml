@@ -7,7 +7,7 @@ spec:
   group: kubecontrollermanager.operator.openshift.io
   version: v1alpha1
   names:
-    kind: KubeApiserverOperatorConfig
+    kind: KubeControllerManagerOperatorConfig
     plural: kubecontrollermanageroperatorconfigs
     singular: kubecontrollermanageroperatorconfig
   subresources:
