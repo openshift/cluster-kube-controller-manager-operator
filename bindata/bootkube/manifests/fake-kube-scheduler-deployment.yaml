@@ -1,0 +1,48 @@
+# NOTE: This belongs to scheduler operator, but we need this pass the initial bootstrap now.
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: kube-scheduler
+    tectonic-operators.coreos.com/managed-by: kube-core-operator
+    tier: control-plane
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-scheduler
+      tier: control-plane
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        k8s-app: kube-scheduler
+        tier: control-plane
+    spec:
+      containers:
+      - name: kube-scheduler
+        image: {{ .Image }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
+        command: ["/bin/bash", "-c"]
+        args:
+        - exec hyperkube scheduler --kubeconfig=/etc/kubernetes/secrets/kubeconfig --leader-elect=true
+        volumeMounts:
+        - mountPath: /etc/kubernetes/secrets
+          name: secrets
+          readOnly: true
+        name: kube-scheduler
+      volumes:
+      - hostPath:
+        path: {{ .SecretsHostPath }}
+        name: secrets
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534

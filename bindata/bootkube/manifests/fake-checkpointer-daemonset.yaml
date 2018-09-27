@@ -1,0 +1,38 @@
+# NOTE: This is just dummy pod that should be replaced by real checkpointer in real installer. For now, this allow us to move
+# forward with cluster up bootkube.
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  labels:
+    k8s-app: pod-checkpointer
+    tectonic-operators.coreos.com/managed-by: kube-core-operator
+    tier: control-plane
+  name: pod-checkpointer
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      tier: control-plane
+      k8s-app: pod-checkpointer
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+        checkpointer.alpha.coreos.com/checkpoint: "true"
+      labels:
+        k8s-app: pod-checkpointer
+        tier: control-plane
+    spec:
+      containers:
+      - command: ["/bin/bash", "-c"]
+        args: ["sleep", "infinity"]
+        image: {{ .Image }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
+        name: pod-checkpointer
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
