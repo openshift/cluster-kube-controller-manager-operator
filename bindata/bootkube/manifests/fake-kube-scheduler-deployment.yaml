@@ -39,7 +39,7 @@ spec:
         name: kube-scheduler
       volumes:
       - hostPath:
-        path: {{ .SecretsHostPath }}
+          path: {{ .SecretsHostPath }}
         name: secrets
       nodeSelector:
         node-role.kubernetes.io/master: ""
