@@ -25,7 +25,8 @@ spec:
     spec:
       containers:
       - command: ["/bin/bash", "-c"]
-        args: ["sleep", "infinity"]
+        args:
+        - sleep infinity
         image: {{ .Image }}
         imagePullPolicy: {{ .ImagePullPolicy }}
         name: pod-checkpointer
