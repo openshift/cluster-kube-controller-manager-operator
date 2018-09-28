@@ -1,5 +1,5 @@
 apiVersion: kubecontrollermanager.operator.openshift.io/v1alpha1
-kind: KubeApiserverOperatorConfig
+kind: KubeControllerManagerOperatorConfig
 metadata:
   name: instance
 spec:
