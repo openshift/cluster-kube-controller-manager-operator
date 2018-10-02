@@ -13,7 +13,6 @@ spec:
   hostNetwork: true
   securityContext:
     supplementalGroups: [65534]
-    privileged: true
   initContainers:
   - name: setup-lock-dir
     image: {{ .Image }}
@@ -32,6 +31,10 @@ spec:
       name: var-lock
   containers:
   - name: kube-controller-manager
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      privileged: true
     image: {{ .Image }}
     imagePullPolicy: {{ .ImagePullPolicy }}
     command: ["/usr/bin/flock", "--exclusive", "--timeout=60", "/var/lock/controller-manager.lock", "-c"]
