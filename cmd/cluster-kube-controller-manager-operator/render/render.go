@@ -30,6 +30,7 @@ type manifestOpts struct {
 	configHostPath        string
 	configFileName        string
 	cloudProviderHostPath string
+	lockHostPath          string
 	secretsHostPath       string
 }
 
@@ -75,6 +76,8 @@ func NewRenderCommand() *cobra.Command {
 		"The config file name inside the manifest-config-host-path.")
 	cmd.Flags().StringVar(&renderOpts.manifest.cloudProviderHostPath, "manifest-cloud-provider-host-path", "/etc/kubernetes/cloud",
 		"A host path mounted into the controller manager pods to hold cloud provider configuration.")
+	cmd.Flags().StringVar(&renderOpts.manifest.lockHostPath, "manifest-lock-host-path", "/var/run/kubernetes/lock",
+		"A host path mounted into the controller manager pods to hold lock.")
 
 	cmd.Flags().StringVar(&renderOpts.assetOutputDir, "asset-output-dir", "", "Output path for rendered manifests.")
 	cmd.Flags().StringVar(&renderOpts.assetInputDir, "asset-input-dir", "", "A path to directory with certificates and secrets.")
@@ -111,7 +114,9 @@ func (r *renderOpts) Validate() error {
 	if len(r.manifest.secretsHostPath) == 0 {
 		return errors.New("missing required flag: --manifest-secrets-host-path")
 	}
-
+	if len(r.manifest.lockHostPath) == 0 {
+		return errors.New("missing required flag: --manifest-lock-host-path")
+	}
 	if len(r.assetInputDir) == 0 {
 		return errors.New("missing required flag: --asset-output-dir")
 	}
@@ -149,6 +154,7 @@ func (r *renderOpts) Run() error {
 		ConfigFileName:        r.manifest.configFileName,
 		CloudProviderHostPath: r.manifest.cloudProviderHostPath,
 		SecretsHostPath:       r.manifest.secretsHostPath,
+		LockHostPath:          r.manifest.lockHostPath,
 	}
 
 	// create post-poststrap configuration

@@ -29,13 +29,16 @@ spec:
       - name: kube-controller-manager
         image: {{ .Image }}
         imagePullPolicy: {{ .ImagePullPolicy }}
-        command: ["/bin/bash", "-c"]
+        command: ["/usr/bin/flock", "--exclusive", "--timeout=60", "/var/lock/controller-manager.lock", "-c"]
         args:
         - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig --master=https://kubernetes.default.svc
         securityContext:
           runAsNonRoot: true
           runAsUser: 65534
         volumeMounts:
+        - mountPath: /var/lock
+          name: var-lock
+          readOnly: false
         - mountPath: /etc/ssl/certs
           name: ssl-certs-host
           readOnly: true
@@ -48,6 +51,7 @@ spec:
         - mountPath: /etc/kubernetes/config
           name: config
           readOnly: true
+      hostNetwork: true
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -55,6 +59,9 @@ spec:
         operator: Exists
         effect: NoSchedule
       volumes:
+      - hostPath:
+          path: {{ .LockHostPath }}
+        name: var-lock
       - hostPath:
           path: {{ .SecretsHostPath }}
         name: secrets

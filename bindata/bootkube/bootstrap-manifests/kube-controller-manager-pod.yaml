@@ -11,14 +11,36 @@ metadata:
 spec:
   restartPolicy: Always
   hostNetwork: true
-  containers:
-  - name: kube-controller-manager
+  securityContext:
+    supplementalGroups: [65534]
+    privileged: true
+  initContainers:
+  - name: setup-lock-dir
     image: {{ .Image }}
     imagePullPolicy: {{ .ImagePullPolicy }}
     command: ["/bin/bash", "-c"]
     args:
+    - |
+      chgrp 65534 /var/lock
+      chmod 775 /var/lock
+      rm -f /var/lock/controller-manager.lock || true
+    securityContext:
+      runAsNonRoot: false
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lock
+      name: var-lock
+  containers:
+  - name: kube-controller-manager
+    image: {{ .Image }}
+    imagePullPolicy: {{ .ImagePullPolicy }}
+    command: ["/usr/bin/flock", "--exclusive", "--timeout=60", "/var/lock/controller-manager.lock", "-c"]
+    args:
     - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
     volumeMounts:
+    - mountPath: /var/lock
+      name: var-lock
+      readOnly: false
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
       readOnly: true
@@ -37,6 +59,9 @@ spec:
         port: 10252
         path: healthz
   volumes:
+  - hostPath:
+      path: {{ .LockHostPath }}
+    name: var-lock
   - hostPath:
       path: {{ .SecretsHostPath }}
     name: secrets
