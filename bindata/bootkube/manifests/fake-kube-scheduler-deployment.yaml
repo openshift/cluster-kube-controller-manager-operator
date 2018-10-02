@@ -37,7 +37,7 @@ spec:
           name: secrets
           readOnly: true
         name: kube-scheduler
-        hostNetwork: true
+      hostNetwork: true
       volumes:
       - hostPath:
           path: {{ .SecretsHostPath }}
