@@ -215,6 +215,8 @@ spec:
           secretName: serving-cert
       nodeSelector:
         node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
 `)
 
 func v3110KubeApiserverDeploymentYamlBytes() ([]byte, error) {
