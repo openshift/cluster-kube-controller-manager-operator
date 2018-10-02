@@ -31,7 +31,7 @@ spec:
         imagePullPolicy: {{ .ImagePullPolicy }}
         command: ["/usr/bin/flock", "--exclusive", "--timeout=60", "/var/lock/controller-manager.lock", "-c"]
         args:
-        - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig --master=https://kubernetes.default.svc
+        - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
         securityContext:
           runAsNonRoot: true
           runAsUser: 65534
