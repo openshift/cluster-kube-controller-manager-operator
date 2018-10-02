@@ -4,6 +4,7 @@
 // bindata/v3.11.0/kube-apiserver/defaultconfig.yaml
 // bindata/v3.11.0/kube-apiserver/deployment.yaml
 // bindata/v3.11.0/kube-apiserver/openshift-kube-controller-manager-ns.yaml
+// bindata/v3.11.0/kube-apiserver/operator-config.yaml
 // bindata/v3.11.0/kube-apiserver/public-info-role.yaml
 // bindata/v3.11.0/kube-apiserver/public-info-rolebinding.yaml
 // bindata/v3.11.0/kube-apiserver/public-info.yaml
@@ -256,6 +257,34 @@ func v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110KubeApiserverOperatorConfigYaml = []byte(`apiVersion: kubecontrollermanager.operator.openshift.io/v1alpha1
+kind: KubeControllerManagerOperatorConfig
+metadata:
+  name: instance
+spec:
+  managementState: Managed
+  imagePullSpec: openshift/origin-hypershift:latest
+  version: 3.11.0
+  logging:
+    level: 4
+  replicas: 2
+`)
+
+func v3110KubeApiserverOperatorConfigYamlBytes() ([]byte, error) {
+	return _v3110KubeApiserverOperatorConfigYaml, nil
+}
+
+func v3110KubeApiserverOperatorConfigYaml() (*asset, error) {
+	bytes, err := v3110KubeApiserverOperatorConfigYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-apiserver/operator-config.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110KubeApiserverPublicInfoRoleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -462,6 +491,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/kube-apiserver/defaultconfig.yaml":                        v3110KubeApiserverDefaultconfigYaml,
 	"v3.11.0/kube-apiserver/deployment.yaml":                           v3110KubeApiserverDeploymentYaml,
 	"v3.11.0/kube-apiserver/openshift-kube-controller-manager-ns.yaml": v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml,
+	"v3.11.0/kube-apiserver/operator-config.yaml":                      v3110KubeApiserverOperatorConfigYaml,
 	"v3.11.0/kube-apiserver/public-info-role.yaml":                     v3110KubeApiserverPublicInfoRoleYaml,
 	"v3.11.0/kube-apiserver/public-info-rolebinding.yaml":              v3110KubeApiserverPublicInfoRolebindingYaml,
 	"v3.11.0/kube-apiserver/public-info.yaml":                          v3110KubeApiserverPublicInfoYaml,
@@ -516,6 +546,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"defaultconfig.yaml":                        {v3110KubeApiserverDefaultconfigYaml, map[string]*bintree{}},
 			"deployment.yaml":                           {v3110KubeApiserverDeploymentYaml, map[string]*bintree{}},
 			"openshift-kube-controller-manager-ns.yaml": {v3110KubeApiserverOpenshiftKubeControllerManagerNsYaml, map[string]*bintree{}},
+			"operator-config.yaml":                      {v3110KubeApiserverOperatorConfigYaml, map[string]*bintree{}},
 			"public-info-role.yaml":                     {v3110KubeApiserverPublicInfoRoleYaml, map[string]*bintree{}},
 			"public-info-rolebinding.yaml":              {v3110KubeApiserverPublicInfoRolebindingYaml, map[string]*bintree{}},
 			"public-info.yaml":                          {v3110KubeApiserverPublicInfoYaml, map[string]*bintree{}},
