@@ -9,13 +9,3 @@ kind: ClusterRoleBinding
   - kind: ServiceAccount
     namespace: openshift-core-operators
     name: openshift-cluster-kube-controller-manager-operator
-
-- apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    namespace: openshift-core-operators
-    name: openshift-cluster-kube-controller-manager-operator-config
-  data:
-    config.yaml: |
-      apiVersion: operator.openshift.io/v1alpha1
-      kind: GenericOperatorConfig
