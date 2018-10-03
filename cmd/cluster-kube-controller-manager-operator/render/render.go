@@ -195,7 +195,7 @@ func (r *renderOpts) Run() error {
 }
 
 func (r *renderOpts) configFromDefaultsPlusOverride(data *Config, tlsOverride string) ([]byte, error) {
-	defaultConfig := v311_00_assets.MustAsset(filepath.Join(bootstrapVersion, "kube-apiserver", "defaultconfig.yaml"))
+	defaultConfig := v311_00_assets.MustAsset(filepath.Join(bootstrapVersion, "kube-controller-manager", "defaultconfig.yaml"))
 	bootstrapOverrides, err := readFileTemplate(tlsOverride, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config override file %q: %v", tlsOverride, err)
