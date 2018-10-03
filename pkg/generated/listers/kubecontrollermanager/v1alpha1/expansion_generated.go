@@ -2,6 +2,6 @@
 
 package v1alpha1
 
-// KubeApiserverOperatorConfigListerExpansion allows custom methods to be added to
-// KubeApiserverOperatorConfigLister.
-type KubeApiserverOperatorConfigListerExpansion interface{}
+// KubeControllerManagerOperatorConfigListerExpansion allows custom methods to be added to
+// KubeControllerManagerOperatorConfigLister.
+type KubeControllerManagerOperatorConfigListerExpansion interface{}

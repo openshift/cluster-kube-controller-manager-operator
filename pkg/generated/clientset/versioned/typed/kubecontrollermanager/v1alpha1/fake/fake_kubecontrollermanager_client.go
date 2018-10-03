@@ -12,8 +12,8 @@ type FakeKubecontrollermanagerV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeKubecontrollermanagerV1alpha1) KubeApiserverOperatorConfigs() v1alpha1.KubeApiserverOperatorConfigInterface {
-	return &FakeKubeApiserverOperatorConfigs{c}
+func (c *FakeKubecontrollermanagerV1alpha1) KubeControllerManagerOperatorConfigs() v1alpha1.KubeControllerManagerOperatorConfigInterface {
+	return &FakeKubeControllerManagerOperatorConfigs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

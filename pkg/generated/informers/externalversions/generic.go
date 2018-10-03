@@ -37,8 +37,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=kubecontrollermanager.operator.openshift.io, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("kubeapiserveroperatorconfigs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Kubecontrollermanager().V1alpha1().KubeApiserverOperatorConfigs().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("kubecontrollermanageroperatorconfigs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Informer()}, nil
 
 	}
 

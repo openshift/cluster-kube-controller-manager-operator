@@ -34,7 +34,7 @@ const (
 	workQueueKey        = "key"
 )
 
-type KubeApiserverOperator struct {
+type KubeControllerManagerOperator struct {
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface
 
 	appsv1Client appsclientv1.AppsV1Interface
@@ -45,21 +45,21 @@ type KubeApiserverOperator struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewKubeApiserverOperator(
-	operatorConfigInformer operatorconfiginformerv1alpha1.KubeApiserverOperatorConfigInformer,
+func NewKubeControllerManagerOperator(
+	operatorConfigInformer operatorconfiginformerv1alpha1.KubeControllerManagerOperatorConfigInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface,
 	appsv1Client appsclientv1.AppsV1Interface,
 	corev1Client coreclientv1.CoreV1Interface,
 	rbacv1Client rbacclientv1.RbacV1Interface,
-) *KubeApiserverOperator {
-	c := &KubeApiserverOperator{
+) *KubeControllerManagerOperator {
+	c := &KubeControllerManagerOperator{
 		operatorConfigClient: operatorConfigClient,
 		appsv1Client:         appsv1Client,
 		corev1Client:         corev1Client,
 		rbacv1Client:         rbacv1Client,
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeControllerManagerOperator"),
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
@@ -74,8 +74,8 @@ func NewKubeApiserverOperator(
 	return c
 }
 
-func (c KubeApiserverOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().Get("instance", metav1.GetOptions{})
+func (c KubeControllerManagerOperator) sync() error {
+	operatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (c KubeApiserverOperator) sync() error {
 				Status: operatorsv1alpha1.ConditionFalse,
 			},
 		}
-		if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().Update(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Update(operatorConfig); err != nil {
 			return err
 		}
 		return nil
@@ -127,12 +127,12 @@ func (c KubeApiserverOperator) sync() error {
 		var versionAvailability operatorsv1alpha1.VersionAvailablity
 		operatorConfig.Status.TaskSummary = "sync-[3.11.0,3.12.0)"
 		operatorConfig.Status.TargetAvailability = nil
-		versionAvailability, errors = syncKubeApiserver_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
+		versionAvailability, errors = syncKubeControllerManager_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
 		operatorConfig.Status.CurrentAvailability = &versionAvailability
 
 	default:
 		operatorConfig.Status.TaskSummary = "unrecognized"
-		if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
 			utilruntime.HandleError(err)
 		}
 
@@ -172,7 +172,7 @@ func (c KubeApiserverOperator) sync() error {
 		operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
 	}
 
-	if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+	if _, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -180,12 +180,12 @@ func (c KubeApiserverOperator) sync() error {
 }
 
 // Run starts the kube-controller-manager and blocks until stopCh is closed.
-func (c *KubeApiserverOperator) Run(workers int, stopCh <-chan struct{}) {
+func (c *KubeControllerManagerOperator) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting KubeApiserverOperator")
-	defer glog.Infof("Shutting down KubeApiserverOperator")
+	glog.Infof("Starting KubeControllerManagerOperator")
+	defer glog.Infof("Shutting down KubeControllerManagerOperator")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)
@@ -193,12 +193,12 @@ func (c *KubeApiserverOperator) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *KubeApiserverOperator) runWorker() {
+func (c *KubeControllerManagerOperator) runWorker() {
 	for c.processNextWorkItem() {
 	}
 }
 
-func (c *KubeApiserverOperator) processNextWorkItem() bool {
+func (c *KubeControllerManagerOperator) processNextWorkItem() bool {
 	dsKey, quit := c.queue.Get()
 	if quit {
 		return false
@@ -218,7 +218,7 @@ func (c *KubeApiserverOperator) processNextWorkItem() bool {
 }
 
 // eventHandler queues the operator to check spec and status
-func (c *KubeApiserverOperator) eventHandler() cache.ResourceEventHandler {
+func (c *KubeControllerManagerOperator) eventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.queue.Add(workQueueKey) },
 		UpdateFunc: func(old, new interface{}) { c.queue.Add(workQueueKey) },
@@ -229,7 +229,7 @@ func (c *KubeApiserverOperator) eventHandler() cache.ResourceEventHandler {
 // this set of namespaces will include things like logging and metrics which are used to drive
 var interestingNamespaces = sets.NewString(targetNamespaceName)
 
-func (c *KubeApiserverOperator) namespaceEventHandler() cache.ResourceEventHandler {
+func (c *KubeControllerManagerOperator) namespaceEventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ns, ok := obj.(*corev1.Namespace)
