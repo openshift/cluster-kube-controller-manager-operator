@@ -11,7 +11,7 @@ import (
 
 type KubecontrollermanagerV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	KubeApiserverOperatorConfigsGetter
+	KubeControllerManagerOperatorConfigsGetter
 }
 
 // KubecontrollermanagerV1alpha1Client is used to interact with features provided by the kubecontrollermanager.operator.openshift.io group.
@@ -19,8 +19,8 @@ type KubecontrollermanagerV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *KubecontrollermanagerV1alpha1Client) KubeApiserverOperatorConfigs() KubeApiserverOperatorConfigInterface {
-	return newKubeApiserverOperatorConfigs(c)
+func (c *KubecontrollermanagerV1alpha1Client) KubeControllerManagerOperatorConfigs() KubeControllerManagerOperatorConfigInterface {
+	return newKubeControllerManagerOperatorConfigs(c)
 }
 
 // NewForConfig creates a new KubecontrollermanagerV1alpha1Client for the given config.

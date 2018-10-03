@@ -2,27 +2,27 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: openshift-kube-controller-manager
-  name: apiserver
+  name: controller-manager
   labels:
     app: openshift-kube-controller-manager
-    apiserver: "true"
+    controller-manager: "true"
 spec:
   strategy:
     type: RollingUpdate
   selector:
     matchLabels:
       app: openshift-kube-controller-manager
-      apiserver: "true"
+      controller-manager: "true"
   template:
     metadata:
       name: openshift-kube-controller-manager
       labels:
         app: openshift-kube-controller-manager
-        apiserver: "true"
+        controller-manager: "true"
     spec:
       serviceAccountName: openshift-kube-controller-manager-sa
       containers:
-      - name: apiserver
+      - name: controller-manager
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
         command: ["hypershift", "openshift-kube-controller-manager"]
@@ -54,7 +54,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: deployment-apiserver-config
+          name: deployment-controller-manager-config
       - name: aggregator-client-ca
         configMap:
           name: aggregator-client-ca
