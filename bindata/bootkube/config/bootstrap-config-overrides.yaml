@@ -9,4 +9,5 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kube-ca.crt"
   cluster-signing-key-file:
   - "/etc/kubernetes/secrets/kube-ca.key"
-
+  port:
+  - "0"
