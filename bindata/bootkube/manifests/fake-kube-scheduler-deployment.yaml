@@ -36,7 +36,6 @@ spec:
         - mountPath: /etc/kubernetes/secrets
           name: secrets
           readOnly: true
-        name: kube-scheduler
       hostNetwork: true
       volumes:
       - hostPath:
