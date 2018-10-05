@@ -16,9 +16,6 @@ type Config struct {
 	// Namespace is the target namespace for the bootstrap controller manager to be created.
 	Namespace string
 
-	// LockHostPath holds the api server lock file for bootstrap
-	LockHostPath string
-
 	// Image is the pull spec of the image to use for the controller manager.
 	Image string
 
