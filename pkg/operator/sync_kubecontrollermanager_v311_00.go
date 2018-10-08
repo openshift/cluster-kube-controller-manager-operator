@@ -20,8 +20,8 @@ import (
 
 // syncKubeControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity) (operatorsv1alpha1.VersionAvailablity, []error) {
-	versionAvailability := operatorsv1alpha1.VersionAvailablity{
+func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability) (operatorsv1alpha1.VersionAvailability, []error) {
+	versionAvailability := operatorsv1alpha1.VersionAvailability{
 		Version: operatorConfig.Spec.Version,
 	}
 
@@ -63,17 +63,17 @@ func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 
-	forceDeployment := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	forceRollout := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
 	if saModified { // SA modification can cause new tokens
-		forceDeployment = true
+		forceRollout = true
 	}
 	if configMapModified {
-		forceDeployment = true
+		forceRollout = true
 	}
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDeployment, _, err := manageKubeControllerManagerDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceDeployment)
+	actualDeployment, _, err := manageKubeControllerManagerDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceRollout)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -87,7 +87,7 @@ func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
-	return resourcemerge.ApplyGenerationAvailability(versionAvailability, actualDeployment, errors...), errors
+	return resourcemerge.ApplyDeploymentGenerationAvailability(versionAvailability, actualDeployment, errors...), errors
 }
 
 func manageKubeControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
@@ -100,7 +100,7 @@ func manageKubeControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageKubeControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceDeployment bool) (*appsv1.Deployment, bool, error) {
+func manageKubeControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceDeployment bool) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/deployment.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
