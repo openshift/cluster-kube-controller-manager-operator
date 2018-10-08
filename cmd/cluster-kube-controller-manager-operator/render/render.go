@@ -63,7 +63,7 @@ func NewRenderCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&renderOpts.manifest.namespace, "manifest-namespace", "openshift-kube-controller-manager",
 		"Target namespace for controller manager pods.")
-	cmd.Flags().StringVar(&renderOpts.manifest.image, "manifest-image", "openshift/origin-hypershift:latest",
+	cmd.Flags().StringVar(&renderOpts.manifest.image, "manifest-image", "openshift/origin-hyperkube:latest",
 		"Image to use for the controller manager.")
 	cmd.Flags().StringVar(&renderOpts.manifest.imagePullPolicy, "manifest-image-pull-policy", "IfNotPresent",
 		"Image pull policy to use for the controller manager.")
