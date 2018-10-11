@@ -33,11 +33,26 @@ spec:
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
-      volumes:
-      - name: config
-        configMap:
-          name: deployment-controller-manager-config
+        - mountPath: /var/run/secrets/service-account-private-key
+          name: service-account-private-key
+        - mountPath: /var/run/secrets/cluster-signing-ca
+          name: cluster-signing-ca
+        - mountPath: /var/run/configmaps/client-ca
+          name: client-ca
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
+      volumes:
+      - name: config
+        configMap:
+          name: controller-manager-config
+      - name: cluster-signing-ca
+        secret:
+          secretName: cluster-signing-ca
+      - name: service-account-private-key
+        secret:
+          secretName: service-account-private-key
+      - name: client-ca
+        configMap:
+          name: client-ca

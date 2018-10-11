@@ -32,13 +32,19 @@ spec:
         command: ["hypershift", "openshift-kube-controller-manager"]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
-        - "--kubeconfig=/var/run/secrets/kubeconfig/kubeconfig"
+        - "--kubeconfig=/var/run/configmaps/kubeconfig/kubeconfig"
         - "--master=https://kubernetes.default.svc"
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
-        - mountPath: /var/run/secrets/kubeconfig
+        - mountPath: /var/run/configmaps/kubeconfig
           name: kubeconfig
+        - mountPath: /var/run/secrets/service-account-private-key
+          name: service-account-private-key
+        - mountPath: /var/run/secrets/cluster-signing-ca
+          name: cluster-signing-ca
+        - mountPath: /var/run/secrets/client-ca
+          name: client-ca
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -49,6 +55,15 @@ spec:
       - name: config
         configMap:
           name: controller-manager-config
+      - name: cluster-signing-ca
+        secret:
+          secretName: cluster-signing-ca
+      - name: service-account-private-key
+        secret:
+          secretName: service-account-private-key
+      - name: client-ca
+        configMap:
+          name: client-ca
       - name: kubeconfig
         secret:
           secretName: controller-manager-kubeconfig
