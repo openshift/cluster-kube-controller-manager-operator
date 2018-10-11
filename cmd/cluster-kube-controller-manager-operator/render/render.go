@@ -167,6 +167,14 @@ func (r *renderOpts) Run() error {
 	if renderConfig.Assets, err = assets.LoadFilesRecursively(r.assetInputDir, skipSchedulerPredicate); err != nil {
 		return fmt.Errorf("failed loading assets from %q: %v", r.assetInputDir, err)
 	}
+
+	// load kubeconfig for bootkube phase 2
+	if kubeConfig, err := r.readBootstrapSecretsKubeconfig(); err != nil {
+		return fmt.Errorf("failed to read %s/kubeconfig: %v", r.manifest.secretsHostPath, err)
+	} else {
+		renderConfig.Assets["kubeconfig"] = kubeConfig
+	}
+
 	for _, manifestDir := range []string{"bootstrap-manifests", "manifests"} {
 		manifests, err := assets.New(filepath.Join(r.templatesDir, manifestDir), renderConfig, assets.OnlyYaml)
 		if err != nil {
@@ -187,6 +195,10 @@ func (r *renderOpts) Run() error {
 	}
 
 	return nil
+}
+
+func (r *renderOpts) readBootstrapSecretsKubeconfig() ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(r.assetInputDir, "..", "auth", "kubeconfig"))
 }
 
 func (r *renderOpts) configFromDefaultsPlusOverride(data *Config, tlsOverride string) ([]byte, error) {

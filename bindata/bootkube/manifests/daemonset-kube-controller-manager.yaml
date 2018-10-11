@@ -32,6 +32,8 @@ spec:
         command: ["hypershift", "openshift-kube-controller-manager"]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
+        - "--kubeconfig=/var/run/secrets/kubeconfig/kubeconfig"
+        - "--master=https://kubernetes.default.svc"
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
@@ -53,6 +55,8 @@ spec:
           name: kubelet-client
         - mountPath: /var/run/secrets/serving-cert
           name: serving-cert
+        - mountPath: /var/run/secrets/kubeconfig
+          name: kubeconfig
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -90,6 +94,9 @@ spec:
       - name: serving-cert
         secret:
           secretName: serving-cert
+      - name: kubeconfig
+        secret:
+          secretName: controller-manager-kubeconfig
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
