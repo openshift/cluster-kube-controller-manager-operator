@@ -37,11 +37,12 @@ type manifestOpts struct {
 type renderOpts struct {
 	manifest manifestOpts
 
-	templatesDir        string
-	assetInputDir       string
-	assetOutputDir      string
-	configOverrideFiles []string
-	configOutputFile    string
+	templatesDir                 string
+	assetInputDir                string
+	assetOutputDir               string
+	configOverrideFiles          []string
+	deprecatedConfigOverrideFile string
+	configOutputFile             string
 
 	skipSchedulerBootstrapManifest bool
 }
@@ -84,6 +85,11 @@ func NewRenderCommand() *cobra.Command {
 
 	// TODO: Remove this when the render command exists in scheduler operator
 	cmd.Flags().BoolVar(&renderOpts.skipSchedulerBootstrapManifest, "skip-scheduler", false, "Skip copying the scheduler manifests.")
+
+	// TODO: Remove these once we break the flag dependency loop in installer
+	cmd.Flags().StringVar(&renderOpts.deprecatedConfigOverrideFile, "config-override-file", "", "")
+	cmd.Flags().MarkHidden("config-override-file")
+	cmd.Flags().MarkDeprecated("config-override-file", "Use 'config-override-files' flag instead")
 
 	return cmd
 }
@@ -190,6 +196,11 @@ func (r *renderOpts) configFromDefaultsPlusOverride(data *Config, tlsOverride st
 		return nil, fmt.Errorf("failed to load config override file %q: %v", tlsOverride, err)
 	}
 	configs := [][]byte{defaultConfig, bootstrapOverrides}
+
+	// TODO: Remove this when the flag is gone
+	if len(r.deprecatedConfigOverrideFile) > 0 {
+		r.configOverrideFiles = append(r.configOverrideFiles, r.deprecatedConfigOverrideFile)
+	}
 	for _, fname := range r.configOverrideFiles {
 		overrides, err := readFileTemplate(fname, data)
 		if err != nil {
