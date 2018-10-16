@@ -1,0 +1,7 @@
+# WARNING: This file was copied from kube-core operator just to unblock deploying the new control-plane.
+#          We **must** find an owner for this component and remove this file from this repository.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kube-system
+  name: pod-checkpointer
