@@ -29,11 +29,10 @@ spec:
       - name: kube-controller-manager
         image: {{ .Image }}
         imagePullPolicy: {{ .ImagePullPolicy }}
-        command: ["hypershift", "openshift-kube-controller-manager"]
+        command: ["hyperkube", "kube-controller-manager"]
         args:
-        - "--config=/var/run/configmaps/config/config.yaml"
-        - "--kubeconfig=/var/run/configmaps/kubeconfig/kubeconfig"
-        - "--master=https://kubernetes.default.svc"
+        - --openshift-config=/var/run/configmaps/config/config.yaml
+        - --kubeconfig=/var/run/configmaps/kubeconfig/kubeconfig
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
@@ -43,7 +42,7 @@ spec:
           name: service-account-private-key
         - mountPath: /var/run/secrets/cluster-signing-ca
           name: cluster-signing-ca
-        - mountPath: /var/run/secrets/client-ca
+        - mountPath: /var/run/configmaps/client-ca
           name: client-ca
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -51,6 +50,7 @@ spec:
       - key: node-role.kubernetes.io/master
         operator: Exists
         effect: NoSchedule
+      hostNetwork: true
       volumes:
       - name: config
         configMap:
