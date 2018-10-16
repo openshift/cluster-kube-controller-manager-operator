@@ -66,8 +66,8 @@ spec:
         operator: Exists
       volumes:
       - name: kubeconfig
-        configMap:
-          name: kubeconfig-in-cluster
+        secret:
+          secretName: controller-manager-kubeconfig
       - hostPath:
           path: /etc/kubernetes
         name: etc-kubernetes

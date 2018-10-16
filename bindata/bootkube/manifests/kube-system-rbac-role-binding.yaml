@@ -1,0 +1,14 @@
+# WARNING: This file was copied from kube-core operator just to unblock deploying the new control-plane.
+#          We **must** find an owner for this component and remove this file from this repository.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:default-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: kube-system
