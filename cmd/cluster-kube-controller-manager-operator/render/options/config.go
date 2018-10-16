@@ -1,6 +1,7 @@
-package render
+package options
 
-type Config struct {
+// ManifestConfig is a struct of values to be used in manifest templates.
+type ManifestConfig struct {
 	// ConfigHostPath is a host path mounted into the controller manager pods to hold the config file.
 	ConfigHostPath string
 
@@ -21,10 +22,21 @@ type Config struct {
 
 	// ImagePullPolicy specifies the image pull policy to use for the images.
 	ImagePullPolicy string
+}
 
-	// PostBootstrapKubeControllerManagerConfig holds the rendered kube-controller-manager config file after bootstrapping.
-	PostBootstrapKubeControllerManagerConfig []byte
+// FileConfig
+type FileConfig struct {
+	// BootstrapConfig holds the rendered control plane component config file for bootstrapping (phase 1).
+	BootstrapConfig []byte
+
+	// PostBootstrapConfig holds the rendered control plane component config file after bootstrapping (phase 2).
+	PostBootstrapConfig []byte
 
 	// Assets holds the loaded assets like certs and keys.
 	Assets map[string][]byte
+}
+
+type TemplateData struct {
+	ManifestConfig
+	FileConfig
 }
