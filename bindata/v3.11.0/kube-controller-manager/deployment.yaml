@@ -46,7 +46,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: controller-manager-config
+          name: deployment-kube-controller-manager-config
       - name: cluster-signing-ca
         secret:
           secretName: cluster-signing-ca
