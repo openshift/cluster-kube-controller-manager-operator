@@ -58,7 +58,7 @@ var _v3110KubeControllerManagerCmYaml = []byte(`apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: openshift-kube-controller-manager
-  name: deployment-controller-manager-config
+  name: deployment-kube-controller-manager-config
 data:
   config.yaml:
 `)
@@ -178,7 +178,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: controller-manager-config
+          name: deployment-kube-controller-manager-config
       - name: cluster-signing-ca
         secret:
           secretName: cluster-signing-ca
