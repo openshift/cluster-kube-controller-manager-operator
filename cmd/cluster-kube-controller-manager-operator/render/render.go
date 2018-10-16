@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"text/template"
 
@@ -43,8 +42,6 @@ type renderOpts struct {
 	configOverrideFiles          []string
 	deprecatedConfigOverrideFile string
 	configOutputFile             string
-
-	skipSchedulerBootstrapManifest bool
 }
 
 func NewRenderCommand() *cobra.Command {
@@ -82,9 +79,6 @@ func NewRenderCommand() *cobra.Command {
 	cmd.Flags().StringVar(&renderOpts.templatesDir, "templates-input-dir", "/usr/share/bootkube/manifests", "A path to a directory with manifest templates.")
 	cmd.Flags().StringSliceVar(&renderOpts.configOverrideFiles, "config-override-files", nil, "Additional sparse KubeControllerManagerConfig.kubecontrolplane.config.openshift.io/v1 files for customiziation through the installer, merged into the default config in the given order.")
 	cmd.Flags().StringVar(&renderOpts.configOutputFile, "config-output-file", "", "Output path for the KubeControllerManagerConfig yaml file.")
-
-	// TODO: Remove this when the render command exists in scheduler operator
-	cmd.Flags().BoolVar(&renderOpts.skipSchedulerBootstrapManifest, "skip-scheduler", false, "Skip copying the scheduler manifests.")
 
 	// TODO: Remove these once we break the flag dependency loop in installer
 	cmd.Flags().StringVar(&renderOpts.deprecatedConfigOverrideFile, "config-override-file", "", "")
@@ -156,15 +150,8 @@ func (r *renderOpts) Run() error {
 	var err error
 	renderConfig.PostBootstrapKubeControllerManagerConfig, err = r.configFromDefaultsPlusOverride(&renderConfig, filepath.Join(r.templatesDir, "config", "config-overrides.yaml"))
 
-	skipSchedulerPredicate := func(f os.FileInfo) bool {
-		if !r.skipSchedulerBootstrapManifest {
-			return true
-		}
-		return f.Name() != "kube-scheduler-pod.yaml"
-	}
-
 	// load and render templates
-	if renderConfig.Assets, err = assets.LoadFilesRecursively(r.assetInputDir, skipSchedulerPredicate); err != nil {
+	if renderConfig.Assets, err = assets.LoadFilesRecursively(r.assetInputDir); err != nil {
 		return fmt.Errorf("failed loading assets from %q: %v", r.assetInputDir, err)
 	}
 
