@@ -25,9 +25,9 @@ spec:
       - name: controller-manager
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
-        command: ["hypershift", "openshift-kube-controller-manager"]
+        command: ["hyperkube", "kube-controller-manager"]
         args:
-        - "--config=/var/run/configmaps/config/config.yaml"
+        - "--openshift-config=/var/run/configmaps/config/config.yaml"
         ports:
         - containerPort: 8443
         volumeMounts:
