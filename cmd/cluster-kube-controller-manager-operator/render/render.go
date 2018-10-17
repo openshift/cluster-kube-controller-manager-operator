@@ -80,7 +80,17 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 
+	if kubeConfig, err := r.readBootstrapSecretsKubeconfig(); err != nil {
+		return fmt.Errorf("failed to read %s/kubeconfig: %v", r.manifest.SecretsHostPath, err)
+	} else {
+		renderConfig.Assets["kubeconfig"] = kubeConfig
+	}
+
 	return WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig)
+}
+
+func (r *renderOpts) readBootstrapSecretsKubeconfig() ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(r.generic.AssetInputDir, "..", "auth", "kubeconfig"))
 }
 
 // WriteFiles writes the manifests and the bootstrap config file.
