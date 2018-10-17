@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/cluster-kube-controller-manager-operator/cmd/cluster-kube-controller-manager-operator/render/options"
 
 	"github.com/openshift/library-go/pkg/assets"
+	"github.com/openshift/library-go/pkg/operator/render/options"
 )
 
 func TestYamlCorrectness(t *testing.T) {
