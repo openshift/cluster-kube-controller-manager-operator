@@ -10,4 +10,4 @@ metadata:
     openshift.io/component: "controller"
 data:
   config.yaml: |
-    {{ .PostBootstrapConfig | indent 4 }}
+    {{ .PostBootstrapKubeControllerManagerConfig | indent 4 }}
