@@ -10,5 +10,7 @@ spec:
     kind: KubeControllerManagerOperatorConfig
     plural: kubecontrollermanageroperatorconfigs
     singular: kubecontrollermanageroperatorconfig
+    categories:
+    - coreoperators
   subresources:
     status: {}
