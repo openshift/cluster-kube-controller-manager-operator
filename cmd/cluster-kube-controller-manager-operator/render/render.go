@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -20,27 +21,33 @@ const (
 type renderOpts struct {
 	manifest options.ManifestOptions
 	generic  options.GenericOptions
+
+	errOut io.Writer
 }
 
 // NewRenderCommand creates a render command.
-func NewRenderCommand() *cobra.Command {
-	renderOpts := &renderOpts{}
+func NewRenderCommand(errOut io.Writer) *cobra.Command {
+	renderOpts := &renderOpts{errOut: errOut}
 	cmd := &cobra.Command{
 		Use:   "render",
 		Short: "Render kubernetes controller manager bootstrap manifests, secrets and configMaps",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := renderOpts.Validate(); err != nil {
-				glog.Fatal(err)
+			must := func(fn func() error) {
+				if err := fn(); err != nil {
+					if cmd.HasParent() {
+						glog.Fatal(err)
+					}
+					fmt.Fprint(renderOpts.errOut, err.Error())
+				}
 			}
-			if err := renderOpts.Run(); err != nil {
-				glog.Fatal(err)
-			}
+
+			must(renderOpts.Validate)
+			must(renderOpts.Run)
 		},
 	}
 
 	renderOpts.manifest.AddFlags(cmd.Flags())
 	renderOpts.generic.AddFlags(cmd.Flags())
-
 	return cmd
 }
 
