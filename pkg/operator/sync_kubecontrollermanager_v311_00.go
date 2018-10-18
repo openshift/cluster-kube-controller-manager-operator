@@ -5,8 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
@@ -28,66 +27,60 @@ func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator
 	errors := []error{}
 	var err error
 
-	requiredNamespace := resourceread.ReadNamespaceV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/ns.yaml"))
-	_, _, err = resourceapply.ApplyNamespace(c.corev1Client, requiredNamespace)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "ns", err))
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
+		"v3.11.0/kube-controller-manager/clusterrolebinding.yaml",
+		"v3.11.0/kube-controller-manager/ns.yaml",
+		"v3.11.0/kube-controller-manager/public-info-role.yaml",
+		"v3.11.0/kube-controller-manager/public-info-rolebinding.yaml",
+		"v3.11.0/kube-controller-manager/svc.yaml",
+		"v3.11.0/kube-controller-manager/sa.yaml",
+		"v3.11.0/openshift-apiserver/sa.yaml",
+	)
+	resourcesThatForceRedeployment := sets.NewString("v3.11.0/kube-controller-manager/sa.yaml")
+	forceRollingUpdate := false
+
+	for _, currResult := range directResourceResults {
+		if currResult.Error != nil {
+			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
+			continue
+		}
+
+		if currResult.Changed && resourcesThatForceRedeployment.Has(currResult.File) {
+			forceRollingUpdate = true
+		}
 	}
 
-	requiredPublicRole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/public-info-role.yaml"))
-	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, requiredPublicRole)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
-	}
-
-	requiredPublicRoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/public-info-rolebinding.yaml"))
-	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, requiredPublicRoleBinding)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
-	}
-
-	requiredService := resourceread.ReadServiceV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/svc.yaml"))
-	_, _, err = resourceapply.ApplyService(c.corev1Client, requiredService)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
-	}
-
-	requiredSA := resourceread.ReadServiceAccountV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/sa.yaml"))
-	_, saModified, err := resourceapply.ApplyServiceAccount(c.corev1Client, requiredSA)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "sa", err))
-	}
-
-	controllerManagerConfig, configMapModified, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.corev1Client, operatorConfig)
+	controllerManagerConfig, configMapModified, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 
 	forceRollout := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	if saModified { // SA modification can cause new tokens
-		forceRollout = true
-	}
-	if configMapModified {
-		forceRollout = true
-	}
+	forceRollout = forceRollout || forceRollingUpdate || configMapModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDeployment, _, err := manageKubeControllerManagerDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceRollout)
+	actualDaemonSet, _, err := manageKubeControllerManagerDaemonSet_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceRollout)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
+		errors = append(errors, fmt.Errorf("%q: %v", "daemonset", err))
+	}
+
+	// if our actual daemonset has at least one pod available, then we should delete the kube-system daemonset to make sure we take over for it.
+	if actualDaemonSet.Status.NumberAvailable > 0 {
+		// we don't care about the return value here.
+		c.kubeClient.AppsV1().DaemonSets("kube-system").Delete("kube-controller-manager", nil)
 	}
 
 	configData := ""
 	if controllerManagerConfig != nil {
 		configData = controllerManagerConfig.Data["config.yaml"]
 	}
-	_, _, err = manageKubeControllerManagerPublicConfigMap_v311_00_to_latest(c.corev1Client, configData, operatorConfig)
+	_, _, err = manageKubeControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), configData, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
-	return resourcemerge.ApplyDeploymentGenerationAvailability(versionAvailability, actualDeployment, errors...), errors
+	return resourcemerge.ApplyDaemonSetGenerationAvailability(versionAvailability, actualDaemonSet, errors...), errors
 }
 
 func manageKubeControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
@@ -100,38 +93,20 @@ func manageKubeControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageKubeControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceDeployment bool) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/deployment.yaml"))
+func manageKubeControllerManagerDaemonSet_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.KubeControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/ds.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
 
-	return resourceapply.ApplyDeployment(client, required, resourcemerge.ExpectedDeploymentGeneration(required, previousAvailability), forceDeployment)
+	return resourceapply.ApplyDaemonSet(client, required, resourcemerge.ExpectedDaemonSetGeneration(required, previousAvailability), forceRollout)
 }
 
 func manageKubeControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, controllerManagerConfigString string, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
-	uncastUnstructured, err := runtime.Decode(unstructured.UnstructuredJSONScheme, []byte(controllerManagerConfigString))
-	if err != nil {
-		return nil, false, err
-	}
-	controllerManagerConfig := uncastUnstructured.(runtime.Unstructured)
-
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/public-info.yaml"))
 	if operatorConfig.Status.CurrentAvailability != nil {
 		configMap.Data["version"] = operatorConfig.Status.CurrentAvailability.Version
 	} else {
 		configMap.Data["version"] = ""
-	}
-	configMap.Data["imagePolicyConfig.internalRegistryHostname"], _, err = unstructured.NestedString(controllerManagerConfig.UnstructuredContent(), "imagePolicyConfig", "internalRegistryHostname")
-	if err != nil {
-		return nil, false, err
-	}
-	configMap.Data["imagePolicyConfig.externalRegistryHostname"], _, err = unstructured.NestedString(controllerManagerConfig.UnstructuredContent(), "imagePolicyConfig", "externalRegistryHostname")
-	if err != nil {
-		return nil, false, err
-	}
-	configMap.Data["projectConfig.defaultNodeSelector"], _, err = unstructured.NestedString(controllerManagerConfig.UnstructuredContent(), "projectConfig", "defaultNodeSelector")
-	if err != nil {
-		return nil, false, err
 	}
 
 	return resourceapply.ApplyConfigMap(client, configMap)

@@ -37,9 +37,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
 		kubeInformersNamespaced,
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
-		kubeClient.AppsV1(),
-		kubeClient.CoreV1(),
-		kubeClient.RbacV1(),
+		kubeClient,
 	)
 
 	ensureOperatorConfigExists(operator.operatorConfigClient, "v3.11.0/kube-controller-manager/operator-config.yaml")

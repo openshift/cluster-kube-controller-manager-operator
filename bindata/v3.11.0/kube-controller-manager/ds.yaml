@@ -1,13 +1,13 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   namespace: openshift-kube-controller-manager
-  name: controller-manager
+  name: kube-controller-manager
   labels:
     app: openshift-kube-controller-manager
     controller-manager: "true"
 spec:
-  strategy:
+  upgradeStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
@@ -39,6 +39,8 @@ spec:
           name: cluster-signing-ca
         - mountPath: /var/run/configmaps/client-ca
           name: client-ca
+        - mountPath: /var/run/secrets/serving-cert
+          name: serving-cert
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
@@ -56,3 +58,6 @@ spec:
       - name: client-ca
         configMap:
           name: client-ca
+      - name: serving-cert
+        secret:
+          secretName: serving-cert
