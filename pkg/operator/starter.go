@@ -34,7 +34,8 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		return err
 	}
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
-	kubeInformersNamespaced := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
+	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
+	kubeInformersForOpenshiftServiceCertSignerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(serviceCertSignerNamespaceName))
 
 	v1alpha1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
@@ -44,11 +45,20 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	)
 	operator := NewKubeControllerManagerOperator(
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
-		kubeInformersNamespaced,
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		kubeInformersForOpenshiftServiceCertSignerNamespace,
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
 		kubeClient.AppsV1(),
 		kubeClient.CoreV1(),
 		kubeClient.RbacV1(),
+	)
+
+	configObserver := NewConfigObserver(
+		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		operatorConfigClient.KubecontrollermanagerV1alpha1(),
+		kubeClient,
+		clientConfig,
 	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
@@ -59,9 +69,11 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	)
 
 	operatorConfigInformers.Start(stopCh)
-	kubeInformersNamespaced.Start(stopCh)
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(stopCh)
+	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(stopCh)
 
 	go operator.Run(1, stopCh)
+	go configObserver.Run(1, stopCh)
 	go clusterOperatorStatus.Run(1, stopCh)
 
 	<-stopCh

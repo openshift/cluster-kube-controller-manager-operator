@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	targetNamespaceName = "openshift-kube-controller-manager"
-	workQueueKey        = "key"
+	targetNamespaceName            = "openshift-kube-controller-manager"
+	serviceCertSignerNamespaceName = "openshift-service-cert-signer"
+	workQueueKey                   = "key"
 )
 
 type KubeControllerManagerOperator struct {
@@ -46,7 +47,8 @@ type KubeControllerManagerOperator struct {
 
 func NewKubeControllerManagerOperator(
 	operatorConfigInformer operatorconfiginformerv1alpha1.KubeControllerManagerOperatorConfigInformer,
-	namespacedKubeInformers informers.SharedInformerFactory,
+	kubeInformersForOpenShiftKubeControllerManagerNamespace informers.SharedInformerFactory,
+	kubeInformersForOpenshiftServiceCertSignerNamespace informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface,
 	appsv1Client appsclientv1.AppsV1Interface,
 	corev1Client coreclientv1.CoreV1Interface,
@@ -62,13 +64,14 @@ func NewKubeControllerManagerOperator(
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftServiceCertSignerNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 
 	// we only watch some namespaces
-	namespacedKubeInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+	kubeInformersForOpenShiftKubeControllerManagerNamespace.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
 	return c
 }
