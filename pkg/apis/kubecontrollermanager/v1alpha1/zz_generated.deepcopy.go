@@ -98,7 +98,8 @@ func (in *KubeControllerManagerOperatorConfigList) DeepCopyObject() runtime.Obje
 func (in *KubeControllerManagerOperatorConfigSpec) DeepCopyInto(out *KubeControllerManagerOperatorConfigSpec) {
 	*out = *in
 	out.OperatorSpec = in.OperatorSpec
-	in.KubeControllerManagerConfig.DeepCopyInto(&out.KubeControllerManagerConfig)
+	in.UserConfig.DeepCopyInto(&out.UserConfig)
+	in.ObservedConfig.DeepCopyInto(&out.ObservedConfig)
 	return
 }
 
