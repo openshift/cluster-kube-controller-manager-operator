@@ -2,9 +2,12 @@
 // sources:
 // bindata/v3.11.0/kube-controller-manager/cm.yaml
 // bindata/v3.11.0/kube-controller-manager/defaultconfig.yaml
-// bindata/v3.11.0/kube-controller-manager/deployment.yaml
+// bindata/v3.11.0/kube-controller-manager/installer-cluster-rolebinding.yaml
+// bindata/v3.11.0/kube-controller-manager/installer-sa.yaml
 // bindata/v3.11.0/kube-controller-manager/ns.yaml
 // bindata/v3.11.0/kube-controller-manager/operator-config.yaml
+// bindata/v3.11.0/kube-controller-manager/pod-cm.yaml
+// bindata/v3.11.0/kube-controller-manager/pod.yaml
 // bindata/v3.11.0/kube-controller-manager/public-info-role.yaml
 // bindata/v3.11.0/kube-controller-manager/public-info-rolebinding.yaml
 // bindata/v3.11.0/kube-controller-manager/public-info.yaml
@@ -130,77 +133,52 @@ func v3110KubeControllerManagerDefaultconfigYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110KubeControllerManagerDeploymentYaml = []byte(`apiVersion: apps/v1
-kind: Deployment
+var _v3110KubeControllerManagerInstallerClusterRolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
+  name: system:openshift:operator:cluster-kube-controller-manager-installer
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
   namespace: openshift-kube-controller-manager
-  name: controller-manager
-  labels:
-    app: openshift-kube-controller-manager
-    controller-manager: "true"
-spec:
-  strategy:
-    type: RollingUpdate
-  selector:
-    matchLabels:
-      app: openshift-kube-controller-manager
-      controller-manager: "true"
-  template:
-    metadata:
-      name: openshift-kube-controller-manager
-      labels:
-        app: openshift-kube-controller-manager
-        controller-manager: "true"
-    spec:
-      serviceAccountName: openshift-kube-controller-manager-sa
-      containers:
-      - name: controller-manager
-        image: ${IMAGE}
-        imagePullPolicy: IfNotPresent
-        command: ["hyperkube", "kube-controller-manager"]
-        args:
-        - "--openshift-config=/var/run/configmaps/config/config.yaml"
-        ports:
-        - containerPort: 8443
-        volumeMounts:
-        - mountPath: /var/run/configmaps/config
-          name: config
-        - mountPath: /var/run/secrets/service-account-private-key
-          name: service-account-private-key
-        - mountPath: /var/run/secrets/cluster-signing-ca
-          name: cluster-signing-ca
-        - mountPath: /var/run/configmaps/client-ca
-          name: client-ca
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
-      tolerations:
-      - operator: Exists
-      volumes:
-      - name: config
-        configMap:
-          name: deployment-kube-controller-manager-config
-      - name: cluster-signing-ca
-        secret:
-          secretName: cluster-signing-ca
-      - name: service-account-private-key
-        secret:
-          secretName: service-account-private-key
-      - name: client-ca
-        configMap:
-          name: client-ca
+  name: installer-sa
 `)
 
-func v3110KubeControllerManagerDeploymentYamlBytes() ([]byte, error) {
-	return _v3110KubeControllerManagerDeploymentYaml, nil
+func v3110KubeControllerManagerInstallerClusterRolebindingYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerInstallerClusterRolebindingYaml, nil
 }
 
-func v3110KubeControllerManagerDeploymentYaml() (*asset, error) {
-	bytes, err := v3110KubeControllerManagerDeploymentYamlBytes()
+func v3110KubeControllerManagerInstallerClusterRolebindingYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerInstallerClusterRolebindingYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/deployment.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/installer-cluster-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerInstallerSaYaml = []byte(`apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: installer-sa
+`)
+
+func v3110KubeControllerManagerInstallerSaYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerInstallerSaYaml, nil
+}
+
+func v3110KubeControllerManagerInstallerSaYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerInstallerSaYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/installer-sa.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -251,6 +229,74 @@ func v3110KubeControllerManagerOperatorConfigYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/operator-config.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerPodCmYaml = []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: kube-controller-manager-pod
+data:
+  pod.yaml:
+  forceRedeploymentReason:
+  version:
+`)
+
+func v3110KubeControllerManagerPodCmYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerPodCmYaml, nil
+}
+
+func v3110KubeControllerManagerPodCmYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerPodCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/pod-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerPodYaml = []byte(`apiVersion: v1
+kind: Pod
+metadata:
+  name: openshift-kube-controller-manager
+  labels:
+    app: openshift-kube-controller-manager
+    controller-manager: "true"
+spec:
+  containers:
+  - name: controller-manager
+    image: ${IMAGE}
+    imagePullPolicy: Always
+    terminationMessagePolicy: FallbackToLogsOnError
+    command: ["hyperkube", "kube-controller-manager"]
+    args:
+    - "--openshift-config=/etc/kubernetes/static-pod-resources/configmaps/deployment-kube-controller-manager-config/config.yaml"
+    volumeMounts:
+    - mountPath: /etc/kubernetes/static-pod-resources
+      name: resource-dir
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-DEPLOYMENT_ID
+    name: resource-dir
+
+`)
+
+func v3110KubeControllerManagerPodYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerPodYaml, nil
+}
+
+func v3110KubeControllerManagerPodYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerPodYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/pod.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -457,16 +503,19 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v3.11.0/kube-controller-manager/cm.yaml":                      v3110KubeControllerManagerCmYaml,
-	"v3.11.0/kube-controller-manager/defaultconfig.yaml":           v3110KubeControllerManagerDefaultconfigYaml,
-	"v3.11.0/kube-controller-manager/deployment.yaml":              v3110KubeControllerManagerDeploymentYaml,
-	"v3.11.0/kube-controller-manager/ns.yaml":                      v3110KubeControllerManagerNsYaml,
-	"v3.11.0/kube-controller-manager/operator-config.yaml":         v3110KubeControllerManagerOperatorConfigYaml,
-	"v3.11.0/kube-controller-manager/public-info-role.yaml":        v3110KubeControllerManagerPublicInfoRoleYaml,
-	"v3.11.0/kube-controller-manager/public-info-rolebinding.yaml": v3110KubeControllerManagerPublicInfoRolebindingYaml,
-	"v3.11.0/kube-controller-manager/public-info.yaml":             v3110KubeControllerManagerPublicInfoYaml,
-	"v3.11.0/kube-controller-manager/sa.yaml":                      v3110KubeControllerManagerSaYaml,
-	"v3.11.0/kube-controller-manager/svc.yaml":                     v3110KubeControllerManagerSvcYaml,
+	"v3.11.0/kube-controller-manager/cm.yaml":                            v3110KubeControllerManagerCmYaml,
+	"v3.11.0/kube-controller-manager/defaultconfig.yaml":                 v3110KubeControllerManagerDefaultconfigYaml,
+	"v3.11.0/kube-controller-manager/installer-cluster-rolebinding.yaml": v3110KubeControllerManagerInstallerClusterRolebindingYaml,
+	"v3.11.0/kube-controller-manager/installer-sa.yaml":                  v3110KubeControllerManagerInstallerSaYaml,
+	"v3.11.0/kube-controller-manager/ns.yaml":                            v3110KubeControllerManagerNsYaml,
+	"v3.11.0/kube-controller-manager/operator-config.yaml":               v3110KubeControllerManagerOperatorConfigYaml,
+	"v3.11.0/kube-controller-manager/pod-cm.yaml":                        v3110KubeControllerManagerPodCmYaml,
+	"v3.11.0/kube-controller-manager/pod.yaml":                           v3110KubeControllerManagerPodYaml,
+	"v3.11.0/kube-controller-manager/public-info-role.yaml":              v3110KubeControllerManagerPublicInfoRoleYaml,
+	"v3.11.0/kube-controller-manager/public-info-rolebinding.yaml":       v3110KubeControllerManagerPublicInfoRolebindingYaml,
+	"v3.11.0/kube-controller-manager/public-info.yaml":                   v3110KubeControllerManagerPublicInfoYaml,
+	"v3.11.0/kube-controller-manager/sa.yaml":                            v3110KubeControllerManagerSaYaml,
+	"v3.11.0/kube-controller-manager/svc.yaml":                           v3110KubeControllerManagerSvcYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -512,16 +561,19 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v3.11.0": {nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
-			"cm.yaml":                      {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
-			"defaultconfig.yaml":           {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
-			"deployment.yaml":              {v3110KubeControllerManagerDeploymentYaml, map[string]*bintree{}},
-			"ns.yaml":                      {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},
-			"operator-config.yaml":         {v3110KubeControllerManagerOperatorConfigYaml, map[string]*bintree{}},
-			"public-info-role.yaml":        {v3110KubeControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
-			"public-info-rolebinding.yaml": {v3110KubeControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
-			"public-info.yaml":             {v3110KubeControllerManagerPublicInfoYaml, map[string]*bintree{}},
-			"sa.yaml":                      {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
-			"svc.yaml":                     {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"cm.yaml":                            {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":                 {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"installer-cluster-rolebinding.yaml": {v3110KubeControllerManagerInstallerClusterRolebindingYaml, map[string]*bintree{}},
+			"installer-sa.yaml":                  {v3110KubeControllerManagerInstallerSaYaml, map[string]*bintree{}},
+			"ns.yaml":                            {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},
+			"operator-config.yaml":               {v3110KubeControllerManagerOperatorConfigYaml, map[string]*bintree{}},
+			"pod-cm.yaml":                        {v3110KubeControllerManagerPodCmYaml, map[string]*bintree{}},
+			"pod.yaml":                           {v3110KubeControllerManagerPodYaml, map[string]*bintree{}},
+			"public-info-role.yaml":              {v3110KubeControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
+			"public-info-rolebinding.yaml":       {v3110KubeControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
+			"public-info.yaml":                   {v3110KubeControllerManagerPublicInfoYaml, map[string]*bintree{}},
+			"sa.yaml":                            {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
+			"svc.yaml":                           {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
 		}},
 	}},
 }}

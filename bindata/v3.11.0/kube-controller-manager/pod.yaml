@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: openshift-kube-controller-manager
+  labels:
+    app: openshift-kube-controller-manager
+    controller-manager: "true"
+spec:
+  containers:
+  - name: controller-manager
+    image: ${IMAGE}
+    imagePullPolicy: Always
+    terminationMessagePolicy: FallbackToLogsOnError
+    command: ["hyperkube", "kube-controller-manager"]
+    args:
+    - "--openshift-config=/etc/kubernetes/static-pod-resources/configmaps/deployment-kube-controller-manager-config/config.yaml"
+    volumeMounts:
+    - mountPath: /etc/kubernetes/static-pod-resources
+      name: resource-dir
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-DEPLOYMENT_ID
+    name: resource-dir
+
