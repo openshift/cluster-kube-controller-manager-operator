@@ -63,11 +63,19 @@ func syncKubeControllerManager_v311_00_to_latest(c KubeControllerManagerOperator
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 
+	_, caBundleModified, err := resourceapply.SyncConfigMap(c.corev1Client, serviceCertSignerNamespaceName, "signing-cabundle", targetNamespaceName, "signing-cabundle")
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+	}
+
 	forceRollout := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
 	if saModified { // SA modification can cause new tokens
 		forceRollout = true
 	}
 	if configMapModified {
+		forceRollout = true
+	}
+	if caBundleModified {
 		forceRollout = true
 	}
 
