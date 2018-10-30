@@ -9,15 +9,20 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 
-	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/library-go/pkg/operator/staticpod/staticpodcontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+)
+
+const (
+	targetNamespaceName            = "openshift-kube-controller-manager"
+	serviceCertSignerNamespaceName = "openshift-service-cert-signer"
+	workQueueKey                   = "key"
 )
 
 func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
@@ -34,23 +39,19 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		return err
 	}
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
+	kubeInformersClusterScoped := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
 	kubeInformersForOpenshiftServiceCertSignerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(serviceCertSignerNamespaceName))
+	staticPodOperatorClient := &staticPodOperatorClient{
+		informers: operatorConfigInformers,
+		client:    operatorConfigClient.Kubecontrollermanager(),
+	}
 
 	v1alpha1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/operator-config.yaml"),
 		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "kubecontrollermanageroperatorconfigs"},
 		v1alpha1helpers.GetImageEnv,
-	)
-	operator := NewKubeControllerManagerOperator(
-		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
-		kubeInformersForOpenshiftServiceCertSignerNamespace,
-		operatorConfigClient.KubecontrollermanagerV1alpha1(),
-		kubeClient.AppsV1(),
-		kubeClient.CoreV1(),
-		kubeClient.RbacV1(),
 	)
 
 	configObserver := NewConfigObserver(
@@ -60,19 +61,50 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeClient,
 		clientConfig,
 	)
+	targetConfigReconciler := NewTargetConfigReconciler(
+		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		operatorConfigClient.KubecontrollermanagerV1alpha1(),
+		kubeClient,
+	)
 
+	deploymentController := staticpodcontroller.NewDeploymentController(
+		targetNamespaceName,
+		deploymentConfigMaps,
+		deploymentSecrets,
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		staticPodOperatorClient,
+		kubeClient,
+	)
+	installerController := staticpodcontroller.NewInstallerController(
+		targetNamespaceName,
+		deploymentConfigMaps,
+		deploymentSecrets,
+		[]string{"cluster-kube-controller-manager-operator", "installer"},
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		staticPodOperatorClient,
+		kubeClient,
+	)
+	nodeController := staticpodcontroller.NewNodeController(
+		staticPodOperatorClient,
+		kubeInformersClusterScoped,
+	)
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-kube-controller-manager",
 		"openshift-kube-controller-manager",
 		dynamicClient,
-		&operatorStatusProvider{informers: operatorConfigInformers},
+		staticPodOperatorClient,
 	)
 
 	operatorConfigInformers.Start(stopCh)
+	kubeInformersClusterScoped.Start(stopCh)
 	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(stopCh)
 	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(stopCh)
 
-	go operator.Run(1, stopCh)
+	go targetConfigReconciler.Run(1, stopCh)
+	go deploymentController.Run(1, stopCh)
+	go installerController.Run(1, stopCh)
+	go nodeController.Run(1, stopCh)
 	go configObserver.Run(1, stopCh)
 	go clusterOperatorStatus.Run(1, stopCh)
 
@@ -80,19 +112,15 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	return fmt.Errorf("stopped")
 }
 
-type operatorStatusProvider struct {
-	informers operatorclientinformers.SharedInformerFactory
+// deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.
+// the first element should be the configmap that contains the static pod manifest
+var deploymentConfigMaps = []string{
+	"kube-controller-manager-pod",
+	"deployment-kube-controller-manager-config",
+	"client-ca",
 }
 
-func (p *operatorStatusProvider) Informer() cache.SharedIndexInformer {
-	return p.informers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Informer()
-}
-
-func (p *operatorStatusProvider) CurrentStatus() (operatorv1alpha1.OperatorStatus, error) {
-	instance, err := p.informers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Lister().Get("instance")
-	if err != nil {
-		return operatorv1alpha1.OperatorStatus{}, err
-	}
-
-	return instance.Status.OperatorStatus, nil
+// deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
+var deploymentSecrets = []string{
+	"serving-cert",
 }
