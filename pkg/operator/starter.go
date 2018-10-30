@@ -42,6 +42,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersClusterScoped := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
 	kubeInformersForOpenshiftServiceCertSignerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(serviceCertSignerNamespaceName))
+	kubeInformersForKubeSystemNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace("kube-system"))
 	staticPodOperatorClient := &staticPodOperatorClient{
 		informers: operatorConfigInformers,
 		client:    operatorConfigClient.Kubecontrollermanager(),
@@ -57,6 +58,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	configObserver := NewConfigObserver(
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		kubeInformersForKubeSystemNamespace,
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
 		kubeClient,
 		clientConfig,
@@ -100,6 +102,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersClusterScoped.Start(stopCh)
 	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(stopCh)
 	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(stopCh)
+	kubeInformersForKubeSystemNamespace.Start(stopCh)
 
 	go targetConfigReconciler.Run(1, stopCh)
 	go deploymentController.Run(1, stopCh)
