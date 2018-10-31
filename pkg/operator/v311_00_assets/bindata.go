@@ -263,6 +263,7 @@ var _v3110KubeControllerManagerPodYaml = []byte(`apiVersion: v1
 kind: Pod
 metadata:
   name: openshift-kube-controller-manager
+  namespace: openshift-kube-controller-manager
   labels:
     app: openshift-kube-controller-manager
     controller-manager: "true"
