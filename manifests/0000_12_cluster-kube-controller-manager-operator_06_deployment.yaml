@@ -32,7 +32,7 @@ spec:
         - name: IMAGE
           value: quay.io/openshift/origin-hyperkube:v4.0
         - name: OPERATOR_IMAGE
-          value: docker.io/openshift/origin-cluster-kube-apiserver-operator:v4.0
+          value: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
         terminationMessagePolicy: FallbackToLogsOnError
       volumes:
       - name: serving-cert
