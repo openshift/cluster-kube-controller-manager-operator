@@ -214,7 +214,7 @@ spec:
   imagePullSpec: openshift/origin-hypershift:latest
   version: 3.11.0
   logging:
-    level: 4
+    level: 2
   replicas: 2
 `)
 
@@ -275,7 +275,8 @@ spec:
     terminationMessagePolicy: FallbackToLogsOnError
     command: ["hyperkube", "kube-controller-manager"]
     args:
-    - "--openshift-config=/etc/kubernetes/static-pod-resources/configmaps/deployment-kube-controller-manager-config/config.yaml"
+    - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/deployment-kube-controller-manager-config/config.yaml
+    - --kubeconfig=/etc/kubernetes/static-pod-resources/secrets/controller-manager-kubeconfig/kubeconfig
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
