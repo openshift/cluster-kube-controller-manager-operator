@@ -30,7 +30,7 @@ type KubeControllerManagerOperatorConfig struct {
 type KubeControllerManagerOperatorConfigSpec struct {
 	operatorsv1alpha1api.OperatorSpec `json:",inline"`
 
-	// forceRedeploymentReason can be used to force the redeployment of the kube-apiserver by providing a unique string.
+	// forceRedeploymentReason can be used to force the redeployment of the kube-controller-manager by providing a unique string.
 	// This provides a mechanism to kick a previously failed deployment and provide a reason why you think it will work
 	// this time instead of failing again on the same config.
 	ForceRedeploymentReason string `json:"forceRedeploymentReason"`

@@ -50,7 +50,7 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 	}
 	_, _, err = managePod_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-apiserver-pod", err))
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
 	configData := ""
 	if controllerManagerConfig != nil {

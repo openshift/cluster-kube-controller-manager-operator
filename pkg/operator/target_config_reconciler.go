@@ -131,7 +131,7 @@ func (c TargetConfigReconciler) sync() error {
 	return nil
 }
 
-// Run starts the kube-apiserver and blocks until stopCh is closed.
+// Run starts the kube-controller-manager and blocks until stopCh is closed.
 func (c *TargetConfigReconciler) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
