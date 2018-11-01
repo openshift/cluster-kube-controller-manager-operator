@@ -38,11 +38,6 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 		}
 	}
 
-	_, _, err := resourceapply.SyncSecret(c.kubeClient.CoreV1(), "kube-system", "controller-manager-kubeconfig", targetNamespaceName, "controller-manager-kubeconfig")
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "secret/controller-manager-kubeconfig", err))
-	}
-
 	controllerManagerConfig, _, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
