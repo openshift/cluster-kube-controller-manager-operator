@@ -116,6 +116,14 @@ extendedArguments:
   - "720h"
   port:
   - "10252"
+  root-ca-file:
+  - "/etc/kubernetes/static-pod-resources/configmaps/client-ca/ca-bundle.crt"
+  service-account-private-key-file:
+  - "/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"
+  cluster-signing-cert-file:
+  - "/etc/kubernetes/static-pod-resources/secrets/cluster-signing-ca/kube-ca.crt"
+  cluster-signing-key-file:
+  - "/etc/kubernetes/static-pod-resources/secrets/cluster-signing-ca/kube-ca.key"
 `)
 
 func v3110KubeControllerManagerDefaultconfigYamlBytes() ([]byte, error) {
