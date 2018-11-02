@@ -122,6 +122,8 @@ var deploymentConfigMaps = []string{
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
 var deploymentSecrets = []string{
-	"serving-cert",
+	"cluster-signing-ca",
 	"controller-manager-kubeconfig",
+	"service-account-private-key",
+	"serving-cert",
 }
