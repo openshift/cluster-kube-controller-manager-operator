@@ -7,8 +7,10 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +46,7 @@ type ConfigObserver struct {
 func NewConfigObserver(
 	operatorConfigInformer operatorconfiginformerv1alpha1.KubeControllerManagerOperatorConfigInformer,
 	kubeInformersForOpenShiftKubeControllerManagerNamespace informers.SharedInformerFactory,
+	kubeInformersForKubeSystemNamespace informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface,
 	kubeClient kubernetes.Interface,
 	clientConfig *rest.Config,
@@ -56,11 +59,14 @@ func NewConfigObserver(
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
 
 		rateLimiter: flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
-		observers:   []observeConfigFunc{},
+		observers: []observeConfigFunc{
+			observeClusterConfig,
+		},
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenShiftKubeControllerManagerNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 	return c
 }
 
@@ -95,6 +101,60 @@ func (c ConfigObserver) sync() error {
 	}
 
 	return nil
+}
+
+// observeClusterConfig observes cloud provider configuration from
+// cluster-config-v1 in order to configure kube-controller-manager's cloud
+// provider.
+func observeClusterConfig(kubeClient kubernetes.Interface, clientConfig *rest.Config, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+	clusterConfig, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get("cluster-config-v1", metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		glog.Warningf("cluster-config-v1 not found in the kube-system namespace")
+		return observedConfig, nil
+	}
+	if err != nil {
+		return observedConfig, err
+	}
+
+	installConfigYaml, ok := clusterConfig.Data["install-config"]
+	if !ok {
+		return observedConfig, nil
+	}
+	installConfig := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
+	if err != nil {
+		glog.Warningf("Unable to parse install-config: %s", err)
+		return observedConfig, nil
+	}
+
+	// extract needed values
+	//  data:
+	//   install-config:
+	//     platform:
+	//       aws: {}
+	platform, ok := installConfig["platform"].(map[string]interface{})
+	if !ok {
+		glog.Warningf("Unable to parse install-config: %s", err)
+		return observedConfig, nil
+	}
+
+	cloudProvider := ""
+	switch {
+	case platform["aws"] != nil:
+		cloudProvider = "aws"
+	default:
+		glog.Warningf("No recognized cloud provider found in install-config/platform")
+		return observedConfig, nil
+	}
+
+	// set observed values
+	//  extendedArguments:
+	//    cloud-provider:
+	//    - "name"
+	unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider},
+		"extendedArguments", "cloud-provider")
+
+	return observedConfig, nil
 }
 
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
