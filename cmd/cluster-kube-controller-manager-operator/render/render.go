@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
@@ -14,7 +12,6 @@ import (
 
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
-	"github.com/openshift/library-go/pkg/assets"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
 )
@@ -67,10 +64,10 @@ func (r *renderOpts) AddFlags(fs *pflag.FlagSet) {
 	r.manifest.AddFlags(fs, "controller manager")
 	r.generic.AddFlags(fs, kubecontrolplanev1.GroupVersion.WithKind("KubeControllerManagerConfig"))
 
-	// TODO: remove after the transition in the installer to a phase-2 free bootstrapping
+	// TODO: remove when the installer has stopped using it
 	fs.BoolVar(&r.disablePhase2, "disable-phase-2", r.disablePhase2, "Disable rendering of the phase 2 daemonset and dependencies.")
 	fs.MarkHidden("disable-phase-2")
-	fs.MarkDeprecated("disable-phase-2", "Only used temporarily to synchronize roll out of the phase 2 removal.")
+	fs.MarkDeprecated("disable-phase-2", "Only used temporarily to synchronize roll out of the phase 2 removal. Does nothing anymore.")
 }
 
 // Validate verifies the inputs.
@@ -118,21 +115,7 @@ func (r *renderOpts) Run() error {
 		renderConfig.Assets["kubeconfig"] = kubeConfig
 	}
 
-	// TODO: remove after the transition in the installer to a phase-2 free bootstrapping
-	var filters []assets.FileInfoPredicate
-	if r.disablePhase2 {
-		filters = append(filters, func(info os.FileInfo) bool {
-			if strings.HasPrefix(info.Name(), "kube-system-") {
-				return false
-			}
-			if info.Name() == "daemonset-kube-controller-manager.yaml" {
-				return false
-			}
-			return true
-		})
-	}
-
-	return genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig, filters...)
+	return genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig)
 }
 
 func (r *renderOpts) readBootstrapSecretsKubeconfig() ([]byte, error) {
