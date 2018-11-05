@@ -14,7 +14,8 @@ import (
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
-	"github.com/openshift/library-go/pkg/operator/staticpod/staticpodcontroller"
+
+	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
 )
@@ -68,27 +69,17 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeClient,
 	)
 
-	deploymentController := staticpodcontroller.NewDeploymentController(
+	staticPodControllers := staticpod.NewControllers(
 		targetNamespaceName,
-		deploymentConfigMaps,
-		deploymentSecrets,
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
-		staticPodOperatorClient,
-		kubeClient,
-	)
-	installerController := staticpodcontroller.NewInstallerController(
-		targetNamespaceName,
-		deploymentConfigMaps,
-		deploymentSecrets,
 		[]string{"cluster-kube-controller-manager-operator", "installer"},
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		deploymentConfigMaps,
+		deploymentSecrets,
 		staticPodOperatorClient,
 		kubeClient,
-	)
-	nodeController := staticpodcontroller.NewNodeController(
-		staticPodOperatorClient,
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
 		kubeInformersClusterScoped,
 	)
+
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-kube-controller-manager",
 		"openshift-kube-controller-manager",
@@ -101,10 +92,8 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(stopCh)
 	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(stopCh)
 
+	go staticPodControllers.Run(stopCh)
 	go targetConfigReconciler.Run(1, stopCh)
-	go deploymentController.Run(1, stopCh)
-	go installerController.Run(1, stopCh)
-	go nodeController.Run(1, stopCh)
 	go configObserver.Run(1, stopCh)
 	go clusterOperatorStatus.Run(1, stopCh)
 
