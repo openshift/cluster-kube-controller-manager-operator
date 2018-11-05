@@ -29,8 +29,6 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 		"v3.11.0/kube-controller-manager/public-info-rolebinding.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",
-		"v3.11.0/kube-controller-manager/installer-sa.yaml",
-		"v3.11.0/kube-controller-manager/installer-cluster-rolebinding.yaml",
 	)
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {

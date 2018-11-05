@@ -15,6 +15,7 @@ import (
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 
+	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
 )
@@ -68,29 +69,17 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeClient,
 	)
 
-	/*
-		deploymentController := staticpodcontroller.NewDeploymentController(
-			targetNamespaceName,
-			deploymentConfigMaps,
-			deploymentSecrets,
-			kubeInformersForOpenShiftKubeControllerManagerNamespace,
-			staticPodOperatorClient,
-			kubeClient,
-		)
-		installerController := staticpodcontroller.NewInstallerController(
-			targetNamespaceName,
-			deploymentConfigMaps,
-			deploymentSecrets,
-			[]string{"cluster-kube-controller-manager-operator", "installer"},
-			kubeInformersForOpenShiftKubeControllerManagerNamespace,
-			staticPodOperatorClient,
-			kubeClient,
-		)
-		nodeController := staticpodcontroller.NewNodeController(
-			staticPodOperatorClient,
-			kubeInformersClusterScoped,
-		)
-	*/
+	staticPodControllers := staticpod.NewControllers(
+		targetNamespaceName,
+		[]string{"cluster-kube-controller-manager-operator", "installer"},
+		deploymentConfigMaps,
+		deploymentSecrets,
+		staticPodOperatorClient,
+		kubeClient,
+		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		kubeInformersClusterScoped,
+	)
+
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-kube-controller-manager",
 		"openshift-kube-controller-manager",
@@ -103,6 +92,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(stopCh)
 	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(stopCh)
 
+	go staticPodControllers.Run(stopCh)
 	go targetConfigReconciler.Run(1, stopCh)
 	go configObserver.Run(1, stopCh)
 	go clusterOperatorStatus.Run(1, stopCh)
