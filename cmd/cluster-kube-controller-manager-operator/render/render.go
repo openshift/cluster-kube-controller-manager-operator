@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -14,6 +15,8 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -25,8 +28,9 @@ type renderOpts struct {
 	manifest genericrenderoptions.ManifestOptions
 	generic  genericrenderoptions.GenericOptions
 
-	disablePhase2 bool
-	errOut        io.Writer
+	clusterConfigFile string
+	disablePhase2     bool
+	errOut            io.Writer
 }
 
 // NewRenderCommand creates a render command.
@@ -64,6 +68,8 @@ func (r *renderOpts) AddFlags(fs *pflag.FlagSet) {
 	r.manifest.AddFlags(fs, "controller manager")
 	r.generic.AddFlags(fs, kubecontrolplanev1.GroupVersion.WithKind("KubeControllerManagerConfig"))
 
+	fs.StringVar(&r.clusterConfigFile, "cluster-config-file", r.clusterConfigFile, "Openshift Cluster API Config file.")
+
 	// TODO: remove when the installer has stopped using it
 	fs.BoolVar(&r.disablePhase2, "disable-phase-2", r.disablePhase2, "Disable rendering of the phase 2 daemonset and dependencies.")
 	fs.MarkHidden("disable-phase-2")
@@ -78,6 +84,7 @@ func (r *renderOpts) Validate() error {
 	if err := r.generic.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -92,9 +99,58 @@ func (r *renderOpts) Complete() error {
 	return nil
 }
 
+type TemplateData struct {
+	genericrenderoptions.TemplateData
+
+	ClusterCIDR           []string
+	ServiceClusterIPRange []string
+}
+
+func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
+	configJson, err := yaml.YAMLToJSON(clusterConfigFileData)
+	if err != nil {
+		return err
+	}
+
+	clusterConfigObj, err := runtime.Decode(unstructured.UnstructuredJSONScheme, configJson)
+	if err != nil {
+		return err
+	}
+	clusterConfig, ok := clusterConfigObj.(*unstructured.Unstructured)
+	if !ok {
+		return fmt.Errorf("unexpected object in %t", clusterConfigObj)
+	}
+
+	if clusterCIDR, found, err := unstructured.NestedStringSlice(
+		clusterConfig.Object, "spec", "clusterNetwork", "pods", "cidrBlocks"); found && err == nil {
+		renderConfig.ClusterCIDR = clusterCIDR
+	}
+	if err != nil {
+		return err
+	}
+	if serviceClusterIPRange, found, err := unstructured.NestedStringSlice(
+		clusterConfig.Object, "spec", "clusterNetwork", "services", "cidrBlocks"); found && err == nil {
+		renderConfig.ServiceClusterIPRange = serviceClusterIPRange
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Run contains the logic of the render command.
 func (r *renderOpts) Run() error {
-	renderConfig := genericrenderoptions.TemplateData{}
+	renderConfig := TemplateData{}
+	if len(r.clusterConfigFile) > 0 {
+		clusterConfigFileData, err := ioutil.ReadFile(r.clusterConfigFile)
+		if err != nil {
+			return err
+		}
+		err = discoverRestrictedCIDRs(clusterConfigFileData, &renderConfig)
+		if err != nil {
+			return fmt.Errorf("unable to parse restricted CIDRs from config: %v", err)
+		}
+	}
 	if err := r.manifest.ApplyTo(&renderConfig.ManifestConfig); err != nil {
 		return err
 	}
