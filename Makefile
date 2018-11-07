@@ -33,18 +33,3 @@ images:
 clean:
 	$(RM) ./cluster-kube-controller-manager-operator
 .PHONY: clean
-
-, := ,
-IMAGES ?= cluster-kube-controller-manager-operator
-QUOTED_IMAGES=\"$(subst $(,),\"$(,)\",$(IMAGES))\"
-
-origin-release:
-	docker pull registry.svc.ci.openshift.org/openshift/origin-release:v4.0
-	imagebuilder -file hack/lib/Dockerfile-origin-release --build-arg "IMAGE_REPOSITORY_NAME=$(IMAGE_REPOSITORY_NAME)" --build-arg "IMAGES=$(QUOTED_IMAGES)" -t "$(IMAGE_REPOSITORY_NAME)/origin-release:latest" hack
-	@echo
-	@echo "To install:"
-	@echo
-	@echo "  IMAGE_REPOSITORY_NAME=$(IMAGE_REPOSITORY_NAME) make images"
-	@echo "  docker push $(IMAGE_REPOSITORY_NAME)/origin-release:latest"
-	@echo "  docker push $(IMAGE_REPOSITORY_NAME)/origin-cluster-kube-controller-manager-operator"
-	@echo "  OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=$(IMAGE_REPOSITORY_NAME)/origin-release:latest bin/openshift-install cluster --log-level=debug"
