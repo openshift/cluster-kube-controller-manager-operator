@@ -11,3 +11,11 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kube-ca.key"
   port:
   - "0"
+  {{if .ClusterCIDR }}
+  cluster-cidr: {{range .ClusterCIDR}}
+  - {{.}}{{end}}
+  {{end}}
+  {{if .ServiceClusterIPRange }}
+  service-cluster-ip-range: {{range .ServiceClusterIPRange}}
+  - {{.}}{{end}}
+  {{end}}
