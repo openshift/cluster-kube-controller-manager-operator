@@ -14,7 +14,6 @@ import (
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
-
 	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
@@ -41,12 +40,12 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	}
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersClusterScoped := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
-	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
+	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
 	kubeInformersForOpenshiftServiceCertSignerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(serviceCertSignerNamespaceName))
 	kubeInformersForKubeSystemNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace("kube-system"))
 	staticPodOperatorClient := &staticPodOperatorClient{
 		informers: operatorConfigInformers,
-		client:    operatorConfigClient.Kubecontrollermanager(),
+		client:    operatorConfigClient.KubecontrollermanagerV1alpha1(),
 	}
 
 	v1alpha1helpers.EnsureOperatorConfigExists(
@@ -61,8 +60,6 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
 		kubeInformersForKubeSystemNamespace,
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
-		kubeClient,
-		clientConfig,
 	)
 	targetConfigReconciler := NewTargetConfigReconciler(
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),

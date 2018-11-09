@@ -4,43 +4,59 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"reflect"
+	"strings"
 	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
+	"github.com/imdario/mergo"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/diff"
+	"k8s.io/apimachinery/pkg/util/rand"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/openshift/api/operator/v1alpha1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
+	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
 )
 
-type observeConfigFunc func(kubernetes.Interface, *rest.Config, map[string]interface{}) (map[string]interface{}, error)
+const configObservationErrorConditionReason = "ConfigObservationError"
+
+type Listers struct {
+	configmapLister corelistersv1.ConfigMapLister
+}
+
+// observeConfigFunc observes configuration and returns the observedConfig. This function should not return an
+// observedConfig that would cause the service being managed by the operator to crash. For example, if a required
+// configuration key cannot be observed, consider reusing the configuration key's previous value. Errors that occur
+// while attempting to generate the observedConfig should be returned in the errs slice.
+type observeConfigFunc func(listers Listers, existingConfig map[string]interface{}) (observedConfig map[string]interface{}, errs []error)
 
 type ConfigObserver struct {
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface
 
-	kubeClient   kubernetes.Interface
-	clientConfig *rest.Config
-
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 
-	rateLimiter flowcontrol.RateLimiter
-	observers   []observeConfigFunc
+	// observers are called in an undefined order and their results are merged to
+	// determine the observed configuration.
+	observers []observeConfigFunc
+
+	rateLimiter  flowcontrol.RateLimiter
+	listers      Listers
+	cachesSynced []cache.InformerSynced
 }
 
 func NewConfigObserver(
@@ -48,19 +64,19 @@ func NewConfigObserver(
 	kubeInformersForOpenShiftKubeControllerManagerNamespace informers.SharedInformerFactory,
 	kubeInformersForKubeSystemNamespace informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface,
-	kubeClient kubernetes.Interface,
-	clientConfig *rest.Config,
 ) *ConfigObserver {
 	c := &ConfigObserver{
 		operatorConfigClient: operatorConfigClient,
-		kubeClient:           kubeClient,
-		clientConfig:         clientConfig,
-
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
-
-		rateLimiter: flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
+		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
+		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 		observers: []observeConfigFunc{
-			observeClusterConfig,
+			observeCloudProviderNames,
+		},
+		listers: Listers{
+			configmapLister: kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
+		},
+		cachesSynced: []cache.InformerSynced{
+			kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
 		},
 	}
 
@@ -72,15 +88,6 @@ func NewConfigObserver(
 
 // sync reacts to a change in controller manager images.
 func (c ConfigObserver) sync() error {
-	var err error
-	observedConfig := map[string]interface{}{}
-
-	for _, observer := range c.observers {
-		observedConfig, err = observer(c.kubeClient, c.clientConfig, observedConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	operatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
 	if err != nil {
@@ -90,41 +97,98 @@ func (c ConfigObserver) sync() error {
 	// don't worry about errors
 	currentConfig := map[string]interface{}{}
 	json.NewDecoder(bytes.NewBuffer(operatorConfig.Spec.ObservedConfig.Raw)).Decode(&currentConfig)
-	if reflect.DeepEqual(currentConfig, observedConfig) {
-		return nil
+
+	var (
+		errs            []error
+		observedConfigs []map[string]interface{}
+	)
+	for _, i := range rand.Perm(len(c.observers)) {
+		observedConfig, currErrs := c.observers[i](c.listers, currentConfig)
+		observedConfigs = append(observedConfigs, observedConfig)
+		errs = append(errs, currErrs...)
 	}
 
-	glog.Infof("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, observedConfig))
-	operatorConfig.Spec.ObservedConfig = runtime.RawExtension{Object: &unstructured.Unstructured{Object: observedConfig}}
-	if _, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Update(operatorConfig); err != nil {
-		return err
+	mergedObservedConfig := map[string]interface{}{}
+	for _, observedConfig := range observedConfigs {
+		mergo.Merge(&mergedObservedConfig, observedConfig)
+	}
+
+	if !equality.Semantic.DeepEqual(currentConfig, mergedObservedConfig) {
+		glog.Infof("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, mergedObservedConfig))
+		operatorConfig.Spec.ObservedConfig = runtime.RawExtension{Object: &unstructured.Unstructured{Object: mergedObservedConfig}}
+		updatedOperatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Update(operatorConfig)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("kubecontrollermanageroperatorconfigs/instance: error writing updated observed config: %v", err))
+		} else {
+			operatorConfig = updatedOperatorConfig
+		}
+	}
+
+	status := operatorConfig.Status.DeepCopy()
+	if len(errs) > 0 {
+		var messages []string
+		for _, currentError := range errs {
+			messages = append(messages, currentError.Error())
+		}
+		v1alpha1helpers.SetOperatorCondition(&status.Conditions, v1alpha1.OperatorCondition{
+			Type:    v1alpha1.OperatorStatusTypeFailing,
+			Status:  v1alpha1.ConditionTrue,
+			Reason:  configObservationErrorConditionReason,
+			Message: strings.Join(messages, "\n"),
+		})
+	} else {
+		condition := v1alpha1helpers.FindOperatorCondition(status.Conditions, v1alpha1.OperatorStatusTypeFailing)
+		if condition != nil && condition.Status != v1alpha1.ConditionFalse && condition.Reason == configObservationErrorConditionReason {
+			condition.Status = v1alpha1.ConditionFalse
+			condition.Reason = ""
+			condition.Message = ""
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(operatorConfig.Status, status) {
+		operatorConfig.Status = *status
+		_, err = c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// observeClusterConfig observes cloud provider configuration from
+// observeCloudProviderNames observes cloud provider configuration from
 // cluster-config-v1 in order to configure kube-controller-manager's cloud
 // provider.
-func observeClusterConfig(kubeClient kubernetes.Interface, clientConfig *rest.Config, observedConfig map[string]interface{}) (map[string]interface{}, error) {
-	clusterConfig, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get("cluster-config-v1", metav1.GetOptions{})
+func observeCloudProviderNames(listers Listers, existingConfig map[string]interface{}) (map[string]interface{}, []error) {
+	var errs []error
+	cloudProvidersPath := []string{"extendedArguments", "cloud-provider"}
+
+	previouslyObservedConfig := map[string]interface{}{}
+	if currentCloudProvider, _, _ := unstructured.NestedStringSlice(existingConfig, cloudProvidersPath...); len(currentCloudProvider) > 0 {
+		unstructured.SetNestedStringSlice(previouslyObservedConfig, currentCloudProvider, cloudProvidersPath...)
+	}
+
+	observedConfig := map[string]interface{}{}
+	clusterConfig, err := listers.configmapLister.ConfigMaps("kube-system").Get("cluster-config-v1")
 	if errors.IsNotFound(err) {
-		glog.Warningf("cluster-config-v1 not found in the kube-system namespace")
-		return observedConfig, nil
+		glog.Warning("configmap/cluster-config-v1.kube-system: not found")
+		return observedConfig, errs
 	}
 	if err != nil {
-		return observedConfig, err
+		errs = append(errs, err)
+		return previouslyObservedConfig, errs
 	}
 
 	installConfigYaml, ok := clusterConfig.Data["install-config"]
 	if !ok {
-		return observedConfig, nil
+		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config not found"))
+		return previouslyObservedConfig, errs
 	}
 	installConfig := map[string]interface{}{}
 	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
 	if err != nil {
 		glog.Warningf("Unable to parse install-config: %s", err)
-		return observedConfig, nil
+		return previouslyObservedConfig, errs
 	}
 
 	// extract needed values
@@ -132,29 +196,27 @@ func observeClusterConfig(kubeClient kubernetes.Interface, clientConfig *rest.Co
 	//   install-config:
 	//     platform:
 	//       aws: {}
-	platform, ok := installConfig["platform"].(map[string]interface{})
-	if !ok {
-		glog.Warningf("Unable to parse install-config: %s", err)
-		return observedConfig, nil
-	}
-
+	// only aws supported for now
 	cloudProvider := ""
+	platform, ok := installConfig["platform"].(map[string]interface{})
 	switch {
+	case !ok:
+		glog.Warning("configmap/cluster-config-v1.kube-system: install-config/platform not found")
+		return previouslyObservedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
 	default:
-		glog.Warningf("No recognized cloud provider found in install-config/platform")
-		return observedConfig, nil
+		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: no recognized cloud provider platform found"))
+		return previouslyObservedConfig, errs
 	}
 
 	// set observed values
 	//  extendedArguments:
 	//    cloud-provider:
 	//    - "name"
-	unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider},
-		"extendedArguments", "cloud-provider")
+	unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider}, cloudProvidersPath...)
 
-	return observedConfig, nil
+	return observedConfig, errs
 }
 
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
