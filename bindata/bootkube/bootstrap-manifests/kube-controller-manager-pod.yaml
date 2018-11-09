@@ -15,6 +15,8 @@ spec:
   - name: kube-controller-manager
     image: {{ .Image }}
     imagePullPolicy: {{ .ImagePullPolicy }}
+    ports:
+      - containerPort: 10257
     command: ["/bin/bash", "-c"]
     args:
     - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
@@ -33,9 +35,11 @@ spec:
       readOnly: true
     livenessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
   volumes:
   - hostPath:
       path: {{ .SecretsHostPath }}

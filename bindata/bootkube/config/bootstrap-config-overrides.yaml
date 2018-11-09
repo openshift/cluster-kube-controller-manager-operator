@@ -9,6 +9,8 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kube-ca.crt"
   cluster-signing-key-file:
   - "/etc/kubernetes/secrets/kube-ca.key"
+  secure-port:
+  - "10257"
   port:
   - "0"
   {{if .ClusterCIDR }}
