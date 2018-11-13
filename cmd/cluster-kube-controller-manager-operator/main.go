@@ -13,8 +13,8 @@ import (
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 
-	"github.com/openshift/cluster-kube-controller-manager-operator/cmd/cluster-kube-controller-manager-operator/render"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/operator"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/library-go/pkg/operator/staticpod/installerpod"
 )
 
