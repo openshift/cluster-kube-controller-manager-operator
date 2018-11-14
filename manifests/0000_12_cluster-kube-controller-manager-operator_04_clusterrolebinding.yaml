@@ -7,5 +7,5 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  namespace: openshift-core-operators
+  namespace: openshift-cluster-kube-controller-manager-operator
   name: openshift-cluster-kube-controller-manager-operator
