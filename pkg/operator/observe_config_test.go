@@ -6,12 +6,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
+	corelistersv1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
-func TestObserveClusterConfig(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset(&corev1.ConfigMap{
+func TestObserveCloudProviderNames(t *testing.T) {
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	indexer.Add(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster-config-v1",
 			Namespace: "kube-system",
@@ -20,9 +21,12 @@ func TestObserveClusterConfig(t *testing.T) {
 			"install-config": "platform:\n  aws: {}\n",
 		},
 	})
-	result, err := observeClusterConfig(kubeClient, &rest.Config{}, map[string]interface{}{})
-	if err != nil {
-		t.Fatal(err)
+	listers := Listers{
+		configmapLister: corelistersv1.NewConfigMapLister(indexer),
+	}
+	result, errs := observeCloudProviderNames(listers, map[string]interface{}{})
+	if len(errs) > 0 {
+		t.Fatal(errs)
 	}
 	cloudProvider, _, err := unstructured.NestedSlice(result, "extendedArguments", "cloud-provider")
 	if err != nil {
