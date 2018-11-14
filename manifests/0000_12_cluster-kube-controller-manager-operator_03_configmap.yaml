@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  namespace: openshift-core-operators
+  namespace: openshift-cluster-kube-controller-manager-operator
   name: openshift-cluster-kube-controller-manager-operator-config
 data:
   config.yaml: |
