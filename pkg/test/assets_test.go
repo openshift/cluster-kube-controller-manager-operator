@@ -5,8 +5,8 @@ import (
 
 	"github.com/ghodss/yaml"
 
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/library-go/pkg/assets"
-	"github.com/openshift/library-go/pkg/operator/render/options"
 )
 
 func TestYamlCorrectness(t *testing.T) {
@@ -15,7 +15,7 @@ func TestYamlCorrectness(t *testing.T) {
 }
 
 func readAllYaml(path string, t *testing.T) {
-	manifests, err := assets.New(path, options.TemplateData{}, assets.OnlyYaml)
+	manifests, err := assets.New(path, render.TemplateData{}, assets.OnlyYaml)
 	if err != nil {
 		t.Errorf("Unexpected error reading manifests from %s: %v", path, err)
 	}
