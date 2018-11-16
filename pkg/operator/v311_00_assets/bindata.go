@@ -223,6 +223,7 @@ metadata:
   labels:
     app: openshift-kube-controller-manager
     controller-manager: "true"
+    revision: "REVISION"
 spec:
   containers:
   - name: controller-manager
@@ -239,7 +240,7 @@ spec:
   hostNetwork: true
   volumes:
   - hostPath:
-      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-DEPLOYMENT_ID
+      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION
     name: resource-dir
 
 `)

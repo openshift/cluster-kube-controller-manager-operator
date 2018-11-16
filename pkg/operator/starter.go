@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,6 +63,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
 	)
 	targetConfigReconciler := NewTargetConfigReconciler(
+		os.Getenv("IMAGE"),
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
@@ -70,6 +72,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 
 	staticPodControllers := staticpod.NewControllers(
 		targetNamespaceName,
+		"openshift-kube-controller-manager",
 		[]string{"cluster-kube-controller-manager-operator", "installer"},
 		deploymentConfigMaps,
 		deploymentSecrets,

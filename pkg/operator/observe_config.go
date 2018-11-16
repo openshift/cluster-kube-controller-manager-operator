@@ -11,7 +11,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/imdario/mergo"
 
-	"github.com/openshift/api/operator/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,9 +26,10 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
-	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+	v1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 const configObservationErrorConditionReason = "ConfigObservationError"
@@ -132,16 +132,16 @@ func (c ConfigObserver) sync() error {
 		for _, currentError := range errs {
 			messages = append(messages, currentError.Error())
 		}
-		v1alpha1helpers.SetOperatorCondition(&status.Conditions, v1alpha1.OperatorCondition{
-			Type:    v1alpha1.OperatorStatusTypeFailing,
-			Status:  v1alpha1.ConditionTrue,
+		v1helpers.SetOperatorCondition(&status.Conditions, operatorv1.OperatorCondition{
+			Type:    operatorv1.OperatorStatusTypeFailing,
+			Status:  operatorv1.ConditionTrue,
 			Reason:  configObservationErrorConditionReason,
 			Message: strings.Join(messages, "\n"),
 		})
 	} else {
-		condition := v1alpha1helpers.FindOperatorCondition(status.Conditions, v1alpha1.OperatorStatusTypeFailing)
-		if condition != nil && condition.Status != v1alpha1.ConditionFalse && condition.Reason == configObservationErrorConditionReason {
-			condition.Status = v1alpha1.ConditionFalse
+		condition := v1helpers.FindOperatorCondition(status.Conditions, operatorv1.OperatorStatusTypeFailing)
+		if condition != nil && condition.Status != operatorv1.ConditionFalse && condition.Reason == configObservationErrorConditionReason {
+			condition.Status = operatorv1.ConditionFalse
 			condition.Reason = ""
 			condition.Message = ""
 		}
