@@ -34,7 +34,7 @@ func TestCopyContent(t *testing.T) {
 		{
 			name: "basic",
 			o: InstallOptions{
-				Revision:               "006",
+				DeploymentID:           "006",
 				Namespace:              "some-ns",
 				PodConfigMapNamePrefix: "kube-apiserver-pod",
 				SecretNamePrefixes:     []string{"first", "second"},
