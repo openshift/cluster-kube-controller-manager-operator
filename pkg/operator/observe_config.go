@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/imdario/mergo"
 
+	"github.com/openshift/api/operator/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +27,6 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/openshift/api/operator/v1alpha1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
@@ -71,6 +71,8 @@ func NewConfigObserver(
 		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 		observers: []observeConfigFunc{
 			observeCloudProviderNames,
+			observeClusterCIDRs,
+			observeServiceClusterIPRanges,
 		},
 		listers: Listers{
 			configmapLister: kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
@@ -201,7 +203,7 @@ func observeCloudProviderNames(listers Listers, existingConfig map[string]interf
 	platform, ok := installConfig["platform"].(map[string]interface{})
 	switch {
 	case !ok:
-		glog.Warning("configmap/cluster-config-v1.kube-system: install-config/platform not found")
+		glog.Warning("configmap/cluster-config-v1.kube-system: install-config.platform not found")
 		return previouslyObservedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
@@ -215,6 +217,92 @@ func observeCloudProviderNames(listers Listers, existingConfig map[string]interf
 	//    cloud-provider:
 	//    - "name"
 	unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider}, cloudProvidersPath...)
+
+	return observedConfig, errs
+}
+
+func observeClusterCIDRs(listers Listers, existingConfig map[string]interface{}) (map[string]interface{}, []error) {
+	var errs []error
+	clusterCIDRsPath := []string{"extendedArguments", "cluster-cidr"}
+
+	previouslyObservedConfig := map[string]interface{}{}
+	if currentClusterCIDRBlocks, _, _ := unstructured.NestedStringSlice(existingConfig, clusterCIDRsPath...); len(currentClusterCIDRBlocks) > 0 {
+		unstructured.SetNestedStringSlice(previouslyObservedConfig, currentClusterCIDRBlocks, clusterCIDRsPath...)
+	}
+
+	observedConfig := map[string]interface{}{}
+	clusterConfig, err := listers.configmapLister.ConfigMaps("kube-system").Get("cluster-config-v1")
+	if errors.IsNotFound(err) {
+		glog.Warning("configmap/cluster-config-v1.kube-system: not found")
+		return observedConfig, errs
+	}
+	if err != nil {
+		errs = append(errs, err)
+		return previouslyObservedConfig, errs
+	}
+
+	installConfigYaml, ok := clusterConfig.Data["install-config"]
+	if !ok {
+		glog.Warning("configmap/cluster-config-v1.kube-system: install-config not found")
+		return observedConfig, errs
+	}
+	installConfig := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Unable to parse install-config: %s", err))
+		return previouslyObservedConfig, errs
+	}
+
+	podCIDR, _, _ := unstructured.NestedString(installConfig, "networking", "podCIDR")
+	if len(podCIDR) == 0 {
+		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config.networking.podCIDR not found"))
+		return previouslyObservedConfig, errs
+	}
+
+	unstructured.SetNestedStringSlice(observedConfig, []string{podCIDR}, clusterCIDRsPath...)
+
+	return observedConfig, errs
+}
+
+func observeServiceClusterIPRanges(listers Listers, existingConfig map[string]interface{}) (map[string]interface{}, []error) {
+	var errs []error
+	serviceClusterIPRangePath := []string{"extendedArguments", "service-cluster-ip-range"}
+
+	previouslyObservedConfig := map[string]interface{}{}
+	if currentServiceClusterIPRanges, _, _ := unstructured.NestedStringSlice(existingConfig, serviceClusterIPRangePath...); len(currentServiceClusterIPRanges) > 0 {
+		unstructured.SetNestedStringSlice(previouslyObservedConfig, currentServiceClusterIPRanges, serviceClusterIPRangePath...)
+	}
+
+	observedConfig := map[string]interface{}{}
+	clusterConfig, err := listers.configmapLister.ConfigMaps("kube-system").Get("cluster-config-v1")
+	if errors.IsNotFound(err) {
+		glog.Warning("configmap/cluster-config-v1.kube-system: not found")
+		return observedConfig, errs
+	}
+	if err != nil {
+		errs = append(errs, err)
+		return previouslyObservedConfig, errs
+	}
+
+	installConfigYaml, ok := clusterConfig.Data["install-config"]
+	if !ok {
+		glog.Warning("configmap/cluster-config-v1.kube-system: install-config not found")
+		return observedConfig, errs
+	}
+	installConfig := map[string]interface{}{}
+	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Unable to parse install-config: %s", err))
+		return previouslyObservedConfig, errs
+	}
+
+	serviceCIDR, _, _ := unstructured.NestedString(installConfig, "networking", "serviceCIDR")
+	if len(serviceCIDR) == 0 {
+		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config.networking.serviceCIDR not found"))
+		return previouslyObservedConfig, errs
+	}
+
+	unstructured.SetNestedStringSlice(observedConfig, []string{serviceCIDR}, serviceClusterIPRangePath...)
 
 	return observedConfig, errs
 }
