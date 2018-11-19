@@ -73,7 +73,9 @@ func TestRenderCommand(t *testing.T) {
 	}{
 		{
 			name: "no-flags",
-			args: []string{},
+			args: []string{
+				"--templates-input-dir=" + templateDir,
+			},
 			errFunc: func(err error) {
 				if err == nil {
 					t.Fatalf("expected required flags error")
