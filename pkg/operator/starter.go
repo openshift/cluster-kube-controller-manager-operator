@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -56,11 +58,10 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		v1alpha1helpers.GetImageEnv,
 	)
 
-	configObserver := NewConfigObserver(
-		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+	configObserver := configobservercontroller.NewConfigObserver(
+		staticPodOperatorClient,
+		operatorConfigInformers,
 		kubeInformersForKubeSystemNamespace,
-		operatorConfigClient.KubecontrollermanagerV1alpha1(),
 	)
 	targetConfigReconciler := NewTargetConfigReconciler(
 		os.Getenv("IMAGE"),
