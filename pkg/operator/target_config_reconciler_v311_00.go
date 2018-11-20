@@ -25,8 +25,6 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
 		"v3.11.0/kube-controller-manager/ns.yaml",
-		"v3.11.0/kube-controller-manager/public-info-role.yaml",
-		"v3.11.0/kube-controller-manager/public-info-rolebinding.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",
 	)
@@ -36,7 +34,7 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 		}
 	}
 
-	controllerManagerConfig, _, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
+	_, _, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
@@ -47,14 +45,6 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 	_, _, err = managePod_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig, c.targetImagePullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
-	}
-	configData := ""
-	if controllerManagerConfig != nil {
-		configData = controllerManagerConfig.Data["config.yaml"]
-	}
-	_, _, err = manageKubeControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), configData, operatorConfig)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
 	if len(errors) > 0 {
@@ -111,11 +101,5 @@ func managePod_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorC
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
 	configMap.Data["forceRedeploymentReason"] = operatorConfig.Spec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
-	return resourceapply.ApplyConfigMap(client, configMap)
-}
-
-func manageKubeControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, controllerManagerConfigString string, operatorConfig *v1alpha1.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/public-info.yaml"))
-
 	return resourceapply.ApplyConfigMap(client, configMap)
 }
