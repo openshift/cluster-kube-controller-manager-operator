@@ -226,7 +226,7 @@ metadata:
     revision: "REVISION"
 spec:
   containers:
-  - name: controller-manager
+  - name: kube-controller-manager
     image: ${IMAGE}
     imagePullPolicy: Always
     terminationMessagePolicy: FallbackToLogsOnError
