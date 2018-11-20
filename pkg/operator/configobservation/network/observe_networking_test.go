@@ -15,34 +15,108 @@ import (
 )
 
 func TestObserveClusterCIDRs(t *testing.T) {
-	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	indexer.Add(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cluster-config-v1",
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"install-config": "networking:\n  podCIDR: podCIDR",
-		},
-	})
-	listers := configobservation.Listers{
-		ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
+	type Test struct {
+		name          string
+		config        *corev1.ConfigMap
+		expected      map[string]interface{}
+		expectedError bool
 	}
-	result, errs := ObserveClusterCIDRs(listers, map[string]interface{}{})
-	if len(errs) > 0 {
-		t.Fatal(errs)
-	}
-	expected := map[string]interface{}{
-		"extendedArguments": map[string]interface{}{
-			"cluster-cidr": []interface{}{
-				"podCIDR",
+	tests := []Test{
+		{
+			"podCIDR",
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-config-v1",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"install-config": "networking:\n  podCIDR: podCIDR",
+				},
 			},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"cluster-cidr": []interface{}{
+						"podCIDR",
+					},
+				},
+			},
+			false,
+		},
+		{
+			"clusterNetworks",
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-config-v1",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2",
+				},
+			},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"cluster-cidr": []interface{}{
+						"podCIDR1", "podCIDR2",
+					},
+				},
+			},
+			false,
+		},
+		{
+			"both podCIDR and clusterNetworks",
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-config-v1",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2\n  podCIDR: podCIDR",
+				},
+			},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"cluster-cidr": []interface{}{
+						"podCIDR1", "podCIDR2",
+					},
+				},
+			},
+			false,
+		},
+		{
+			"none",
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-config-v1",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"install-config": "networking: {}\n",
+				},
+			},
+			nil,
+			true,
 		},
 	}
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("\n===== observed config expected:\n%v\n===== observed config actual:\n%v", toYAML(expected), toYAML(result))
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			indexer.Add(test.config)
+			listers := configobservation.Listers{
+				ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
+			}
+			result, errs := ObserveClusterCIDRs(listers, map[string]interface{}{})
+			if len(errs) > 0 && !test.expectedError {
+				t.Fatal(errs)
+			} else if len(errs) == 0 {
+				if test.expectedError {
+					t.Fatalf("expected error, but got none")
+				}
+				if !reflect.DeepEqual(test.expected, result) {
+					t.Errorf("\n===== observed config expected:\n%v\n===== observed config actual:\n%v", toYAML(test.expected), toYAML(result))
+				}
+			}
+		})
 	}
-
 }
 
 func TestObserveServiceClusterIPRanges(t *testing.T) {
@@ -73,7 +147,6 @@ func TestObserveServiceClusterIPRanges(t *testing.T) {
 	if !reflect.DeepEqual(expected, result) {
 		t.Errorf("\n===== observed config expected:\n%v\n===== observed config actual:\n%v", toYAML(expected), toYAML(result))
 	}
-
 }
 
 func toYAML(o interface{}) string {

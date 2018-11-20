@@ -43,17 +43,41 @@ func ObserveClusterCIDRs(genericListers configobserver.Listers, existingConfig m
 	installConfig := map[string]interface{}{}
 	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
 	if err != nil {
-		errs = append(errs, fmt.Errorf("Unable to parse install-config: %s", err))
+		errs = append(errs, fmt.Errorf("unable to parse install-config: %s", err))
 		return previouslyObservedConfig, errs
 	}
 
-	podCIDR, _, _ := unstructured.NestedString(installConfig, "networking", "podCIDR")
-	if len(podCIDR) == 0 {
-		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config.networking.podCIDR not found"))
+	var clusterCIDRs []string
+	clusterNetworks, _, err := unstructured.NestedSlice(installConfig, "networking", "clusterNetworks")
+	if err != nil {
+		errs = append(errs, fmt.Errorf("unabled to parse install-config: %s", err))
 		return previouslyObservedConfig, errs
 	}
-
-	unstructured.SetNestedStringSlice(observedConfig, []string{podCIDR}, clusterCIDRsPath...)
+	for i, n := range clusterNetworks {
+		obj, ok := n.(map[string]interface{})
+		if !ok {
+			errs = append(errs, fmt.Errorf("unabled to parse install-config: expected networking.clusterNetworks[%d] to be an object, got: %#v", i, n))
+			return previouslyObservedConfig, errs
+		}
+		cidr, _, err := unstructured.NestedString(obj, "cidr")
+		if err != nil {
+			errs = append(errs, fmt.Errorf("unabled to parse install-config: %v", err))
+			return previouslyObservedConfig, errs
+		}
+		clusterCIDRs = append(clusterCIDRs, cidr)
+	}
+	// fallback to podCIDR
+	if clusterNetworks == nil {
+		podCIDR, _, _ := unstructured.NestedString(installConfig, "networking", "podCIDR")
+		if len(podCIDR) == 0 {
+			errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config.networking.clusterNetworks and install-config.networking.podCIDR not found"))
+			return previouslyObservedConfig, errs
+		}
+		clusterCIDRs = append(clusterCIDRs, podCIDR)
+	}
+	if len(clusterCIDRs) > 0 {
+		unstructured.SetNestedStringSlice(observedConfig, clusterCIDRs, clusterCIDRsPath...)
+	}
 
 	return observedConfig, errs
 }
