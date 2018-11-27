@@ -14,7 +14,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
-	v1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 // syncKubeControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
@@ -23,7 +23,7 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, op
 	operatorConfigOriginal := operatorConfig.DeepCopy()
 	errors := []error{}
 
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
 		"v3.11.0/kube-controller-manager/ns.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",

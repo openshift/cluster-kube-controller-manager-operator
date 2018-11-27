@@ -18,9 +18,11 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
-	v1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 type TargetConfigReconciler struct {
@@ -28,7 +30,8 @@ type TargetConfigReconciler struct {
 
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface
 
-	kubeClient kubernetes.Interface
+	kubeClient    kubernetes.Interface
+	eventRecorder events.Recorder
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -40,12 +43,14 @@ func NewTargetConfigReconciler(
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.KubecontrollermanagerV1alpha1Interface,
 	kubeClient kubernetes.Interface,
+	eventRecorder events.Recorder,
 ) *TargetConfigReconciler {
 	c := &TargetConfigReconciler{
 		targetImagePullSpec: targetImagePullSpec,
 
 		operatorConfigClient: operatorConfigClient,
 		kubeClient:           kubeClient,
+		eventRecorder:        eventRecorder,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
 	}
