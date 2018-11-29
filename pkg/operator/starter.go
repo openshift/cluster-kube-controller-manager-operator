@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
 
+	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
@@ -42,6 +43,11 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
+	configClient, err := configv1client.NewForConfig(ctx.KubeConfig)
+	if err != nil {
+		return err
+	}
+
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersClusterScoped := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
 	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
@@ -89,8 +95,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-cluster-kube-controller-manager-operator",
-		"openshift-cluster-kube-controller-manager-operator",
-		dynamicClient,
+		configClient.ConfigV1(),
 		staticPodOperatorClient,
 	)
 
