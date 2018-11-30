@@ -85,10 +85,6 @@ extendedArguments:
   - "true"
   configure-cloud-routes:
   - "false"
-  cluster-cidr:
-  - "10.2.0.0/16"
-  service-cluster-ip-range:
-  - "10.3.0.0/16"
   use-service-account-credentials:
   - "true"
   leader-elect:
@@ -122,7 +118,6 @@ extendedArguments:
   - "150" # this is a historical values
   kube-api-burst:
   - "300" # this is a historical values
-
 `)
 
 func v3110KubeControllerManagerDefaultconfigYamlBytes() ([]byte, error) {

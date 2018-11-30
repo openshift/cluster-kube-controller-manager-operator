@@ -38,6 +38,9 @@ type RevisionController struct {
 	// secrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
 	secrets []string
 
+	// validate checks the synched config maps and secrets before increasing the revision counter. It's optional.
+	validate ValidationFunc
+
 	operatorConfigClient common.OperatorClient
 
 	kubeClient kubernetes.Interface
@@ -48,11 +51,15 @@ type RevisionController struct {
 	eventRecorder events.Recorder
 }
 
+// ValidationFunc validates the synched config maps.
+type ValidationFunc func(map[string]*corev1.ConfigMap, map[string]*corev1.Secret) []error
+
 // NewRevisionController create a new revision controller.
 func NewRevisionController(
 	targetNamespace string,
 	configMaps []string,
 	secrets []string,
+	validate ValidationFunc,
 	kubeInformersForTargetNamespace informers.SharedInformerFactory,
 	operatorConfigClient common.OperatorClient,
 	kubeClient kubernetes.Interface,
@@ -62,6 +69,7 @@ func NewRevisionController(
 		targetNamespace: targetNamespace,
 		configMaps:      configMaps,
 		secrets:         secrets,
+		validate:        validate,
 
 		operatorConfigClient: operatorConfigClient,
 		kubeClient:           kubeClient,
@@ -92,7 +100,8 @@ func (c RevisionController) createRevisionIfNeeded(operatorSpec *operatorv1.Oper
 
 	nextRevision := latestRevision + 1
 	glog.Infof("new revision %d triggered by %q", nextRevision, reason)
-	if err := c.createNewRevision(nextRevision); err != nil {
+	configs, secrets, err := c.createNewRevision(nextRevision)
+	if err != nil {
 		cond := operatorv1.OperatorCondition{
 			Type:    "RevisionControllerFailing",
 			Status:  operatorv1.ConditionTrue,
@@ -104,6 +113,22 @@ func (c RevisionController) createRevisionIfNeeded(operatorSpec *operatorv1.Oper
 			return true, updateError
 		}
 		return true, nil
+	}
+
+	if c.validate != nil {
+		if errs := c.validate(configs, secrets); len(errs) > 0 {
+			cond := operatorv1.OperatorCondition{
+				Type:    "RevisionControllerFailing",
+				Status:  operatorv1.ConditionTrue,
+				Reason:  "ContentInvalid",
+				Message: common.NewMultiLineAggregate(errs).Error(),
+			}
+			if _, updateError := common.UpdateStatus(c.operatorConfigClient, common.UpdateConditionFn(cond)); updateError != nil {
+				c.eventRecorder.Warningf("RevisionCreateFailed", "Failed to create revision %d: %v", nextRevision, err.Error())
+				return true, updateError
+			}
+			return true, nil
+		}
 	}
 
 	cond := operatorv1.OperatorCondition{
@@ -158,27 +183,32 @@ func (c RevisionController) isLatestRevisionCurrent(revision int32) (bool, strin
 	return true, ""
 }
 
-func (c RevisionController) createNewRevision(revision int32) error {
+func (c RevisionController) createNewRevision(revision int32) (map[string]*corev1.ConfigMap, map[string]*corev1.Secret, error) {
+	configs := map[string]*corev1.ConfigMap{}
 	for _, name := range c.configMaps {
 		obj, _, err := resourceapply.SyncConfigMap(c.kubeClient.CoreV1(), c.eventRecorder, c.targetNamespace, name, c.targetNamespace, nameFor(name, revision))
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		if obj == nil {
-			return apierrors.NewNotFound(corev1.Resource("configmaps"), name)
+			return nil, nil, apierrors.NewNotFound(corev1.Resource("configmaps"), name)
 		}
+		configs[name] = obj
 	}
+
+	secrets := map[string]*corev1.Secret{}
 	for _, name := range c.secrets {
 		obj, _, err := resourceapply.SyncSecret(c.kubeClient.CoreV1(), c.eventRecorder, c.targetNamespace, name, c.targetNamespace, nameFor(name, revision))
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		if obj == nil {
-			return apierrors.NewNotFound(corev1.Resource("secrets"), name)
+			return nil, nil, apierrors.NewNotFound(corev1.Resource("secrets"), name)
 		}
+		secrets[name] = obj
 	}
 
-	return nil
+	return configs, secrets, nil
 }
 
 func (c RevisionController) sync() error {

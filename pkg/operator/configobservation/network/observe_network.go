@@ -1,19 +1,27 @@
 package network
 
 import (
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"fmt"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/network"
 	"github.com/openshift/library-go/pkg/operator/events"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+)
+
+var (
+	serviceClusterIPRangePath = []string{"extendedArguments", "service-cluster-ip-range"}
+	clusterCIDRsPath          = []string{"extendedArguments", "cluster-cidr"}
 )
 
 func ObserveClusterCIDRs(genericListers configobserver.Listers, recorder events.Recorder, existingConfig map[string]interface{}) (map[string]interface{}, []error) {
 	listers := genericListers.(configobservation.Listers)
 
 	var errs []error
-	clusterCIDRsPath := []string{"extendedArguments", "cluster-cidr"}
 
 	previouslyObservedConfig := map[string]interface{}{}
 	if currentClusterCIDRBlocks, _, err := unstructured.NestedStringSlice(existingConfig, clusterCIDRsPath...); len(currentClusterCIDRBlocks) > 0 {
@@ -45,7 +53,6 @@ func ObserveServiceClusterIPRanges(genericListers configobserver.Listers, record
 	listers := genericListers.(configobservation.Listers)
 
 	var errs []error
-	serviceClusterIPRangePath := []string{"extendedArguments", "service-cluster-ip-range"}
 
 	previouslyObservedConfig := map[string]interface{}{}
 	if currentServiceClusterIPRanges, _, _ := unstructured.NestedStringSlice(existingConfig, serviceClusterIPRangePath...); len(currentServiceClusterIPRanges) > 0 {
@@ -66,4 +73,21 @@ func ObserveServiceClusterIPRanges(genericListers configobserver.Listers, record
 	}
 
 	return observedConfig, errs
+}
+
+// Validate verifies whether the observed configuration can be used to make progress.
+func Validate(observedConfig map[string]interface{}) (errs []error) {
+	if clusterCIDRs, _, err := unstructured.NestedStringSlice(observedConfig, clusterCIDRsPath...); err != nil {
+		errs = append(errs, err)
+	} else if len(clusterCIDRs) == 0 {
+		errs = append(errs, fmt.Errorf("%s cannot be empty", strings.Join(serviceClusterIPRangePath, ".")))
+	}
+
+	if serviceCIDR, _, err := unstructured.NestedString(observedConfig, serviceClusterIPRangePath...); err != nil {
+		errs = append(errs, err)
+	} else if len(serviceCIDR) == 0 {
+		errs = append(errs, fmt.Errorf("%s cannot be empty", strings.Join(serviceClusterIPRangePath, ".")))
+	}
+
+	return
 }

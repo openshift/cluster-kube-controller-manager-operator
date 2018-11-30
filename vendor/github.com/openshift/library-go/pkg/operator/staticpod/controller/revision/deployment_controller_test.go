@@ -1,6 +1,7 @@
 package revision
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ func TestRevisionController(t *testing.T) {
 		targetNamespace         string
 		testSecrets             []string
 		testConfigs             []string
+		testValidate            ValidationFunc
 		startingObjects         []runtime.Object
 		staticPodOperatorClient common.OperatorClient
 		validateActions         func(t *testing.T, actions []clienttesting.Action)
@@ -88,6 +90,63 @@ func TestRevisionController(t *testing.T) {
 				}
 				if !strings.Contains(status.Conditions[0].Message, `configmaps "test-config" not found`) {
 					t.Errorf("expected status to be 'configmaps test-config not found', got: %s", status.Conditions[0].Message)
+				}
+			},
+		},
+		{
+			targetNamespace: "invalid-configmap",
+			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
+				},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{
+					LatestAvailableRevision: 1,
+					NodeStatuses: []operatorv1.NodeStatus{
+						{
+							NodeName:        "test-node-1",
+							CurrentRevision: 0,
+							TargetRevision:  0,
+						},
+					},
+				},
+				nil,
+			),
+			startingObjects: []runtime.Object{
+				&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "test-secret", Namespace: "invalid-configmap"}},
+				&v1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "test-config", Namespace: "invalid-configmap"}},
+			},
+			testConfigs: []string{"test-config"},
+			testSecrets: []string{"test-secret"},
+			testValidate: func(configs map[string]*v1.ConfigMap, secrets map[string]*v1.Secret) error {
+				if len(configs) != 1 {
+					return fmt.Errorf("expected only one config map")
+				}
+				for name := range configs {
+					if name != "test-config" {
+						return fmt.Errorf("expected 'test-config' config map, got: %s", name)
+					}
+				}
+				if len(secrets) != 1 {
+					return fmt.Errorf("expected only one secret")
+				}
+				for name := range secrets {
+					if name != "test-secret" {
+						return fmt.Errorf("expected 'test-secret' secret, got: %s", name)
+					}
+				}
+				return fmt.Errorf("test config validation error")
+			},
+			expectSyncError: "synthetic requeue request",
+			validateStatus: func(t *testing.T, status *operatorv1.StaticPodOperatorStatus) {
+				if status.Conditions[0].Type != "RevisionControllerFailing" {
+					t.Errorf("expected status condition to be 'RevisionControllerFailing', got %v", status.Conditions[0].Type)
+				}
+				if status.Conditions[0].Reason != "ContentInvalid" {
+					t.Errorf("expected status condition reason to be 'ContentInvalid', got %v", status.Conditions[0].Reason)
+				}
+				if !strings.Contains(status.Conditions[0].Message, "test config validation error") {
+					t.Errorf("expected status to be 'test config validation error', got: %s", status.Conditions[0].Message)
 				}
 			},
 		},
@@ -151,6 +210,7 @@ func TestRevisionController(t *testing.T) {
 				tc.targetNamespace,
 				tc.testConfigs,
 				tc.testSecrets,
+				tc.testValidate,
 				informers.NewSharedInformerFactoryWithOptions(kubeClient, 1*time.Minute, informers.WithNamespace(tc.targetNamespace)),
 				tc.staticPodOperatorClient,
 				kubeClient,

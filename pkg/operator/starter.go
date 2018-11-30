@@ -1,10 +1,12 @@
 package operator
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -20,6 +22,7 @@ import (
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/validation"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 )
 
@@ -86,6 +89,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		[]string{"cluster-kube-controller-manager-operator", "installer"},
 		deploymentConfigMaps,
 		deploymentSecrets,
+		validate,
 		staticPodOperatorClient,
 		kubeClient,
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
@@ -113,6 +117,18 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	<-ctx.StopCh
 	return fmt.Errorf("stopped")
+}
+
+func validate(configs map[string]*v1.ConfigMap, secrets map[string]*v1.Secret) []error {
+	var observedConfig map[string]interface{}
+	if cm, ok := configs["config"]; !ok {
+		return []error{fmt.Errorf("'config' config map not found")}
+	} else if configYaml, ok := cm.Data["config.yaml"]; !ok {
+		return []error{fmt.Errorf("'config.yaml' in config map 'config' not found")}
+	} else if err := json.Unmarshal([]byte(configYaml), &observedConfig); err != nil {
+		return []error{fmt.Errorf("invalid 'config.yaml' in config map 'config': %v", err)}
+	}
+	return validation.Validate(observedConfig)
 }
 
 // deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.

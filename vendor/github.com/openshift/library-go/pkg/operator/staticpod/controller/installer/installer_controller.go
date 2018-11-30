@@ -30,7 +30,7 @@ import (
 const operatorStatusInstallerControllerFailing = "InstallerControllerFailing"
 const installerControllerWorkQueueKey = "key"
 
-// InstallerController is a controller that watches the currentRevision and targetRevision fields for each node and spawn
+// InstallerController is a controller that watches the currentRevision and targetRevision fields for each node and spawns
 // installer pods to update the static pods on the master nodes.
 type InstallerController struct {
 	targetNamespace, staticPodName string

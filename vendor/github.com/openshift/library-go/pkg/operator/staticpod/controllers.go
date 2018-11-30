@@ -27,7 +27,7 @@ type staticPodOperatorControllers struct {
 //    appears that doesn't match the current latest for first kubeletStatus and the first kubeletStatus isn't already transitioning,
 //    it kicks off an installer pod.  If the next kubeletStatus doesn't match the immediate prior one, it kicks off that transition.
 // 3. NodeController - watches nodes for master nodes and keeps the operator status up to date
-func NewControllers(targetNamespaceName, staticPodName string, command, revisionConfigMaps, revisionSecrets []string,
+func NewControllers(targetNamespaceName, staticPodName string, command, revisionConfigMaps, revisionSecrets []string, validate revision.ValidationFunc,
 	staticPodOperatorClient common.OperatorClient, kubeClient kubernetes.Interface, kubeInformersNamespaceScoped,
 	kubeInformersClusterScoped informers.SharedInformerFactory, eventRecorder events.Recorder) *staticPodOperatorControllers {
 	controller := &staticPodOperatorControllers{}
@@ -36,6 +36,7 @@ func NewControllers(targetNamespaceName, staticPodName string, command, revision
 		targetNamespaceName,
 		revisionConfigMaps,
 		revisionSecrets,
+		validate,
 		kubeInformersNamespaceScoped,
 		staticPodOperatorClient,
 		kubeClient,
