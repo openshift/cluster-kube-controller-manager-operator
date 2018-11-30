@@ -115,7 +115,7 @@ func RunOperator(_ *unstructured.Unstructured, clientConfig *rest.Config, eventR
 // the first element should be the configmap that contains the static pod manifest
 var deploymentConfigMaps = []string{
 	"kube-controller-manager-pod",
-	"deployment-kube-controller-manager-config",
+	"config",
 	"client-ca",
 }
 

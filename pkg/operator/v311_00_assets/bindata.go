@@ -56,7 +56,7 @@ var _v3110KubeControllerManagerCmYaml = []byte(`apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: openshift-kube-controller-manager
-  name: deployment-kube-controller-manager-config
+  name: config
 data:
   config.yaml:
 `)
@@ -229,7 +229,7 @@ spec:
     terminationMessagePolicy: FallbackToLogsOnError
     command: ["hyperkube", "kube-controller-manager"]
     args:
-    - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/deployment-kube-controller-manager-config/config.yaml
+    - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
     - --kubeconfig=/etc/kubernetes/static-pod-resources/secrets/controller-manager-kubeconfig/kubeconfig
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
