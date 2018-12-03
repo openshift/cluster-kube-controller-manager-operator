@@ -97,6 +97,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		"openshift-cluster-kube-controller-manager-operator",
 		configClient.ConfigV1(),
 		staticPodOperatorClient,
+		ctx.EventRecorder,
 	)
 
 	operatorConfigInformers.Start(ctx.StopCh)
