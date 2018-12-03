@@ -9,12 +9,14 @@ import (
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/openshift/library-go/pkg/operator/events"
+
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 )
 
 func TestObserveCloudProviderNames(t *testing.T) {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	indexer.Add(&corev1.ConfigMap{
+	if err := indexer.Add(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster-config-v1",
 			Namespace: "kube-system",
@@ -22,11 +24,13 @@ func TestObserveCloudProviderNames(t *testing.T) {
 		Data: map[string]string{
 			"install-config": "platform:\n  aws: {}\n",
 		},
-	})
+	}); err != nil {
+		t.Fatal(err.Error())
+	}
 	listers := configobservation.Listers{
 		ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
 	}
-	result, errs := ObserveCloudProviderNames(listers, map[string]interface{}{})
+	result, errs := ObserveCloudProviderNames(listers, events.NewInMemoryRecorder("cloud"), map[string]interface{}{})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}

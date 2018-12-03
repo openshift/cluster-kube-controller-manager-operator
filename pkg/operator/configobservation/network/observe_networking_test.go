@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"github.com/openshift/library-go/pkg/operator/events"
 
 	"github.com/ghodss/yaml"
 
@@ -100,11 +101,13 @@ func TestObserveClusterCIDRs(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-			indexer.Add(test.config)
+			if err := indexer.Add(test.config); err != nil {
+				t.Fatal(err.Error())
+			}
 			listers := configobservation.Listers{
 				ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
 			}
-			result, errs := ObserveClusterCIDRs(listers, map[string]interface{}{})
+			result, errs := ObserveClusterCIDRs(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
 			if len(errs) > 0 && !test.expectedError {
 				t.Fatal(errs)
 			} else if len(errs) == 0 {
@@ -121,7 +124,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 
 func TestObserveServiceClusterIPRanges(t *testing.T) {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	indexer.Add(&corev1.ConfigMap{
+	if err := indexer.Add(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster-config-v1",
 			Namespace: "kube-system",
@@ -129,11 +132,13 @@ func TestObserveServiceClusterIPRanges(t *testing.T) {
 		Data: map[string]string{
 			"install-config": "networking:\n  serviceCIDR: serviceCIDR",
 		},
-	})
+	}); err != nil {
+		t.Fatal(err.Error())
+	}
 	listers := configobservation.Listers{
 		ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
 	}
-	result, errs := ObserveServiceClusterIPRanges(listers, map[string]interface{}{})
+	result, errs := ObserveServiceClusterIPRanges(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
