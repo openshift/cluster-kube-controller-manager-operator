@@ -41,12 +41,10 @@ spec:
       volumes:
       - name: serving-cert
         secret:
-          defaultMode: 400
           secretName: openshift-cluster-kube-controller-manager-operator-serving-cert
           optional: true
       - name: config
         configMap:
-          defaultMode: 440
           name: openshift-cluster-kube-controller-manager-operator-config
       nodeSelector:
         node-role.kubernetes.io/master: ""
