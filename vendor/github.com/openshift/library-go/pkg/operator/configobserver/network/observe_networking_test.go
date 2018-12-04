@@ -4,23 +4,22 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
-	"github.com/openshift/library-go/pkg/operator/events"
-
 	"github.com/ghodss/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/openshift/library-go/pkg/operator/events"
 )
 
 func TestObserveClusterCIDRs(t *testing.T) {
 	type Test struct {
-		name            string
-		config          *corev1.ConfigMap
-		input, expected map[string]interface{}
-		expectedError   bool
+		name          string
+		config        *corev1.ConfigMap
+		expected      []string
+		expectedError bool
 	}
 	tests := []Test{
 		{
@@ -34,14 +33,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking:\n  podCIDR: podCIDR",
 				},
 			},
-			nil,
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR",
-					},
-				},
-			},
+			[]string{"podCIDR"},
 			false,
 		},
 		{
@@ -55,20 +47,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking:\n  podCIDR: podCIDR",
 				},
 			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"oldPodCIDR",
-					},
-				},
-			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR",
-					},
-				},
-			},
+			[]string{"podCIDR"},
 			false,
 		},
 		{
@@ -82,14 +61,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2",
 				},
 			},
-			map[string]interface{}{},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR1", "podCIDR2",
-					},
-				},
-			},
+			[]string{"podCIDR1", "podCIDR2"},
 			false,
 		},
 		{
@@ -103,14 +75,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2\n  podCIDR: podCIDR",
 				},
 			},
-			map[string]interface{}{},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR1", "podCIDR2",
-					},
-				},
-			},
+			[]string{"podCIDR1", "podCIDR2"},
 			false,
 		},
 		{
@@ -124,8 +89,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking: {}\n",
 				},
 			},
-			map[string]interface{}{},
-			map[string]interface{}{},
+			nil,
 			true,
 		},
 		{
@@ -139,20 +103,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 					"install-config": "networking: {}\n",
 				},
 			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"oldPodCIDR",
-					},
-				},
-			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"oldPodCIDR",
-					},
-				},
-			},
+			nil,
 			true,
 		},
 	}
@@ -162,13 +113,10 @@ func TestObserveClusterCIDRs(t *testing.T) {
 			if err := indexer.Add(test.config); err != nil {
 				t.Fatal(err.Error())
 			}
-			listers := configobservation.Listers{
-				ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
-			}
-			result, errs := ObserveClusterCIDRs(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
-			if len(errs) > 0 && !test.expectedError {
-				t.Fatal(errs)
-			} else if len(errs) == 0 {
+			result, err := GetClusterCIDRs(corelistersv1.NewConfigMapLister(indexer), events.NewInMemoryRecorder("network"))
+			if err != nil && !test.expectedError {
+				t.Fatal(err)
+			} else if err == nil {
 				if test.expectedError {
 					t.Fatalf("expected error, but got none")
 				}
@@ -193,21 +141,12 @@ func TestObserveServiceClusterIPRanges(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err.Error())
 	}
-	listers := configobservation.Listers{
-		ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
+	result, err := GetServiceCIDR(corelistersv1.NewConfigMapLister(indexer), events.NewInMemoryRecorder("network"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	result, errs := ObserveServiceClusterIPRanges(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
-	if len(errs) > 0 {
-		t.Fatal(errs)
-	}
-	expected := map[string]interface{}{
-		"extendedArguments": map[string]interface{}{
-			"service-cluster-ip-range": []interface{}{
-				"serviceCIDR",
-			},
-		},
-	}
-	if !reflect.DeepEqual(expected, result) {
+
+	if expected := "serviceCIDR"; !reflect.DeepEqual(expected, result) {
 		t.Errorf("\n===== observed config expected:\n%v\n===== observed config actual:\n%v", toYAML(expected), toYAML(result))
 	}
 }
