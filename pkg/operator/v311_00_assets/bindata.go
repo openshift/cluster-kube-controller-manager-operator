@@ -119,6 +119,11 @@ extendedArguments:
   - "/etc/kubernetes/static-pod-resources/secrets/cluster-signing-ca/kube-ca.crt"
   cluster-signing-key-file:
   - "/etc/kubernetes/static-pod-resources/secrets/cluster-signing-ca/kube-ca.key"
+  kube-api-qps:
+  - "150" # this is a historical values
+  kube-api-burst:
+  - "300" # this is a historical values
+
 `)
 
 func v3110KubeControllerManagerDefaultconfigYamlBytes() ([]byte, error) {
