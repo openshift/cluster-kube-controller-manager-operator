@@ -17,6 +17,9 @@ spec:
     args:
     - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
     - --kubeconfig=/etc/kubernetes/static-pod-resources/secrets/controller-manager-kubeconfig/kubeconfig
+    resources:
+      requests:
+        memory: 200Mi
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
