@@ -1,6 +1,7 @@
 package configobservercontroller
 
 import (
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -18,7 +19,7 @@ type ConfigObserver struct {
 }
 
 func NewConfigObserver(
-	operatorClient configobserver.OperatorClient,
+	operatorClient v1helpers.OperatorClient,
 	operatorConfigInformers operatorconfiginformers.SharedInformerFactory,
 	kubeInformersForKubeSystemNamespace kubeinformers.SharedInformerFactory,
 	eventRecorder events.Recorder,
