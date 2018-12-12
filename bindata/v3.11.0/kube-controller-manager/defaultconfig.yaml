@@ -24,7 +24,6 @@ extendedArguments:
   - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
   - "-bootstrapsigner"
   - "-tokencleaner"
-  - "-horizontalpodautoscaling"
   node-monitor-grace-period:
   - "5m" # TODO: set to 2m for AWS like kube-core does
   pod-eviction-timeout:
