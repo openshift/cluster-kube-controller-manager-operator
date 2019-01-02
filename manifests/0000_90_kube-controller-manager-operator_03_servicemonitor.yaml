@@ -1,8 +1,8 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: cluster-kube-controller-manager-operator
-  namespace: openshift-cluster-kube-controller-manager-operator
+  name: kube-controller-manager-operator
+  namespace: openshift-kube-controller-manager-operator
 spec:
   endpoints:
   - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -17,11 +17,11 @@ spec:
     tlsConfig:
       # TODO where do you mount the service-ca.crt?
       insecureSkipVerify: true
-      serverName: metrics.openshift-cluster-kube-controller-manager-operator.svc
+      serverName: metrics.openshift-kube-controller-manager-operator.svc
   jobLabel: component
   namespaceSelector:
     matchNames:
-    - openshift-cluster-kube-controller-manager-operator
+    - openshift-kube-controller-manager-operator
   selector:
     matchLabels:
-      app: openshift-cluster-kube-controller-manager-operator
+      app: openshift-kube-controller-manager-operator

@@ -94,7 +94,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
-		"openshift-cluster-kube-controller-manager-operator",
+		"openshift-kube-controller-manager-operator",
 		configClient.ConfigV1(),
 		staticPodOperatorClient,
 		ctx.EventRecorder,
