@@ -73,11 +73,14 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		glog.Warning("configmap/cluster-config-v1.kube-system: install-config.platform not found")
 		recorder.Warningf("ObserveCloudProvidersFailed", "Required platform field is not set in install-config")
 		return previouslyObservedConfig, errs
+	case platform["libvirt"] != nil:
+		// this means we are using libvirt
+		return observedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
 	default:
-		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: no recognized cloud provider platform found"))
-		recorder.Warning("ObserveCloudProvidersFailed", "No recognized cloud provider platform found in cloud config")
+		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: no recognized cloud provider platform found: %#v", platform))
+		recorder.Warning("ObserveCloudProvidersFailed", fmt.Sprintf("No recognized cloud provider platform found in cloud config: %#v", platform))
 		return previouslyObservedConfig, errs
 	}
 
