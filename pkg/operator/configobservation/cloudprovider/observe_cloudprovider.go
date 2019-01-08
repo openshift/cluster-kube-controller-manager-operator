@@ -76,6 +76,9 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	case platform["libvirt"] != nil:
 		// this means we are using libvirt
 		return observedConfig, errs
+	case platform["none"] != nil:
+		// this means we are using bare metal
+		return observedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
 	default:
