@@ -24,4 +24,4 @@ spec:
     - openshift-kube-controller-manager-operator
   selector:
     matchLabels:
-      app: openshift-kube-controller-manager-operator
+      app: kube-controller-manager-operator

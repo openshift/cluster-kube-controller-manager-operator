@@ -96,8 +96,14 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
-		"openshift-kube-controller-manager-operator",
-		[]configv1.ObjectReference{},
+		"kube-controller-manager",
+		[]configv1.ObjectReference{
+			{Group: "kubecontrollermanager.operator.openshift.io", Resource: "kubecontrollermanageroperatorconfigs", Name: "cluster"},
+			{Resource: "namespaces", Name: "openshift-config"},
+			{Resource: "namespaces", Name: "openshift-config-managed"},
+			{Resource: "namespaces", Name: targetNamespaceName},
+			{Resource: "namespaces", Name: "openshift-kube-controller-manager-operator"},
+		},
 		configClient.ConfigV1(),
 		staticPodOperatorClient,
 		ctx.EventRecorder,

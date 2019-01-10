@@ -165,7 +165,7 @@ func v3110KubeControllerManagerNsYaml() (*asset, error) {
 var _v3110KubeControllerManagerOperatorConfigYaml = []byte(`apiVersion: kubecontrollermanager.operator.openshift.io/v1alpha1
 kind: KubeControllerManagerOperatorConfig
 metadata:
-  name: instance
+  name: cluster
 spec:
   managementState: Managed
   imagePullSpec: openshift/origin-hypershift:latest
@@ -222,12 +222,12 @@ metadata:
   name: openshift-kube-controller-manager
   namespace: openshift-kube-controller-manager
   labels:
-    app: openshift-kube-controller-manager
-    controller-manager: "true"
+    app: kube-controller-manager
+    kube-controller-manager: "true"
     revision: "REVISION"
 spec:
   containers:
-  - name: kube-controller-manager
+  - name: openshift-kube-controller-manager
     image: ${IMAGE}
     imagePullPolicy: Always
     terminationMessagePolicy: FallbackToLogsOnError
@@ -271,7 +271,7 @@ var _v3110KubeControllerManagerSaYaml = []byte(`apiVersion: v1
 kind: ServiceAccount
 metadata:
   namespace: openshift-kube-controller-manager
-  name: openshift-kube-controller-manager-sa
+  name: kube-controller-manager-sa
 `)
 
 func v3110KubeControllerManagerSaYamlBytes() ([]byte, error) {
@@ -293,14 +293,14 @@ var _v3110KubeControllerManagerSvcYaml = []byte(`apiVersion: v1
 kind: Service
 metadata:
   namespace: openshift-kube-controller-manager
-  name: controller-manager
+  name: kube-controller-manager
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: serving-cert
     prometheus.io/scrape: "true"
     prometheus.io/scheme: https
 spec:
   selector:
-    controller-manager: "true"
+    kube-controller-manager: "true"
   ports:
   - name: https
     port: 443
