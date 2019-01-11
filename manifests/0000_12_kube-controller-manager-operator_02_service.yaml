@@ -2,9 +2,9 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    service.alpha.openshift.io/serving-cert-secret-name: openshift-kube-controller-manager-operator-serving-cert
+    service.alpha.openshift.io/serving-cert-secret-name: kube-controller-manager-operator-serving-cert
   labels:
-    app: openshift-kube-controller-manager-operator
+    app: kube-controller-manager-operator
   name: metrics
   namespace: openshift-kube-controller-manager-operator
 spec:
@@ -14,6 +14,6 @@ spec:
     protocol: TCP
     targetPort: 8443
   selector:
-    app: openshift-kube-controller-manager-operator
+    app: kube-controller-manager-operator
   sessionAffinity: None
   type: ClusterIP

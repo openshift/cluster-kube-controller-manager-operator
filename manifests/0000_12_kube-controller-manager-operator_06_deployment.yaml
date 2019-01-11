@@ -2,21 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: openshift-kube-controller-manager-operator
-  name: openshift-kube-controller-manager-operator
+  name: kube-controller-manager-operator
   labels:
-    app: openshift-kube-controller-manager-operator
+    app: kube-controller-manager-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: openshift-kube-controller-manager-operator
+      app: kube-controller-manager-operator
   template:
     metadata:
-      name: openshift-kube-controller-manager-operator
+      name: kube-controller-manager-operator
       labels:
-        app: openshift-kube-controller-manager-operator
+        app: kube-controller-manager-operator
     spec:
-      serviceAccountName: openshift-kube-controller-manager-operator
+      serviceAccountName: kube-controller-manager-operator
       containers:
       - name: operator
         image: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
@@ -44,11 +44,11 @@ spec:
       volumes:
       - name: serving-cert
         secret:
-          secretName: openshift-kube-controller-manager-operator-serving-cert
+          secretName: kube-controller-manager-operator-serving-cert
           optional: true
       - name: config
         configMap:
-          name: openshift-kube-controller-manager-operator-config
+          name: kube-controller-manager-operator-config
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:

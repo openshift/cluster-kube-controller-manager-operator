@@ -1,7 +1,7 @@
 apiVersion: kubecontrollermanager.operator.openshift.io/v1alpha1
 kind: KubeControllerManagerOperatorConfig
 metadata:
-  name: instance
+  name: cluster
 spec:
   managementState: Managed
   imagePullSpec: openshift/origin-hypershift:latest

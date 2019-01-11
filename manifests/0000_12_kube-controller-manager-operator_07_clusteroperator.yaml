@@ -1,5 +1,5 @@
 apiVersion: config.openshift.io/v1
 kind: ClusterOperator
 metadata:
-  name: openshift-kube-controller-manager-operator
+  name: kube-controller-manager
 spec: {}

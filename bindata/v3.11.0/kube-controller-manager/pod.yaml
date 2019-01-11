@@ -4,12 +4,12 @@ metadata:
   name: openshift-kube-controller-manager
   namespace: openshift-kube-controller-manager
   labels:
-    app: openshift-kube-controller-manager
-    controller-manager: "true"
+    app: kube-controller-manager
+    kube-controller-manager: "true"
     revision: "REVISION"
 spec:
   containers:
-  - name: kube-controller-manager
+  - name: openshift-kube-controller-manager
     image: ${IMAGE}
     imagePullPolicy: Always
     terminationMessagePolicy: FallbackToLogsOnError
