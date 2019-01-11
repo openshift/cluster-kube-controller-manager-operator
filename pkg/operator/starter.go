@@ -89,6 +89,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		deploymentSecrets,
 		staticPodOperatorClient,
 		kubeClient,
+		dynamicClient,
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
 		kubeInformersClusterScoped,
 		ctx.EventRecorder,
