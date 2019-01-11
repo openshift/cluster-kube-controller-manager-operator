@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
 
+	configv1 "github.com/openshift/api/config/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
@@ -88,6 +89,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		deploymentSecrets,
 		staticPodOperatorClient,
 		kubeClient,
+		dynamicClient,
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,
 		kubeInformersClusterScoped,
 		ctx.EventRecorder,
@@ -95,6 +97,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-kube-controller-manager-operator",
+		[]configv1.ObjectReference{},
 		configClient.ConfigV1(),
 		staticPodOperatorClient,
 		ctx.EventRecorder,
