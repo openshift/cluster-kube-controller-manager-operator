@@ -13,7 +13,7 @@ import (
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/status"
-	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
@@ -59,11 +59,10 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		client:    operatorConfigClient.KubecontrollermanagerV1alpha1(),
 	}
 
-	v1alpha1helpers.EnsureOperatorConfigExists(
+	v1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/operator-config.yaml"),
 		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "kubecontrollermanageroperatorconfigs"},
-		v1alpha1helpers.GetImageEnv,
 	)
 
 	configObserver := configobservercontroller.NewConfigObserver(
@@ -88,6 +87,8 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		deploymentConfigMaps,
 		deploymentSecrets,
 		staticPodOperatorClient,
+		kubeClient.CoreV1(),
+		kubeClient.CoreV1(),
 		kubeClient,
 		dynamicClient,
 		kubeInformersForOpenShiftKubeControllerManagerNamespace,

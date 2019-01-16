@@ -40,7 +40,7 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, re
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
-	_, _, err = resourceapply.SyncConfigMap(c.kubeClient.CoreV1(), recorder, serviceCertSignerNamespaceName, "signing-cabundle", targetNamespaceName, "signing-cabundle")
+	_, _, err = resourceapply.SyncConfigMap(c.kubeClient.CoreV1(), recorder, serviceCertSignerNamespaceName, "signing-cabundle", targetNamespaceName, "signing-cabundle", nil)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
