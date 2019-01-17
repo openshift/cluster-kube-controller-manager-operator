@@ -20,6 +20,7 @@ spec:
     resources:
       requests:
         memory: 200Mi
+        cpu: 100m
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
