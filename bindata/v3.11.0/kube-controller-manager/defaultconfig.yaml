@@ -33,7 +33,7 @@ extendedArguments:
   port:
   - "10252"
   root-ca-file:
-  - "/etc/kubernetes/static-pod-resources/configmaps/client-ca/ca-bundle.crt"
+  - "/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"
   service-account-private-key-file:
   - "/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"
   cluster-signing-cert-file:
