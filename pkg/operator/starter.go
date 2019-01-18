@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
@@ -21,13 +20,9 @@ import (
 	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
-)
-
-const (
-	targetNamespaceName            = "openshift-kube-controller-manager"
-	serviceCertSignerNamespaceName = "openshift-service-cert-signer"
-	workQueueKey                   = "key"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
@@ -50,13 +45,18 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	}
 
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
-	kubeInformersClusterScoped := informers.NewSharedInformerFactory(kubeClient, 10*time.Minute)
-	kubeInformersForOpenShiftKubeControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
-	kubeInformersForOpenshiftServiceCertSignerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(serviceCertSignerNamespaceName))
-	kubeInformersForKubeSystemNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace("kube-system"))
-	staticPodOperatorClient := &staticPodOperatorClient{
-		informers: operatorConfigInformers,
-		client:    operatorConfigClient.KubecontrollermanagerV1alpha1(),
+	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
+		"",
+		operatorclient.GlobalUserSpecifiedConfigNamespace,
+		operatorclient.MachineSpecifiedGlobalConfigNamespace,
+		operatorclient.ServiceCertSignerNamespace,
+		operatorclient.OperatorNamespace,
+		operatorclient.TargetNamespace,
+		"kube-system",
+	)
+	operatorClient := &operatorclient.OperatorClient{
+		Informers: operatorConfigInformers,
+		Client:    operatorConfigClient.KubecontrollermanagerV1alpha1(),
 	}
 
 	v1helpers.EnsureOperatorConfigExists(
@@ -66,33 +66,33 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 
 	configObserver := configobservercontroller.NewConfigObserver(
-		staticPodOperatorClient,
+		operatorClient,
 		operatorConfigInformers,
-		kubeInformersForKubeSystemNamespace,
+		kubeInformersForNamespaces.InformersFor("kube-system"),
 		ctx.EventRecorder,
 	)
-	targetConfigReconciler := NewTargetConfigReconciler(
+	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
+		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
 		kubeClient,
 		ctx.EventRecorder,
 	)
 
 	staticPodControllers := staticpod.NewControllers(
-		targetNamespaceName,
+		operatorclient.TargetNamespace,
 		"openshift-kube-controller-manager",
 		[]string{"cluster-kube-controller-manager-operator", "installer"},
 		deploymentConfigMaps,
 		deploymentSecrets,
-		staticPodOperatorClient,
-		kubeClient.CoreV1(),
-		kubeClient.CoreV1(),
+		operatorClient,
+		v1helpers.CachedConfigMapGetter(kubeClient, kubeInformersForNamespaces),
+		v1helpers.CachedSecretGetter(kubeClient, kubeInformersForNamespaces),
 		kubeClient,
 		dynamicClient,
-		kubeInformersForOpenShiftKubeControllerManagerNamespace,
-		kubeInformersClusterScoped,
+		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
+		kubeInformersForNamespaces.InformersFor(""),
 		ctx.EventRecorder,
 	)
 
@@ -102,22 +102,19 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 			{Group: "kubecontrollermanager.operator.openshift.io", Resource: "kubecontrollermanageroperatorconfigs", Name: "cluster"},
 			{Resource: "namespaces", Name: "openshift-config"},
 			{Resource: "namespaces", Name: "openshift-config-managed"},
-			{Resource: "namespaces", Name: targetNamespaceName},
+			{Resource: "namespaces", Name: operatorclient.TargetNamespace},
 			{Resource: "namespaces", Name: "openshift-kube-controller-manager-operator"},
 		},
 		configClient.ConfigV1(),
-		staticPodOperatorClient,
+		operatorClient,
 		ctx.EventRecorder,
 	)
 
 	operatorConfigInformers.Start(ctx.StopCh)
-	kubeInformersClusterScoped.Start(ctx.StopCh)
-	kubeInformersForOpenShiftKubeControllerManagerNamespace.Start(ctx.StopCh)
-	kubeInformersForOpenshiftServiceCertSignerNamespace.Start(ctx.StopCh)
-	kubeInformersForKubeSystemNamespace.Start(ctx.StopCh)
+	kubeInformersForNamespaces.Start(ctx.StopCh)
 
 	go staticPodControllers.Run(ctx.StopCh)
-	go targetConfigReconciler.Run(1, ctx.StopCh)
+	go targetConfigController.Run(1, ctx.StopCh)
 	go configObserver.Run(1, ctx.StopCh)
 	go clusterOperatorStatus.Run(1, ctx.StopCh)
 
