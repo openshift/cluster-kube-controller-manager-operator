@@ -21,6 +21,7 @@ import (
 	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 )
@@ -48,8 +49,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
 		operatorclient.GlobalUserSpecifiedConfigNamespace,
-		operatorclient.MachineSpecifiedGlobalConfigNamespace,
-		operatorclient.ServiceCertSignerNamespace,
+		operatorclient.GlobalMachineSpecifiedConfigNamespace,
 		operatorclient.OperatorNamespace,
 		operatorclient.TargetNamespace,
 		"kube-system",
@@ -65,14 +65,25 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "kubecontrollermanageroperatorconfigs"},
 	)
 
+	resourceSyncController, err := resourcesynccontroller.NewResourceSyncController(
+		operatorClient,
+		kubeInformersForNamespaces,
+		kubeClient,
+		ctx.EventRecorder,
+	)
+	if err != nil {
+		return err
+	}
 	configObserver := configobservercontroller.NewConfigObserver(
 		operatorClient,
 		operatorConfigInformers,
 		kubeInformersForNamespaces.InformersFor("kube-system"),
+		resourceSyncController,
 		ctx.EventRecorder,
 	)
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
+		kubeInformersForNamespaces,
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
@@ -117,6 +128,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	go targetConfigController.Run(1, ctx.StopCh)
 	go configObserver.Run(1, ctx.StopCh)
 	go clusterOperatorStatus.Run(1, ctx.StopCh)
+	go resourceSyncController.Run(1, ctx.StopCh)
 
 	<-ctx.StopCh
 	return fmt.Errorf("stopped")
@@ -127,7 +139,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 var deploymentConfigMaps = []string{
 	"kube-controller-manager-pod",
 	"config",
-	"client-ca",
+	"serviceaccount-ca",
 }
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.

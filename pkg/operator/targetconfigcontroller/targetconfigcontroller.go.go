@@ -6,9 +6,22 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v12 "github.com/openshift/api/operator/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 	v1alpha13 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
+	v1alpha1client "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
 	v1alpha12 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
@@ -17,28 +30,20 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	v14 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	v13 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 )
 
 const workQueueKey = "key"
 
-type TargetConfigReconciler struct {
+type TargetConfigController struct {
 	targetImagePullSpec string
 
-	operatorConfigClient v1alpha1.KubecontrollermanagerV1alpha1Interface
+	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface
 
-	kubeClient    kubernetes.Interface
-	eventRecorder events.Recorder
+	kubeClient      kubernetes.Interface
+	configMapLister corev1listers.ConfigMapLister
+	eventRecorder   events.Recorder
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -46,20 +51,22 @@ type TargetConfigReconciler struct {
 
 func NewTargetConfigController(
 	targetImagePullSpec string,
+	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorConfigInformer v1alpha12.KubeControllerManagerOperatorConfigInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
-	operatorConfigClient v1alpha1.KubecontrollermanagerV1alpha1Interface,
+	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
-) *TargetConfigReconciler {
-	c := &TargetConfigReconciler{
+) *TargetConfigController {
+	c := &TargetConfigController{
 		targetImagePullSpec: targetImagePullSpec,
 
+		configMapLister:      kubeInformersForNamespaces.ConfigMapLister(),
 		operatorConfigClient: operatorConfigClient,
 		kubeClient:           kubeClient,
 		eventRecorder:        eventRecorder,
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigController"),
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
@@ -70,14 +77,18 @@ func NewTargetConfigController(
 	namespacedKubeInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
 	namespacedKubeInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
 
+	// for config
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+
 	// we only watch some namespaces
 	namespacedKubeInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
 	return c
 }
 
-func (c TargetConfigReconciler) sync() error {
-	operatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Get("cluster", v1.GetOptions{})
+func (c TargetConfigController) sync() error {
+	operatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Get("cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -85,24 +96,24 @@ func (c TargetConfigReconciler) sync() error {
 	operatorConfigOriginal := operatorConfig.DeepCopy()
 
 	switch operatorConfig.Spec.ManagementState {
-	case v12.Unmanaged:
+	case operatorv1.Unmanaged:
 		return nil
 
-	case v12.Removed:
+	case operatorv1.Removed:
 		// TODO probably just fail
 		return nil
 	}
 
-	requeue, err := createTargetConfigReconciler_v311_00_to_latest(c, c.eventRecorder, operatorConfig)
+	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorConfig)
 	if requeue && err == nil {
 		return fmt.Errorf("synthetic requeue request")
 	}
 
 	if err != nil {
 		if !reflect.DeepEqual(operatorConfigOriginal, operatorConfig) {
-			v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, v12.OperatorCondition{
-				Type:    v12.OperatorStatusTypeFailing,
-				Status:  v12.ConditionTrue,
+			v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+				Type:    operatorv1.OperatorStatusTypeFailing,
+				Status:  operatorv1.ConditionTrue,
 				Reason:  "StatusUpdateError",
 				Message: err.Error(),
 			})
@@ -118,7 +129,7 @@ func (c TargetConfigReconciler) sync() error {
 
 // syncKubeControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (bool, error) {
+func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (bool, error) {
 	operatorConfigOriginal := operatorConfig.DeepCopy()
 	errors := []error{}
 
@@ -133,15 +144,15 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, re
 		}
 	}
 
-	_, _, err := manageKubeControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), recorder, operatorConfig)
+	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
-	_, _, err = resourceapply.SyncConfigMap(c.kubeClient.CoreV1(), recorder, operatorclient.ServiceCertSignerNamespace, "signing-cabundle", operatorclient.TargetNamespace, "signing-cabundle", nil)
+	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
-	_, _, err = managePod_v311_00_to_latest(c.kubeClient.CoreV1(), recorder, operatorConfig, c.targetImagePullSpec)
+	_, _, err = managePod(c.kubeClient.CoreV1(), recorder, operatorConfig, c.targetImagePullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -151,9 +162,9 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, re
 		for _, err := range errors {
 			message = message + err.Error() + "\n"
 		}
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, v12.OperatorCondition{
-			Type:    "TargetConfigReconcilerFailing",
-			Status:  v12.ConditionTrue,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+			Type:    "TargetConfigControllerFailing",
+			Status:  operatorv1.ConditionTrue,
 			Reason:  "SynchronizationError",
 			Message: message,
 		})
@@ -164,9 +175,9 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, re
 		return true, nil
 	}
 
-	v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, v12.OperatorCondition{
-		Type:   "TargetConfigReconcilerFailing",
-		Status: v12.ConditionFalse,
+	v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+		Type:   "TargetConfigControllerFailing",
+		Status: operatorv1.ConditionFalse,
 	})
 	if !reflect.DeepEqual(operatorConfigOriginal, operatorConfig) {
 		_, updateError := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig)
@@ -178,7 +189,7 @@ func createTargetConfigReconciler_v311_00_to_latest(c TargetConfigReconciler, re
 	return false, nil
 }
 
-func manageKubeControllerManagerConfigMap_v311_00_to_latest(client v13.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (*v14.ConfigMap, bool, error) {
+func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
@@ -188,9 +199,9 @@ func manageKubeControllerManagerConfigMap_v311_00_to_latest(client v13.ConfigMap
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func managePod_v311_00_to_latest(client v13.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig, imagePullSpec string) (*v14.ConfigMap, bool, error) {
+func managePod(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
-	required.Spec.Containers[0].ImagePullPolicy = v14.PullAlways
+	required.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
 	if len(imagePullSpec) > 0 {
 		required.Spec.Containers[0].Image = imagePullSpec
 	}
@@ -203,13 +214,27 @@ func managePod_v311_00_to_latest(client v13.ConfigMapsGetter, recorder events.Re
 	return resourceapply.ApplyConfigMap(client, recorder, configMap)
 }
 
+func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
+		lister, client, recorder,
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-serviceaccount-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "csr-controller-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "managed-kube-apiserver-serving-cert-signer"},
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
 // Run starts the kube-controller-manager and blocks until stopCh is closed.
-func (c *TargetConfigReconciler) Run(workers int, stopCh <-chan struct{}) {
+func (c *TargetConfigController) Run(workers int, stopCh <-chan struct{}) {
 	defer runtime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting TargetConfigReconciler")
-	defer glog.Infof("Shutting down TargetConfigReconciler")
+	glog.Infof("Starting TargetConfigController")
+	defer glog.Infof("Shutting down TargetConfigController")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)
@@ -217,12 +242,12 @@ func (c *TargetConfigReconciler) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *TargetConfigReconciler) runWorker() {
+func (c *TargetConfigController) runWorker() {
 	for c.processNextWorkItem() {
 	}
 }
 
-func (c *TargetConfigReconciler) processNextWorkItem() bool {
+func (c *TargetConfigController) processNextWorkItem() bool {
 	dsKey, quit := c.queue.Get()
 	if quit {
 		return false
@@ -242,7 +267,7 @@ func (c *TargetConfigReconciler) processNextWorkItem() bool {
 }
 
 // eventHandler queues the operator to check spec and status
-func (c *TargetConfigReconciler) eventHandler() cache.ResourceEventHandler {
+func (c *TargetConfigController) eventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.queue.Add(workQueueKey) },
 		UpdateFunc: func(old, new interface{}) { c.queue.Add(workQueueKey) },
@@ -253,10 +278,10 @@ func (c *TargetConfigReconciler) eventHandler() cache.ResourceEventHandler {
 // this set of namespaces will include things like logging and metrics which are used to drive
 var interestingNamespaces = sets.NewString(operatorclient.TargetNamespace)
 
-func (c *TargetConfigReconciler) namespaceEventHandler() cache.ResourceEventHandler {
+func (c *TargetConfigController) namespaceEventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			ns, ok := obj.(*v14.Namespace)
+			ns, ok := obj.(*corev1.Namespace)
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
@@ -265,7 +290,7 @@ func (c *TargetConfigReconciler) namespaceEventHandler() cache.ResourceEventHand
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
-			ns, ok := old.(*v14.Namespace)
+			ns, ok := old.(*corev1.Namespace)
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
@@ -274,14 +299,14 @@ func (c *TargetConfigReconciler) namespaceEventHandler() cache.ResourceEventHand
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			ns, ok := obj.(*v14.Namespace)
+			ns, ok := obj.(*corev1.Namespace)
 			if !ok {
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
 					runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 					return
 				}
-				ns, ok = tombstone.Obj.(*v14.Namespace)
+				ns, ok = tombstone.Obj.(*corev1.Namespace)
 				if !ok {
 					runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Namespace %#v", obj))
 					return
