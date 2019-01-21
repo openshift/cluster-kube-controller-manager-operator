@@ -2,7 +2,6 @@ package targetconfigcontroller
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/golang/glog"
@@ -40,6 +39,7 @@ type TargetConfigController struct {
 	targetImagePullSpec string
 
 	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface
+	operatorClient       v1helpers.StaticPodOperatorClient
 
 	kubeClient      kubernetes.Interface
 	configMapLister corev1listers.ConfigMapLister
@@ -55,6 +55,7 @@ func NewTargetConfigController(
 	operatorConfigInformer v1alpha12.KubeControllerManagerOperatorConfigInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface,
+	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
 ) *TargetConfigController {
@@ -63,6 +64,7 @@ func NewTargetConfigController(
 
 		configMapLister:      kubeInformersForNamespaces.ConfigMapLister(),
 		operatorConfigClient: operatorConfigClient,
+		operatorClient:       operatorClient,
 		kubeClient:           kubeClient,
 		eventRecorder:        eventRecorder,
 
@@ -93,8 +95,6 @@ func (c TargetConfigController) sync() error {
 		return err
 	}
 
-	operatorConfigOriginal := operatorConfig.DeepCopy()
-
 	switch operatorConfig.Spec.ManagementState {
 	case operatorv1.Unmanaged:
 		return nil
@@ -105,32 +105,18 @@ func (c TargetConfigController) sync() error {
 	}
 
 	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorConfig)
-	if requeue && err == nil {
-		return fmt.Errorf("synthetic requeue request")
-	}
-
 	if err != nil {
-		if !reflect.DeepEqual(operatorConfigOriginal, operatorConfig) {
-			v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-				Type:    operatorv1.OperatorStatusTypeFailing,
-				Status:  operatorv1.ConditionTrue,
-				Reason:  "StatusUpdateError",
-				Message: err.Error(),
-			})
-			if _, updateError := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); updateError != nil {
-				glog.Error(updateError)
-			}
-		}
 		return err
+	}
+	if requeue {
+		return fmt.Errorf("synthetic requeue request")
 	}
 
 	return nil
 }
 
-// syncKubeControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
-// most of the time the sync method will be good for a large span of minor versions
+// createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
 func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (bool, error) {
-	operatorConfigOriginal := operatorConfig.DeepCopy()
 	errors := []error{}
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
@@ -158,32 +144,24 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	}
 
 	if len(errors) > 0 {
-		message := ""
-		for _, err := range errors {
-			message = message + err.Error() + "\n"
-		}
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+		condition := operatorv1.OperatorCondition{
 			Type:    "TargetConfigControllerFailing",
 			Status:  operatorv1.ConditionTrue,
 			Reason:  "SynchronizationError",
-			Message: message,
-		})
-		if !reflect.DeepEqual(operatorConfigOriginal, operatorConfig) {
-			_, updateError := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig)
-			return true, updateError
+			Message: v1helpers.NewMultiLineAggregate(errors).Error(),
+		}
+		if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
+			return true, err
 		}
 		return true, nil
 	}
 
-	v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+	condition := operatorv1.OperatorCondition{
 		Type:   "TargetConfigControllerFailing",
 		Status: operatorv1.ConditionFalse,
-	})
-	if !reflect.DeepEqual(operatorConfigOriginal, operatorConfig) {
-		_, updateError := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().UpdateStatus(operatorConfig)
-		if updateError != nil {
-			return true, updateError
-		}
+	}
+	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
+		return true, err
 	}
 
 	return false, nil
