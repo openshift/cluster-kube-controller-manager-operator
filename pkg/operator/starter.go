@@ -87,6 +87,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorConfigClient.KubecontrollermanagerV1alpha1(),
+		operatorClient,
 		kubeClient,
 		ctx.EventRecorder,
 	)
@@ -118,6 +119,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		},
 		configClient.ConfigV1(),
 		operatorClient,
+		status.NewVersionGetter(),
 		ctx.EventRecorder,
 	)
 
