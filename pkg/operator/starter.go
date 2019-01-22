@@ -118,6 +118,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		},
 		configClient.ConfigV1(),
 		operatorClient,
+		status.NewVersionGetter(),
 		ctx.EventRecorder,
 	)
 
