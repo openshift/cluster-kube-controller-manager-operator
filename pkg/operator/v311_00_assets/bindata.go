@@ -91,6 +91,8 @@ extendedArguments:
   - "10.3.0.0/16"
   use-service-account-credentials:
   - "true"
+  flex-volume-plugin-dir:
+  - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
   leader-elect:
   - "true"
   leader-elect-retry-period:
