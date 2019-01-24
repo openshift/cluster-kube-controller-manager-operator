@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -138,16 +140,17 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 // deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.
 // the first element should be the configmap that contains the static pod manifest
-var deploymentConfigMaps = []string{
-	"kube-controller-manager-pod",
-	"config",
-	"serviceaccount-ca",
+var deploymentConfigMaps = []revision.RevisionResource{
+	{Name: "kube-controller-manager-pod"},
+
+	{Name: "config"},
+	{Name: "serviceaccount-ca"},
 }
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
-var deploymentSecrets = []string{
-	"cluster-signing-ca",
-	"controller-manager-kubeconfig",
-	"service-account-private-key",
-	"serving-cert",
+var deploymentSecrets = []revision.RevisionResource{
+	{Name: "cluster-signing-ca"},
+	{Name: "controller-manager-kubeconfig"},
+	{Name: "service-account-private-key"},
+	{Name: "serving-cert"},
 }
