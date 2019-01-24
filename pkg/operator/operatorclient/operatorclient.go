@@ -17,13 +17,13 @@ func (c *OperatorClient) Informer() cache.SharedIndexInformer {
 	return c.Informers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Informer()
 }
 
-func (c *OperatorClient) GetStaticPodOperatorState() (*operatorv1.OperatorSpec, *operatorv1.StaticPodOperatorStatus, string, error) {
+func (c *OperatorClient) GetStaticPodOperatorState() (*operatorv1.StaticPodOperatorSpec, *operatorv1.StaticPodOperatorStatus, string, error) {
 	instance, err := c.Informers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Lister().Get("cluster")
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	return &instance.Spec.OperatorSpec, &instance.Status.StaticPodOperatorStatus, instance.ResourceVersion, nil
+	return &instance.Spec.StaticPodOperatorSpec, &instance.Status.StaticPodOperatorStatus, instance.ResourceVersion, nil
 }
 
 func (c *OperatorClient) UpdateStaticPodOperatorStatus(resourceVersion string, status *operatorv1.StaticPodOperatorStatus) (*operatorv1.StaticPodOperatorStatus, error) {

@@ -16,6 +16,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/operator"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/library-go/pkg/operator/staticpod/installerpod"
+	"github.com/openshift/library-go/pkg/operator/staticpod/prune"
 )
 
 func main() {
@@ -47,6 +48,7 @@ func NewSSCSCommand() *cobra.Command {
 	cmd.AddCommand(operator.NewOperator())
 	cmd.AddCommand(render.NewRenderCommand(os.Stderr))
 	cmd.AddCommand(installerpod.NewInstaller())
+	cmd.AddCommand(prune.NewPrune())
 
 	return cmd
 }
