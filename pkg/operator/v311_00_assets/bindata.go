@@ -164,8 +164,8 @@ func v3110KubeControllerManagerNsYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110KubeControllerManagerOperatorConfigYaml = []byte(`apiVersion: kubecontrollermanager.operator.openshift.io/v1alpha1
-kind: KubeControllerManagerOperatorConfig
+var _v3110KubeControllerManagerOperatorConfigYaml = []byte(`apiVersion: operator.openshift.io/v1
+kind: KubeControllerManager
 metadata:
   name: cluster
 spec:

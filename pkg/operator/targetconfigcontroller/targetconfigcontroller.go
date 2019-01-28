@@ -19,9 +19,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	v1alpha13 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
-	v1alpha1client "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned/typed/kubecontrollermanager/v1alpha1"
-	v1alpha12 "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions/kubecontrollermanager/v1alpha1"
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
+	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
@@ -38,7 +37,7 @@ const workQueueKey = "key"
 type TargetConfigController struct {
 	targetImagePullSpec string
 
-	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface
+	operatorConfigClient operatorv1client.KubeControllerManagersGetter
 	operatorClient       v1helpers.StaticPodOperatorClient
 
 	kubeClient      kubernetes.Interface
@@ -52,9 +51,9 @@ type TargetConfigController struct {
 func NewTargetConfigController(
 	targetImagePullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	operatorConfigInformer v1alpha12.KubeControllerManagerOperatorConfigInformer,
+	operatorConfigInformer operatorv1informers.KubeControllerManagerInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
-	operatorConfigClient v1alpha1client.KubecontrollermanagerV1alpha1Interface,
+	operatorConfigClient operatorv1client.KubeControllerManagersGetter,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
@@ -90,7 +89,7 @@ func NewTargetConfigController(
 }
 
 func (c TargetConfigController) sync() error {
-	operatorConfig, err := c.operatorConfigClient.KubeControllerManagerOperatorConfigs().Get("cluster", metav1.GetOptions{})
+	operatorConfig, err := c.operatorConfigClient.KubeControllerManagers().Get("cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,7 @@ func (c TargetConfigController) sync() error {
 }
 
 // createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
-func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (bool, error) {
+func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager) (bool, error) {
 	errors := []error{}
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
@@ -167,7 +166,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	return false, nil
 }
 
-func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
@@ -177,7 +176,7 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func managePod(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha13.KubeControllerManagerOperatorConfig, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
 	required.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
 	if len(imagePullSpec) > 0 {
