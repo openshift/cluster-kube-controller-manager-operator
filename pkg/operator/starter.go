@@ -5,8 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -26,6 +24,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
@@ -97,12 +96,15 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	staticPodControllers := staticpod.NewControllers(
 		operatorclient.TargetNamespace,
 		"openshift-kube-controller-manager",
+		"kube-controller-manager-pod",
 		[]string{"cluster-kube-controller-manager-operator", "installer"},
+		[]string{"cluster-kube-controller-manager-operator", "prune"},
 		deploymentConfigMaps,
 		deploymentSecrets,
 		operatorClient,
 		v1helpers.CachedConfigMapGetter(kubeClient, kubeInformersForNamespaces),
 		v1helpers.CachedSecretGetter(kubeClient, kubeInformersForNamespaces),
+		kubeClient.CoreV1(),
 		kubeClient,
 		dynamicClient,
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
