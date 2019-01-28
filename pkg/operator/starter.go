@@ -15,10 +15,10 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/apis/kubecontrollermanager/v1alpha1"
-	operatorconfigclient "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/clientset/versioned"
-	operatorclientinformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
@@ -33,7 +33,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
-	operatorConfigClient, err := operatorconfigclient.NewForConfig(ctx.KubeConfig)
+	operatorConfigClient, err := operatorv1client.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
-	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
+	operatorConfigInformers := operatorv1informers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
 		operatorclient.GlobalUserSpecifiedConfigNamespace,
@@ -57,13 +57,13 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 	operatorClient := &operatorclient.OperatorClient{
 		Informers: operatorConfigInformers,
-		Client:    operatorConfigClient.KubecontrollermanagerV1alpha1(),
+		Client:    operatorConfigClient.OperatorV1(),
 	}
 
 	v1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/operator-config.yaml"),
-		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "kubecontrollermanageroperatorconfigs"},
+		schema.GroupVersionResource{Group: operatorv1.GroupName, Version: operatorv1.GroupVersion.Version, Resource: "kubecontrollermanagers"},
 	)
 
 	resourceSyncController, err := resourcesynccontroller.NewResourceSyncController(
@@ -85,9 +85,9 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
 		kubeInformersForNamespaces,
-		operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs(),
+		operatorConfigInformers.Operator().V1().KubeControllerManagers(),
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
-		operatorConfigClient.KubecontrollermanagerV1alpha1(),
+		operatorConfigClient.OperatorV1(),
 		operatorClient,
 		kubeClient,
 		ctx.EventRecorder,
@@ -115,7 +115,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"kube-controller-manager",
 		[]configv1.ObjectReference{
-			{Group: "kubecontrollermanager.operator.openshift.io", Resource: "kubecontrollermanageroperatorconfigs", Name: "cluster"},
+			{Group: "operator.openshift.io", Resource: "kubecontrollermanagers", Name: "cluster"},
 			{Resource: "namespaces", Name: "openshift-config"},
 			{Resource: "namespaces", Name: "openshift-config-managed"},
 			{Resource: "namespaces", Name: operatorclient.TargetNamespace},

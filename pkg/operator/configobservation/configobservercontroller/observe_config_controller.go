@@ -9,7 +9,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/events"
 
-	operatorconfiginformers "github.com/openshift/cluster-kube-controller-manager-operator/pkg/generated/informers/externalversions"
+	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/cloudprovider"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
@@ -21,7 +21,7 @@ type ConfigObserver struct {
 
 func NewConfigObserver(
 	operatorClient v1helpers.OperatorClient,
-	operatorConfigInformers operatorconfiginformers.SharedInformerFactory,
+	operatorConfigInformers operatorv1informers.SharedInformerFactory,
 	kubeInformersForKubeSystemNamespace kubeinformers.SharedInformerFactory,
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
 	eventRecorder events.Recorder,
@@ -43,7 +43,7 @@ func NewConfigObserver(
 		),
 	}
 
-	operatorConfigInformers.Kubecontrollermanager().V1alpha1().KubeControllerManagerOperatorConfigs().Informer().AddEventHandler(c.EventHandler())
+	operatorConfigInformers.Operator().V1().KubeControllerManagers().Informer().AddEventHandler(c.EventHandler())
 	kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
 
 	return c
