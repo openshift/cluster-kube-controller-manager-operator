@@ -81,6 +81,8 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		return observedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
+	case platform["openstack"] != nil:
+		cloudProvider = "openstack"
 	default:
 		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: no recognized cloud provider platform found: %#v", platform))
 		recorder.Warning("ObserveCloudProvidersFailed", fmt.Sprintf("No recognized cloud provider platform found in cloud config: %#v", platform))
