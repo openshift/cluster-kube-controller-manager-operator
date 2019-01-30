@@ -129,6 +129,23 @@ func (StaticPodOperatorStatus) SwaggerDoc() map[string]string {
 	return map_StaticPodOperatorStatus
 }
 
+var map_ConsoleCustomization = map[string]string{
+	"brand":                "brand is the default branding of the web console which can be overridden by providing the brand field.  There is a limited set of specific brand options. This field controls elements of the console such as the logo. Invalid value will prevent a console rollout.",
+	"documentationBaseURL": "documentationBaseURL links to external documentation are shown in various sections of the web console.  Providing documentationBaseURL will override the default documentation URL. Invalid value will prevent a console rollout.",
+}
+
+func (ConsoleCustomization) SwaggerDoc() map[string]string {
+	return map_ConsoleCustomization
+}
+
+var map_ConsoleSpec = map[string]string{
+	"customization": "customization is used to optionally provide a small set of customization options to the web console.",
+}
+
+func (ConsoleSpec) SwaggerDoc() map[string]string {
+	return map_ConsoleSpec
+}
+
 var map_KubeAPIServer = map[string]string{
 	"": "KubeAPISOperatorConfig provides information to configure an operator to manage kube-apiserver.",
 }
@@ -197,6 +214,24 @@ var map_OpenShiftAPIServerList = map[string]string{
 
 func (OpenShiftAPIServerList) SwaggerDoc() map[string]string {
 	return map_OpenShiftAPIServerList
+}
+
+var map_OpenShiftControllerManager = map[string]string{
+	"": "OpenShiftControllerManager provides information to configure an operator to manage openshift-controller-manager.",
+}
+
+func (OpenShiftControllerManager) SwaggerDoc() map[string]string {
+	return map_OpenShiftControllerManager
+}
+
+var map_OpenShiftControllerManagerList = map[string]string{
+	"":         "OpenShiftControllerManagerList is a collection of items",
+	"metadata": "Standard object's metadata.",
+	"items":    "Items contains the items",
+}
+
+func (OpenShiftControllerManagerList) SwaggerDoc() map[string]string {
+	return map_OpenShiftControllerManagerList
 }
 
 // AUTO-GENERATED FUNCTIONS END HERE
