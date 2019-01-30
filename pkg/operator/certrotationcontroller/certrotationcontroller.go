@@ -3,7 +3,6 @@ package certrotationcontroller
 import (
 	"time"
 
-	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
@@ -51,8 +50,8 @@ func NewCertRotationController(
 			Name:              "csr-signer",
 			Validity:          1 * 4 * time.Hour,
 			RefreshPercentage: 0.5,
-			ClientRotation: &certrotation.ClientRotation{
-				UserInfo: &user.DefaultInfo{Name: "system:openshift:csr-signer"},
+			SignerRotation: &certrotation.SignerRotation{
+				SignerName: "kube-csr-signer",
 			},
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets(),
 			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Lister(),

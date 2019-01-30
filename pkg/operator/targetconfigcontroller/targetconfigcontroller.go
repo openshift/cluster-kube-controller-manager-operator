@@ -223,7 +223,7 @@ func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client c
 		lister, client, recorder,
 		// include ca bundles from the installer
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-serviceaccount-ca"},
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-csr-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-csr-signer-ca"},
 		// include the ca bundle needed to recognize the server
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "managed-kube-apiserver-serving-cert-signer"},
 		// for now, include the CA we use to sign CSRs
@@ -252,7 +252,7 @@ func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 
 func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
-	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
+	csrSigner, err := lister.Secrets(operatorclient.TargetNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
 		return nil, false, nil
 	}
@@ -278,9 +278,7 @@ func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
 			Data:       map[string]string{},
 		}
-		return nil, false, nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, false, err
 	}
 

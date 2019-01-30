@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: initial-csr-ca
+  name: initial-csr-signer-ca
   namespace: openshift-config
 data:
   ca-bundle.crt: |
