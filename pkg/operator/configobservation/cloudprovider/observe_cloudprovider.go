@@ -76,9 +76,6 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	case platform["libvirt"] != nil:
 		// this means we are using libvirt
 		return observedConfig, errs
-	case platform["none"] != nil:
-		// this means we are using bare metal
-		return observedConfig, errs
 	case platform["aws"] != nil:
 		cloudProvider = "aws"
 	case platform["openstack"] != nil:
@@ -88,10 +85,14 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		// master nodes
 		//cloudProvider = "openstack"
 		return observedConfig, errs
+	case platform["none"] != nil:
+		// this means we are using bare metal
+		return observedConfig, errs
 	default:
-		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: no recognized cloud provider platform found: %#v", platform))
+		// the new doc on the infrastructure fields requires that we treat an unrecognized thing the same bare metal.
+		// TODO find a way to indicate to the user that we didn't honor their choice
 		recorder.Warning("ObserveCloudProvidersFailed", fmt.Sprintf("No recognized cloud provider platform found in cloud config: %#v", platform))
-		return previouslyObservedConfig, errs
+		return observedConfig, errs
 	}
 
 	// set observed values
