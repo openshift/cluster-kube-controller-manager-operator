@@ -110,8 +110,10 @@ extendedArguments:
   - "5m" # TODO: set to 220s for AWS like kube-core does
   experimental-cluster-signing-duration:
   - "720h"
+  secure-port:
+  - "10257"
   port:
-  - "10252"
+  - "0"
   root-ca-file:
   - "/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"
   service-account-private-key-file:
@@ -241,9 +243,25 @@ spec:
       requests:
         memory: 200Mi
         cpu: 100m
+    ports:
+      - containerPort: 10257
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
@@ -307,7 +325,7 @@ spec:
   ports:
   - name: https
     port: 443
-    targetPort: 8443
+    targetPort: 10257
 `)
 
 func v3110KubeControllerManagerSvcYamlBytes() ([]byte, error) {

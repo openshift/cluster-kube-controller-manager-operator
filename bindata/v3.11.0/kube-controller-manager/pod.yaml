@@ -21,9 +21,25 @@ spec:
       requests:
         memory: 200Mi
         cpu: 100m
+    ports:
+      - containerPort: 10257
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
