@@ -154,5 +154,7 @@ var deploymentSecrets = []revision.RevisionResource{
 	{Name: "cluster-signing-ca"},
 	{Name: "controller-manager-kubeconfig"},
 	{Name: "service-account-private-key"},
-	{Name: "serving-cert"},
+
+	// this cert is created by the service-ca controller, which doesn't come up until after we are available. this piece of config must be optional.
+	{Name: "serving-cert", Optional: true},
 }
