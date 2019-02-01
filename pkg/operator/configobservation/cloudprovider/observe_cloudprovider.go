@@ -3,20 +3,15 @@ package cloudprovider
 import (
 	"fmt"
 
-	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/openshift/library-go/pkg/operator/events"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
-)
-
-const (
-	clusterConfigNamespace = "kube-system"
-	clusterConfigName      = "cluster-config-v1"
 )
 
 // ObserveCloudProviderNames observes cloud provider configuration from
@@ -27,71 +22,53 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	var errs []error
 	cloudProvidersPath := []string{"extendedArguments", "cloud-provider"}
 
-	previouslyObservedConfig := map[string]interface{}{}
-	if currentCloudProvider, _, _ := unstructured.NestedStringSlice(existingConfig, cloudProvidersPath...); len(currentCloudProvider) > 0 {
-		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, currentCloudProvider, cloudProvidersPath...); err != nil {
-			errs = append(errs, err)
+	prevObservedConfig := map[string]interface{}{}
+	currentCloudProvider, _, err := unstructured.NestedStringSlice(existingConfig, cloudProvidersPath...)
+	if err != nil {
+		return prevObservedConfig, append(errs, err)
+	}
+	if len(currentCloudProvider) > 0 {
+		if err := unstructured.SetNestedStringSlice(prevObservedConfig, currentCloudProvider, cloudProvidersPath...); err != nil {
+			return prevObservedConfig, append(errs, err)
 		}
 	}
 
+	if !listers.InfrastructureSynced() {
+		glog.Warning("infrastructure.config.openshift.io not synced")
+		return prevObservedConfig, errs
+	}
+
 	observedConfig := map[string]interface{}{}
-	clusterConfig, err := listers.ConfigmapLister.ConfigMaps(clusterConfigNamespace).Get(clusterConfigName)
+	clusterConfig, err := listers.InfrastructureLister.Get("cluster")
 	if errors.IsNotFound(err) {
-		glog.Warning("configmap/cluster-config-v1.kube-system: not found")
-		recorder.Warningf("ObserveCloudProvidersFailed", "Required %s/%s config map not found", clusterConfigNamespace, clusterConfigName)
+		glog.Warning("infrastructure.config.openshift.io/cluster: not found")
 		return observedConfig, errs
 	}
 	if err != nil {
-		errs = append(errs, err)
-		return previouslyObservedConfig, errs
+		return prevObservedConfig, append(errs, err)
 	}
 
-	installConfigYaml, ok := clusterConfig.Data["install-config"]
-	if !ok {
-		errs = append(errs, fmt.Errorf("configmap/cluster-config-v1.kube-system: install-config not found"))
-		recorder.Warningf("ObserveCloudProvidersFailed", "ConfigMap %s/%s does not have required 'install-config'", clusterConfigNamespace, clusterConfigName)
-		return previouslyObservedConfig, errs
-	}
-	installConfig := map[string]interface{}{}
-	err = yaml.Unmarshal([]byte(installConfigYaml), &installConfig)
-	if err != nil {
-		glog.Warningf("Unable to parse install-config: %s", err)
-		recorder.Warningf("ObserveCloudProvidersFailed", "Unable to decode install config: %v'", err)
-		return previouslyObservedConfig, errs
-	}
-
-	// extract needed values
-	//  data:
-	//   install-config:
-	//     platform:
-	//       aws: {}
-	// only aws supported for now
 	cloudProvider := ""
-	platform, ok := installConfig["platform"].(map[string]interface{})
-	switch {
-	case !ok:
-		glog.Warning("configmap/cluster-config-v1.kube-system: install-config.platform not found")
-		recorder.Warningf("ObserveCloudProvidersFailed", "Required platform field is not set in install-config")
-		return previouslyObservedConfig, errs
-	case platform["libvirt"] != nil:
+	switch clusterConfig.Status.Platform {
+	case configv1.LibvirtPlatform:
 		// this means we are using libvirt
 		return observedConfig, errs
-	case platform["aws"] != nil:
+	case configv1.AWSPlatform:
 		cloudProvider = "aws"
-	case platform["openstack"] != nil:
+	case configv1.OpenStackPlatform:
 		// TODO(flaper87): Enable this once
 		// we've figured out a way to write
 		// the cloud provider config in the
 		// master nodes
 		//cloudProvider = "openstack"
 		return observedConfig, errs
-	case platform["none"] != nil:
+	case configv1.NonePlatform:
 		// this means we are using bare metal
 		return observedConfig, errs
 	default:
 		// the new doc on the infrastructure fields requires that we treat an unrecognized thing the same bare metal.
 		// TODO find a way to indicate to the user that we didn't honor their choice
-		recorder.Warning("ObserveCloudProvidersFailed", fmt.Sprintf("No recognized cloud provider platform found in cloud config: %#v", platform))
+		recorder.Warning("ObserveCloudProvidersFailed", fmt.Sprintf("No recognized cloud provider platform found in cloud config: %#v", clusterConfig.Status.Platform))
 		return observedConfig, errs
 	}
 

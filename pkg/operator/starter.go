@@ -17,6 +17,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
+	configv1informers "github.com/openshift/client-go/config/informers/externalversions"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
@@ -56,6 +57,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorclient.TargetNamespace,
 		"kube-system",
 	)
+	configInformers := configv1informers.NewSharedInformerFactory(configClient, 10*time.Minute)
 	operatorClient := &operatorclient.OperatorClient{
 		Informers: operatorConfigInformers,
 		Client:    operatorConfigClient.OperatorV1(),
@@ -80,6 +82,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorClient,
 		operatorConfigInformers,
 		kubeInformersForNamespaces.InformersFor("kube-system"),
+		configInformers,
 		resourceSyncController,
 		ctx.EventRecorder,
 	)
