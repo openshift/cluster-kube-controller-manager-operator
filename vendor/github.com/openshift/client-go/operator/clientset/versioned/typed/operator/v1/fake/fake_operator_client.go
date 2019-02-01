@@ -12,6 +12,10 @@ type FakeOperatorV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeOperatorV1) Consoles() v1.ConsoleInterface {
+	return &FakeConsoles{c}
+}
+
 func (c *FakeOperatorV1) KubeAPIServers() v1.KubeAPIServerInterface {
 	return &FakeKubeAPIServers{c}
 }
@@ -22,6 +26,10 @@ func (c *FakeOperatorV1) KubeControllerManagers() v1.KubeControllerManagerInterf
 
 func (c *FakeOperatorV1) OpenShiftAPIServers() v1.OpenShiftAPIServerInterface {
 	return &FakeOpenShiftAPIServers{c}
+}
+
+func (c *FakeOperatorV1) OpenShiftControllerManagers() v1.OpenShiftControllerManagerInterface {
+	return &FakeOpenShiftControllerManagers{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

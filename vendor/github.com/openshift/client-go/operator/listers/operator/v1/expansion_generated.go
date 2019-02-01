@@ -2,6 +2,10 @@
 
 package v1
 
+// ConsoleListerExpansion allows custom methods to be added to
+// ConsoleLister.
+type ConsoleListerExpansion interface{}
+
 // KubeAPIServerListerExpansion allows custom methods to be added to
 // KubeAPIServerLister.
 type KubeAPIServerListerExpansion interface{}
@@ -13,3 +17,7 @@ type KubeControllerManagerListerExpansion interface{}
 // OpenShiftAPIServerListerExpansion allows custom methods to be added to
 // OpenShiftAPIServerLister.
 type OpenShiftAPIServerListerExpansion interface{}
+
+// OpenShiftControllerManagerListerExpansion allows custom methods to be added to
+// OpenShiftControllerManagerLister.
+type OpenShiftControllerManagerListerExpansion interface{}
