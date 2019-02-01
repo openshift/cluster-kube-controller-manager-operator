@@ -1,12 +1,15 @@
 package targetconfigcontroller
 
 import (
+	"crypto/x509"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/golang/glog"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -16,6 +19,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -24,6 +28,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
+	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
@@ -42,6 +47,7 @@ type TargetConfigController struct {
 
 	kubeClient      kubernetes.Interface
 	configMapLister corev1listers.ConfigMapLister
+	secretLister    corev1listers.SecretLister
 	eventRecorder   events.Recorder
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
@@ -62,6 +68,7 @@ func NewTargetConfigController(
 		targetImagePullSpec: targetImagePullSpec,
 
 		configMapLister:      kubeInformersForNamespaces.ConfigMapLister(),
+		secretLister:         kubeInformersForNamespaces.SecretLister(),
 		operatorConfigClient: operatorConfigClient,
 		operatorClient:       operatorClient,
 		kubeClient:           kubeClient,
@@ -132,6 +139,14 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+	}
+	_, _, err = manageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
+	}
+	_, _, err = manageCSRCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
 	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
@@ -206,14 +221,102 @@ func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client c
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
 		lister, client, recorder,
+		// include ca bundles from the installer
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-serviceaccount-ca"},
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "csr-controller-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-csr-signer-ca"},
+		// include the ca bundle needed to recognize the server
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "managed-kube-apiserver-serving-cert-signer"},
+		// for now, include the CA we use to sign CSRs
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 	)
 	if err != nil {
 		return nil, false, err
 	}
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
+func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
+		lister, client, recorder,
+		// include the CA we use to sign CSRs
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
+		// include the CA we use to sign the cert key pairs from from csr-signer
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-signer-ca"},
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
+func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
+	csrSigner, err := lister.Secrets(operatorclient.TargetNamespace).Get("csr-signer")
+	if apierrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	signingCert := csrSigner.Data["tls.crt"]
+	if len(signingCert) == 0 {
+		return nil, false, nil
+	}
+	signingKey := csrSigner.Data["tls.key"]
+	if len(signingCert) == 0 {
+		return nil, false, nil
+	}
+	signingCertKeyPair, err := crypto.GetCAFromBytes(signingCert, signingKey)
+	if err != nil {
+		return nil, false, err
+	}
+
+	csrSignerCA, err := client.ConfigMaps(operatorclient.OperatorNamespace).Get("csr-signer-ca", metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		csrSignerCA = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
+			Data:       map[string]string{},
+		}
+	} else if err != nil {
+		return nil, false, err
+	}
+
+	certificates := []*x509.Certificate{}
+	caBundle := csrSignerCA.Data["ca-bundle.crt"]
+	if len(caBundle) > 0 {
+		var err error
+		certificates, err = cert.ParseCertsPEM([]byte(caBundle))
+		if err != nil {
+			return nil, false, err
+		}
+	}
+	certificates = append([]*x509.Certificate{}, signingCertKeyPair.Config.Certs...)
+	certificates = append(certificates, certificates...)
+	certificates = crypto.FilterExpiredCerts(certificates...)
+
+	finalCertificates := []*x509.Certificate{}
+	// now check for duplicates. n^2, but super simple
+	for i := range certificates {
+		found := false
+		for j := range finalCertificates {
+			if reflect.DeepEqual(certificates[i].Raw, finalCertificates[j].Raw) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			finalCertificates = append(finalCertificates, certificates[i])
+		}
+	}
+
+	caBytes, err := crypto.EncodeCertificates(finalCertificates...)
+	if err != nil {
+		return nil, false, err
+	}
+	csrSignerCA.Data["ca-bundle.crt"] = string(caBytes)
+
+	return resourceapply.ApplyConfigMap(client, recorder, csrSignerCA)
 }
 
 // Run starts the kube-controller-manager and blocks until stopCh is closed.

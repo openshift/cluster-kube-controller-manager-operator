@@ -19,6 +19,7 @@ import (
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
@@ -127,6 +128,11 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		ctx.EventRecorder,
 	)
 
+	certRotationController, err := certrotationcontroller.NewCertRotationController(kubeClient, operatorClient, kubeInformersForNamespaces, ctx.EventRecorder)
+	if err != nil {
+		return err
+	}
+
 	operatorConfigInformers.Start(ctx.Context.Done())
 	kubeInformersForNamespaces.Start(ctx.Context.Done())
 
@@ -135,6 +141,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	go configObserver.Run(1, ctx.Context.Done())
 	go clusterOperatorStatus.Run(1, ctx.Context.Done())
 	go resourceSyncController.Run(1, ctx.Context.Done())
+	go certRotationController.Run(1, ctx.Context.Done())
 
 	<-ctx.Context.Done()
 	return fmt.Errorf("stopped")
@@ -151,8 +158,8 @@ var deploymentConfigMaps = []revision.RevisionResource{
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
 var deploymentSecrets = []revision.RevisionResource{
-	{Name: "cluster-signing-ca"},
 	{Name: "controller-manager-kubeconfig"},
+	{Name: "csr-signer"},
 	{Name: "service-account-private-key"},
 
 	// this cert is created by the service-ca controller, which doesn't come up until after we are available. this piece of config must be optional.
