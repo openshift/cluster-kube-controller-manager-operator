@@ -1,5 +1,5 @@
 hash: 1037ac27126b88282406929754baf3804a68910b4e696ba1c4eb9d33855c246a
-updated: 2019-02-01T16:22:20.387616146-05:00
+updated: 2019-02-05T13:52:54.07069+01:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -196,7 +196,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 4912e102a00fa8bb4bf27f83808dce6ef1b6887d
+  version: d67473e7f1907b74d1f27706260eecf0bc9f2a52
   subpackages:
   - apps
   - apps/v1
@@ -242,7 +242,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 43eeb8cff295868f3cd8faa3347bcfbdc9b2a9c0
+  version: 5af2e329a3e8b7d536a508266e3ffb485cd849b0
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -256,7 +256,7 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: aafb48132bbd2429a954682eef96489a38cfdcd5
+  version: 45b02a74f60c022084b3d9816f19f62bee88bffb
   subpackages:
   - pkg/assets
   - pkg/config/client
