@@ -32,6 +32,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 
 	scheme.AddKnownTypes(GroupVersion,
+		&Authentication{},
+		&AuthenticationList{},
 		&Console{},
 		&ConsoleList{},
 		&Etcd{},
@@ -40,6 +42,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KubeAPIServerList{},
 		&KubeControllerManager{},
 		&KubeControllerManagerList{},
+		&KubeScheduler{},
+		&KubeSchedulerList{},
 		&OpenShiftAPIServer{},
 		&OpenShiftAPIServerList{},
 		&OpenShiftControllerManager{},
