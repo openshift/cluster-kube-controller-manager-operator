@@ -294,8 +294,7 @@ func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 			return nil, false, err
 		}
 	}
-	certificates = append([]*x509.Certificate{}, signingCertKeyPair.Config.Certs...)
-	certificates = append(certificates, certificates...)
+	certificates = append(certificates, signingCertKeyPair.Config.Certs...)
 	certificates = crypto.FilterExpiredCerts(certificates...)
 
 	finalCertificates := []*x509.Certificate{}
