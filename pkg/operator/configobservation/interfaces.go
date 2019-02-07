@@ -12,8 +12,6 @@ type Listers struct {
 	ConfigmapLister      corelistersv1.ConfigMapLister
 	InfrastructureLister configlistersv1.InfrastructureLister
 
-	InfrastructureSynced cache.InformerSynced
-
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
 }

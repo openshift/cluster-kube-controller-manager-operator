@@ -35,10 +35,10 @@ func NewConfigObserver(
 			configobservation.Listers{
 				ConfigmapLister:      kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
 				InfrastructureLister: configInformer.Config().V1().Infrastructures().Lister(),
-				InfrastructureSynced: configInformer.Config().V1().Infrastructures().Informer().HasSynced,
 				ResourceSync:         resourceSyncer,
 				PreRunCachesSynced: []cache.InformerSynced{
 					kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
+					configInformer.Config().V1().Infrastructures().Informer().HasSynced,
 				},
 			},
 			cloudprovider.ObserveCloudProviderNames,

@@ -63,7 +63,6 @@ func TestObserveCloudProviderNames(t *testing.T) {
 			indexer.Add(tc.infrastructure)
 			listers := configobservation.Listers{
 				InfrastructureLister: configlistersv1.NewInfrastructureLister(indexer),
-				InfrastructureSynced: func() bool { return true },
 			}
 			result, errs := ObserveCloudProviderNames(listers, events.NewInMemoryRecorder("cloud"), map[string]interface{}{})
 			if len(errs) != 0 {

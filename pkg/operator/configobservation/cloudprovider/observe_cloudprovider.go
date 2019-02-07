@@ -33,11 +33,6 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		}
 	}
 
-	if !listers.InfrastructureSynced() {
-		glog.Warning("infrastructure.config.openshift.io not synced")
-		return prevObservedConfig, errs
-	}
-
 	observedConfig := map[string]interface{}{}
 	clusterConfig, err := listers.InfrastructureLister.Get("cluster")
 	if errors.IsNotFound(err) {
