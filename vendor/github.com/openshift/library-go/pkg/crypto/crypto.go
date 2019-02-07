@@ -681,7 +681,7 @@ func (ca *CA) MakeClientCertificate(certFile, keyFile string, u user.Info, expir
 		return nil, err
 	}
 
-	certData, err := EncodeCertificates(clientCrt)
+	certData, err := EncodeCertificates(append([]*x509.Certificate{clientCrt}, ca.Config.Certs...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -708,7 +708,7 @@ func (ca *CA) MakeClientCertificateForDuration(u user.Info, lifetime time.Durati
 		return nil, err
 	}
 
-	certData, err := EncodeCertificates(clientCrt)
+	certData, err := EncodeCertificates(append([]*x509.Certificate{clientCrt}, ca.Config.Certs...)...)
 	if err != nil {
 		return nil, err
 	}
