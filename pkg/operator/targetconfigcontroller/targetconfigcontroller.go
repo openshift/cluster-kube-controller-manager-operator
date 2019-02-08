@@ -148,6 +148,10 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
+	_, _, err = manageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "secrets/csr-signer", err))
+	}
 	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
@@ -250,9 +254,47 @@ func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
+func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, bool, error) {
+	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
+	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
+	if apierrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	// the CSR signing controller only accepts a single cert.  make sure we only ever have one (not multiple to construct a larger chain)
+	signingCert := csrSigner.Data["tls.crt"]
+	if len(signingCert) == 0 {
+		return nil, false, nil
+	}
+	signingKey := csrSigner.Data["tls.key"]
+	if len(signingCert) == 0 {
+		return nil, false, nil
+	}
+	signingCertKeyPair, err := crypto.GetCAFromBytes(signingCert, signingKey)
+	if err != nil {
+		return nil, false, err
+	}
+	certBytes, err := crypto.EncodeCertificates(signingCertKeyPair.Config.Certs[0])
+	if err != nil {
+		return nil, false, err
+	}
+
+	csrSigner = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "csr-signer"},
+		Data: map[string][]byte{
+			"tls.cert": certBytes,
+			"tls.key":  []byte(signingKey),
+		},
+	}
+	return resourceapply.ApplySecret(client, recorder, csrSigner)
+}
+
 func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
-	csrSigner, err := lister.Secrets(operatorclient.TargetNamespace).Get("csr-signer")
+	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
 		return nil, false, nil
 	}

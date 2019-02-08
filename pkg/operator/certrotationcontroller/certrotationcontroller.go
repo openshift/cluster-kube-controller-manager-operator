@@ -46,7 +46,7 @@ func NewCertRotationController(
 			EventRecorder: eventRecorder,
 		},
 		certrotation.TargetRotation{
-			Namespace:         operatorclient.TargetNamespace,
+			Namespace:         operatorclient.OperatorNamespace,
 			Name:              "csr-signer",
 			Validity:          1 * 4 * time.Hour,
 			RefreshPercentage: 0.5,
