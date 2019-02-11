@@ -2,6 +2,7 @@
 // sources:
 // bindata/v3.11.0/kube-controller-manager/cm.yaml
 // bindata/v3.11.0/kube-controller-manager/defaultconfig.yaml
+// bindata/v3.11.0/kube-controller-manager/kubeconfig-cm.yaml
 // bindata/v3.11.0/kube-controller-manager/ns.yaml
 // bindata/v3.11.0/kube-controller-manager/operator-config.yaml
 // bindata/v3.11.0/kube-controller-manager/pod-cm.yaml
@@ -146,6 +147,49 @@ func v3110KubeControllerManagerDefaultconfigYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110KubeControllerManagerKubeconfigCmYaml = []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: controller-manager-kubeconfig
+  namespace: openshift-kube-controller-manager
+data:
+  kubeconfig: |
+    apiVersion: v1
+    clusters:
+      - cluster:
+          certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
+          server: https://localhost:6443
+        name: loopback
+    contexts:
+      - context:
+          cluster: loopback
+          user: kube-controller-manager
+        name: kube-controller-manager
+    current-context: kube-controller-manager
+    kind: Config
+    preferences: {}
+    users:
+      - name: kube-controller-manager
+        user:
+          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
+          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
+`)
+
+func v3110KubeControllerManagerKubeconfigCmYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerKubeconfigCmYaml, nil
+}
+
+func v3110KubeControllerManagerKubeconfigCmYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerKubeconfigCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/kubeconfig-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110KubeControllerManagerNsYaml = []byte(`apiVersion: v1
 kind: Namespace
 metadata:
@@ -240,7 +284,7 @@ spec:
     command: ["hyperkube", "kube-controller-manager"]
     args:
     - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
-    - --kubeconfig=/etc/kubernetes/static-pod-resources/secrets/controller-manager-kubeconfig/kubeconfig
+    - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
     resources:
       requests:
         memory: 200Mi
@@ -399,6 +443,7 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/kube-controller-manager/cm.yaml":              v3110KubeControllerManagerCmYaml,
 	"v3.11.0/kube-controller-manager/defaultconfig.yaml":   v3110KubeControllerManagerDefaultconfigYaml,
+	"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml":   v3110KubeControllerManagerKubeconfigCmYaml,
 	"v3.11.0/kube-controller-manager/ns.yaml":              v3110KubeControllerManagerNsYaml,
 	"v3.11.0/kube-controller-manager/operator-config.yaml": v3110KubeControllerManagerOperatorConfigYaml,
 	"v3.11.0/kube-controller-manager/pod-cm.yaml":          v3110KubeControllerManagerPodCmYaml,
@@ -452,6 +497,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
 			"cm.yaml":              {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
 			"defaultconfig.yaml":   {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"kubeconfig-cm.yaml":   {v3110KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
 			"ns.yaml":              {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},
 			"operator-config.yaml": {v3110KubeControllerManagerOperatorConfigYaml, map[string]*bintree{}},
 			"pod-cm.yaml":          {v3110KubeControllerManagerPodCmYaml, map[string]*bintree{}},
