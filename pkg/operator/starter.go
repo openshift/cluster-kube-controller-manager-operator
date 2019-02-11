@@ -139,6 +139,10 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
+	saTokenController, err := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, ctx.EventRecorder)
+	if err != nil {
+		return err
+	}
 
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
@@ -149,6 +153,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	go clusterOperatorStatus.Run(1, ctx.Done())
 	go resourceSyncController.Run(1, ctx.Done())
 	go certRotationController.Run(1, ctx.Done())
+	go saTokenController.Run(1, ctx.Done())
 
 	<-ctx.Done()
 	return fmt.Errorf("stopped")
