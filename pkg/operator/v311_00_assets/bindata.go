@@ -3,6 +3,7 @@
 // bindata/v3.11.0/kube-controller-manager/cm.yaml
 // bindata/v3.11.0/kube-controller-manager/defaultconfig.yaml
 // bindata/v3.11.0/kube-controller-manager/kubeconfig-cm.yaml
+// bindata/v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml
 // bindata/v3.11.0/kube-controller-manager/ns.yaml
 // bindata/v3.11.0/kube-controller-manager/operator-config.yaml
 // bindata/v3.11.0/kube-controller-manager/pod-cm.yaml
@@ -186,6 +187,34 @@ func v3110KubeControllerManagerKubeconfigCmYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/kubeconfig-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerLeaderElectionRolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: kube-system
+  name: system:openshift:leader-locking-kube-controller-manager
+roleRef:
+  kind: Role
+  name: system::leader-locking-kube-controller-manager
+subjects:
+  - kind: User
+    name: system:kube-controller-manager
+`)
+
+func v3110KubeControllerManagerLeaderElectionRolebindingYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerLeaderElectionRolebindingYaml, nil
+}
+
+func v3110KubeControllerManagerLeaderElectionRolebindingYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerLeaderElectionRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -441,15 +470,16 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v3.11.0/kube-controller-manager/cm.yaml":              v3110KubeControllerManagerCmYaml,
-	"v3.11.0/kube-controller-manager/defaultconfig.yaml":   v3110KubeControllerManagerDefaultconfigYaml,
-	"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml":   v3110KubeControllerManagerKubeconfigCmYaml,
-	"v3.11.0/kube-controller-manager/ns.yaml":              v3110KubeControllerManagerNsYaml,
-	"v3.11.0/kube-controller-manager/operator-config.yaml": v3110KubeControllerManagerOperatorConfigYaml,
-	"v3.11.0/kube-controller-manager/pod-cm.yaml":          v3110KubeControllerManagerPodCmYaml,
-	"v3.11.0/kube-controller-manager/pod.yaml":             v3110KubeControllerManagerPodYaml,
-	"v3.11.0/kube-controller-manager/sa.yaml":              v3110KubeControllerManagerSaYaml,
-	"v3.11.0/kube-controller-manager/svc.yaml":             v3110KubeControllerManagerSvcYaml,
+	"v3.11.0/kube-controller-manager/cm.yaml":                          v3110KubeControllerManagerCmYaml,
+	"v3.11.0/kube-controller-manager/defaultconfig.yaml":               v3110KubeControllerManagerDefaultconfigYaml,
+	"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml":               v3110KubeControllerManagerKubeconfigCmYaml,
+	"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml": v3110KubeControllerManagerLeaderElectionRolebindingYaml,
+	"v3.11.0/kube-controller-manager/ns.yaml":                          v3110KubeControllerManagerNsYaml,
+	"v3.11.0/kube-controller-manager/operator-config.yaml":             v3110KubeControllerManagerOperatorConfigYaml,
+	"v3.11.0/kube-controller-manager/pod-cm.yaml":                      v3110KubeControllerManagerPodCmYaml,
+	"v3.11.0/kube-controller-manager/pod.yaml":                         v3110KubeControllerManagerPodYaml,
+	"v3.11.0/kube-controller-manager/sa.yaml":                          v3110KubeControllerManagerSaYaml,
+	"v3.11.0/kube-controller-manager/svc.yaml":                         v3110KubeControllerManagerSvcYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -495,15 +525,16 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v3.11.0": {nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
-			"cm.yaml":              {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
-			"defaultconfig.yaml":   {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
-			"kubeconfig-cm.yaml":   {v3110KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
-			"ns.yaml":              {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},
-			"operator-config.yaml": {v3110KubeControllerManagerOperatorConfigYaml, map[string]*bintree{}},
-			"pod-cm.yaml":          {v3110KubeControllerManagerPodCmYaml, map[string]*bintree{}},
-			"pod.yaml":             {v3110KubeControllerManagerPodYaml, map[string]*bintree{}},
-			"sa.yaml":              {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
-			"svc.yaml":             {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"cm.yaml":                          {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":               {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"kubeconfig-cm.yaml":               {v3110KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
+			"leader-election-rolebinding.yaml": {v3110KubeControllerManagerLeaderElectionRolebindingYaml, map[string]*bintree{}},
+			"ns.yaml":                          {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},
+			"operator-config.yaml":             {v3110KubeControllerManagerOperatorConfigYaml, map[string]*bintree{}},
+			"pod-cm.yaml":                      {v3110KubeControllerManagerPodCmYaml, map[string]*bintree{}},
+			"pod.yaml":                         {v3110KubeControllerManagerPodYaml, map[string]*bintree{}},
+			"sa.yaml":                          {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
+			"svc.yaml":                         {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
