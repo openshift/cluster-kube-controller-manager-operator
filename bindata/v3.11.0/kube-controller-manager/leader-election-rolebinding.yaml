@@ -1,0 +1,10 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:leader-locking-kube-controller-manager
+roleRef:
+  kind: Role
+  name: system::leader-locking-kube-controller-manager
+subjects:
+  - kind: User
+    name: system:kube-controller-manager
