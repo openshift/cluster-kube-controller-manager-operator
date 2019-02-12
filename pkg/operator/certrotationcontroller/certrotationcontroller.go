@@ -3,12 +3,13 @@ package certrotationcontroller
 import (
 	"time"
 
-	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
 type CertRotationController struct {
@@ -16,7 +17,8 @@ type CertRotationController struct {
 }
 
 func NewCertRotationController(
-	kubeClient kubernetes.Interface,
+	secretsGetter corev1client.SecretsGetter,
+	configMapsGetter corev1client.ConfigMapsGetter,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
@@ -34,7 +36,7 @@ func NewCertRotationController(
 			RefreshPercentage: 0.5,
 			Informer:          kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
 			Lister:            kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:            kubeClient.CoreV1(),
+			Client:            secretsGetter,
 			EventRecorder:     eventRecorder,
 		},
 		certrotation.CABundleRotation{
@@ -42,7 +44,7 @@ func NewCertRotationController(
 			Name:          "csr-controller-signer-ca",
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps(),
 			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister(),
-			Client:        kubeClient.CoreV1(),
+			Client:        configMapsGetter,
 			EventRecorder: eventRecorder,
 		},
 		certrotation.TargetRotation{
@@ -55,7 +57,7 @@ func NewCertRotationController(
 			},
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
 			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:        kubeClient.CoreV1(),
+			Client:        secretsGetter,
 			EventRecorder: eventRecorder,
 		},
 		operatorClient,

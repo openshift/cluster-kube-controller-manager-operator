@@ -9,28 +9,28 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/openshift/library-go/pkg/controller/controllercmd"
-	"github.com/openshift/library-go/pkg/operator/staticpod"
-	"github.com/openshift/library-go/pkg/operator/status"
-	"github.com/openshift/library-go/pkg/operator/v1helpers"
-
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
+	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/staticpod"
+	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
+	"github.com/openshift/library-go/pkg/operator/status"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
-	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
-
-	kubeClient, err := kubernetes.NewForConfig(ctx.KubeConfig)
+	// This kube client use protobuf, do not use it for CR
+	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,8 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	resourceSyncController, err := resourcesynccontroller.NewResourceSyncController(
 		operatorClient,
 		kubeInformersForNamespaces,
-		kubeClient,
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		ctx.EventRecorder,
 	)
 	if err != nil {
@@ -128,7 +129,13 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		ctx.EventRecorder,
 	)
 
-	certRotationController, err := certrotationcontroller.NewCertRotationController(kubeClient, operatorClient, kubeInformersForNamespaces, ctx.EventRecorder)
+	certRotationController, err := certrotationcontroller.NewCertRotationController(
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		operatorClient,
+		kubeInformersForNamespaces,
+		ctx.EventRecorder,
+	)
 	if err != nil {
 		return err
 	}
