@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -30,19 +32,22 @@ import (
 const workQueueKey = "key"
 
 type SATokenSignerController struct {
-	operatorClient  v1helpers.OperatorClient
+	operatorClient  v1helpers.StaticPodOperatorClient
 	secretClient    corev1client.SecretsGetter
 	configMapClient corev1client.ConfigMapsGetter
+	endpointClient  corev1client.EndpointsGetter
+	podClient       corev1client.PodsGetter
 	eventRecorder   events.Recorder
 
-	cachesSynced []cache.InformerSynced
+	confirmedBootstrapNodeGone bool
+	cachesSynced               []cache.InformerSynced
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 }
 
 func NewSATokenSignerController(
-	operatorClient v1helpers.OperatorClient,
+	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
@@ -51,8 +56,10 @@ func NewSATokenSignerController(
 
 	ret := &SATokenSignerController{
 		operatorClient:  operatorClient,
-		secretClient:    v1helpers.CachedSecretGetter(kubeClient, kubeInformersForNamespaces),
-		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient, kubeInformersForNamespaces),
+		secretClient:    v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		endpointClient:  kubeClient.CoreV1(),
+		podClient:       kubeClient.CoreV1(),
 		eventRecorder:   eventRecorder,
 
 		cachesSynced: []cache.InformerSynced{
@@ -72,6 +79,7 @@ func NewSATokenSignerController(
 }
 
 func (c SATokenSignerController) sync() error {
+
 	syncErr := c.syncWorker()
 
 	condition := operatorv1.OperatorCondition{
@@ -91,6 +99,45 @@ func (c SATokenSignerController) sync() error {
 }
 
 func (c SATokenSignerController) syncWorker() error {
+	// we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
+	// tokens that should be valid.  To test this, we go through kubernetes.default.svc endpoints and see if any of them
+	// are not in the list of known pod hosts.  We only have to do this once because the bootstrap node never comes back
+	if !c.confirmedBootstrapNodeGone {
+		nodeIPs := sets.String{}
+		apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
+		if err != nil {
+			return err
+		}
+		for _, pod := range apiServerPods.Items {
+			nodeIPs.Insert(pod.Status.HostIP)
+		}
+
+		kubeEndpoints, err := c.endpointClient.Endpoints("default").Get("kubernetes", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if len(kubeEndpoints.Subsets) == 0 {
+			message := "missing kubernetes endpoints subsets"
+			c.eventRecorder.Warning("SATokenSignerControllerStuck", message)
+			return fmt.Errorf(message)
+		}
+		unexpectedEndpoints := sets.String{}
+		for _, subset := range kubeEndpoints.Subsets {
+			for _, address := range subset.Addresses {
+				if !nodeIPs.Has(address.IP) {
+					unexpectedEndpoints.Insert(address.IP)
+				}
+			}
+		}
+		if len(unexpectedEndpoints) != 0 {
+			message := fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
+			c.eventRecorder.Event("SATokenSignerControllerStuck", message)
+			return fmt.Errorf(message)
+		}
+		// we have confirmed that the bootstrap node is gone
+		c.confirmedBootstrapNodeGone = true
+	}
+
 	saTokenSigner, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
