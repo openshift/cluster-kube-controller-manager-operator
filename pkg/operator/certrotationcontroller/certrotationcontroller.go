@@ -53,8 +53,8 @@ func NewCertRotationController(
 			SignerRotation: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},
-			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets(),
-			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Lister(),
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
 			Client:        kubeClient.CoreV1(),
 			EventRecorder: eventRecorder,
 		},

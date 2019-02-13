@@ -285,8 +285,8 @@ func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 	csrSigner = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "csr-signer"},
 		Data: map[string][]byte{
-			"tls.cert": certBytes,
-			"tls.key":  []byte(signingKey),
+			"tls.crt": certBytes,
+			"tls.key": []byte(signingKey),
 		},
 	}
 	return resourceapply.ApplySecret(client, recorder, csrSigner)
