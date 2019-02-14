@@ -103,8 +103,8 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		deploymentConfigMaps,
 		deploymentSecrets,
 		operatorClient,
-		v1helpers.CachedConfigMapGetter(kubeClient, kubeInformersForNamespaces),
-		v1helpers.CachedSecretGetter(kubeClient, kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		kubeClient.CoreV1(),
 		kubeClient,
 		dynamicClient,
@@ -133,17 +133,17 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
-	operatorConfigInformers.Start(ctx.Context.Done())
-	kubeInformersForNamespaces.Start(ctx.Context.Done())
+	operatorConfigInformers.Start(ctx.Done())
+	kubeInformersForNamespaces.Start(ctx.Done())
 
-	go staticPodControllers.Run(ctx.Context.Done())
-	go targetConfigController.Run(1, ctx.Context.Done())
-	go configObserver.Run(1, ctx.Context.Done())
-	go clusterOperatorStatus.Run(1, ctx.Context.Done())
-	go resourceSyncController.Run(1, ctx.Context.Done())
-	go certRotationController.Run(1, ctx.Context.Done())
+	go staticPodControllers.Run(ctx.Done())
+	go targetConfigController.Run(1, ctx.Done())
+	go configObserver.Run(1, ctx.Done())
+	go clusterOperatorStatus.Run(1, ctx.Done())
+	go resourceSyncController.Run(1, ctx.Done())
+	go certRotationController.Run(1, ctx.Done())
 
-	<-ctx.Context.Done()
+	<-ctx.Done()
 	return fmt.Errorf("stopped")
 }
 
