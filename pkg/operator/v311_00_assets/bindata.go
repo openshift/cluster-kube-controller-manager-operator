@@ -298,7 +298,7 @@ func v3110KubeControllerManagerPodCmYaml() (*asset, error) {
 var _v3110KubeControllerManagerPodYaml = []byte(`apiVersion: v1
 kind: Pod
 metadata:
-  name: openshift-kube-controller-manager
+  name: kube-controller-manager
   namespace: openshift-kube-controller-manager
   labels:
     app: kube-controller-manager
@@ -306,7 +306,7 @@ metadata:
     revision: "REVISION"
 spec:
   containers:
-  - name: openshift-kube-controller-manager
+  - name: kube-controller-manager-REVISION
     image: ${IMAGE}
     imagePullPolicy: Always
     terminationMessagePolicy: FallbackToLogsOnError

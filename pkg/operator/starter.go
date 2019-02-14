@@ -115,7 +115,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		WithEvents(ctx.EventRecorder).
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
-		WithResources(operatorclient.TargetNamespace, "openshift-kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
+		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithServiceMonitor(dynamicClient).
 		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
 		ToControllers()
