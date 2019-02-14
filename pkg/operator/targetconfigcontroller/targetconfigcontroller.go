@@ -127,6 +127,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
 		"v3.11.0/kube-controller-manager/ns.yaml",
+		"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml",
+		"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",
 	)

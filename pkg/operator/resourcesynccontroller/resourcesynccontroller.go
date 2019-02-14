@@ -26,6 +26,12 @@ func NewResourceSyncController(
 	); err != nil {
 		return nil, err
 	}
+	if err := resourceSyncController.SyncSecret(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "kube-controller-manager-client-cert-key"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-controller-manager-client-cert-key"},
+	); err != nil {
+		return nil, err
+	}
 
 	return resourceSyncController, nil
 }
