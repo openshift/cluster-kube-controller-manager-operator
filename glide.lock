@@ -1,5 +1,5 @@
 hash: 1037ac27126b88282406929754baf3804a68910b4e696ba1c4eb9d33855c246a
-updated: 2019-02-14T11:11:09.576317227-05:00
+updated: 2019-02-14T19:44:03.340576+01:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -386,7 +386,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
+  version: 99bc4335fe23898c0a61f5b35afabb6d11f29094
   subpackages:
   - internal
   - internal/base
