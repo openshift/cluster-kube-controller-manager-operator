@@ -1,24 +1,27 @@
 package resourcesynccontroller
 
 import (
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	"k8s.io/client-go/kubernetes"
+
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
 func NewResourceSyncController(
 	operatorConfigClient v1helpers.OperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	kubeClient kubernetes.Interface,
+	secretsGetter corev1client.SecretsGetter,
+	configMapsGetter corev1client.ConfigMapsGetter,
 	eventRecorder events.Recorder) (*resourcesynccontroller.ResourceSyncController, error) {
 
 	resourceSyncController := resourcesynccontroller.NewResourceSyncController(
 		operatorConfigClient,
 		kubeInformersForNamespaces,
-		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
-		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedSecretGetter(secretsGetter, kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(configMapsGetter, kubeInformersForNamespaces),
 		eventRecorder,
 	)
 	if err := resourceSyncController.SyncConfigMap(
