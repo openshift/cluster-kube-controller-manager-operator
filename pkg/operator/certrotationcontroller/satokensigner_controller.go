@@ -98,44 +98,67 @@ func (c SATokenSignerController) sync() error {
 	return syncErr
 }
 
-func (c SATokenSignerController) syncWorker() error {
-	// we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
-	// tokens that should be valid.  To test this, we go through kubernetes.default.svc endpoints and see if any of them
-	// are not in the list of known pod hosts.  We only have to do this once because the bootstrap node never comes back
-	if !c.confirmedBootstrapNodeGone {
-		nodeIPs := sets.String{}
-		apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
-		if err != nil {
-			return err
-		}
-		for _, pod := range apiServerPods.Items {
-			nodeIPs.Insert(pod.Status.HostIP)
-		}
+// we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
+// tokens that should be valid.  To test this, we go through kubernetes.default.svc endpoints and see if any of them
+// are not in the list of known pod hosts.  We only have to do this once because the bootstrap node never comes back
+func (c SATokenSignerController) isPastBootstrapNode() error {
+	if c.confirmedBootstrapNodeGone {
+		return nil
+	}
+	nodeIPs := sets.String{}
+	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
+	if err != nil {
+		return err
+	}
+	for _, pod := range apiServerPods.Items {
+		nodeIPs.Insert(pod.Status.HostIP)
+	}
 
-		kubeEndpoints, err := c.endpointClient.Endpoints("default").Get("kubernetes", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if len(kubeEndpoints.Subsets) == 0 {
-			message := "missing kubernetes endpoints subsets"
-			c.eventRecorder.Warning("SATokenSignerControllerStuck", message)
-			return fmt.Errorf(message)
-		}
-		unexpectedEndpoints := sets.String{}
-		for _, subset := range kubeEndpoints.Subsets {
-			for _, address := range subset.Addresses {
-				if !nodeIPs.Has(address.IP) {
-					unexpectedEndpoints.Insert(address.IP)
-				}
+	kubeEndpoints, err := c.endpointClient.Endpoints("default").Get("kubernetes", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if len(kubeEndpoints.Subsets) == 0 {
+		message := "missing kubernetes endpoints subsets"
+		c.eventRecorder.Warning("SATokenSignerControllerStuck", message)
+		return fmt.Errorf(message)
+	}
+	unexpectedEndpoints := sets.String{}
+	for _, subset := range kubeEndpoints.Subsets {
+		for _, address := range subset.Addresses {
+			if !nodeIPs.Has(address.IP) {
+				unexpectedEndpoints.Insert(address.IP)
 			}
 		}
-		if len(unexpectedEndpoints) != 0 {
-			message := fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
-			c.eventRecorder.Event("SATokenSignerControllerStuck", message)
-			return fmt.Errorf(message)
+	}
+	if len(unexpectedEndpoints) != 0 {
+		message := fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
+		c.eventRecorder.Event("SATokenSignerControllerStuck", message)
+		return fmt.Errorf(message)
+	}
+
+	// we have confirmed that the bootstrap node is gone
+	c.confirmedBootstrapNodeGone = true
+	return nil
+}
+
+func (c SATokenSignerController) syncWorker() error {
+	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
+		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
+		// initial provided by the installer.
+		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
+		if err == nil {
+			// return this error to be reported and requeue
+			return pastBootstrapErr
 		}
-		// we have confirmed that the bootstrap node is gone
-		c.confirmedBootstrapNodeGone = true
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		// at this point we have not-found condition, sync the original
+		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
+			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",
+			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
+		return err
 	}
 
 	saTokenSigner, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
@@ -173,7 +196,7 @@ func (c SATokenSignerController) syncWorker() error {
 	}
 	if errors.IsNotFound(err) {
 		saTokenSigningCerts = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "sa-token-signing-certs"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "sa-token-signing-certs"},
 			Data:       map[string]string{},
 		}
 	}
