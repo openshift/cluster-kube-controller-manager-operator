@@ -67,7 +67,9 @@ func NewSATokenSignerController(
 		eventRecorder:   eventRecorder,
 
 		cachesSynced: []cache.InformerSynced{
+			kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().HasSynced,
 			kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer().HasSynced,
 			kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().HasSynced,
 			operatorClient.Informer().HasSynced,
 		},
@@ -75,7 +77,9 @@ func NewSATokenSignerController(
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SATokenSignerController"),
 	}
 
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(ret.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
 	operatorClient.Informer().AddEventHandler(ret.eventHandler())
 
@@ -197,6 +201,8 @@ func (c *SATokenSignerController) syncWorker() error {
 		if err != nil {
 			return err
 		}
+		// requeue for after we should have recovered
+		c.queue.AddAfter(workQueueKey, 5*time.Minute+10*time.Second)
 	}
 
 	saTokenSigningCerts, err := c.configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get("sa-token-signing-certs", metav1.GetOptions{})
