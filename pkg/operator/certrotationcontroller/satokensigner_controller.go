@@ -82,7 +82,7 @@ func NewSATokenSignerController(
 	return ret, nil
 }
 
-func (c SATokenSignerController) sync() error {
+func (c *SATokenSignerController) sync() error {
 
 	syncErr := c.syncWorker()
 
@@ -105,10 +105,11 @@ func (c SATokenSignerController) sync() error {
 // we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
 // tokens that should be valid.  To test this, we go through kubernetes.default.svc endpoints and see if any of them
 // are not in the list of known pod hosts.  We only have to do this once because the bootstrap node never comes back
-func (c SATokenSignerController) isPastBootstrapNode() error {
+func (c *SATokenSignerController) isPastBootstrapNode() error {
 	if c.confirmedBootstrapNodeGone {
 		return nil
 	}
+
 	nodeIPs := sets.String{}
 	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
 	if err != nil {
@@ -123,9 +124,9 @@ func (c SATokenSignerController) isPastBootstrapNode() error {
 		return err
 	}
 	if len(kubeEndpoints.Subsets) == 0 {
-		message := "missing kubernetes endpoints subsets"
-		c.eventRecorder.Warning("SATokenSignerControllerStuck", message)
-		return fmt.Errorf(message)
+		err := fmt.Errorf("missing kubernetes endpoints subsets")
+		c.eventRecorder.Warning("SATokenSignerControllerStuck", err.Error())
+		return err
 	}
 	unexpectedEndpoints := sets.String{}
 	for _, subset := range kubeEndpoints.Subsets {
@@ -136,17 +137,18 @@ func (c SATokenSignerController) isPastBootstrapNode() error {
 		}
 	}
 	if len(unexpectedEndpoints) != 0 {
-		message := fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
-		c.eventRecorder.Event("SATokenSignerControllerStuck", message)
-		return fmt.Errorf(message)
+		err := fmt.Errorf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
+		c.eventRecorder.Event("SATokenSignerControllerStuck", err.Error())
+		return err
 	}
 
 	// we have confirmed that the bootstrap node is gone
+	c.eventRecorder.Event("SATokenSignerControllerOK", "found expected kube-apiserver endpoints")
 	c.confirmedBootstrapNodeGone = true
 	return nil
 }
 
-func (c SATokenSignerController) syncWorker() error {
+func (c *SATokenSignerController) syncWorker() error {
 	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
