@@ -153,17 +153,21 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 }
 
 func (c *SATokenSignerController) syncWorker() error {
+	fmt.Printf("#### 3a\n")
 	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
 		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
 		if err == nil {
 			// return this error to be reported and requeue
+			fmt.Printf("#### 3b %v\n", pastBootstrapErr)
 			return pastBootstrapErr
 		}
 		if err != nil && !errors.IsNotFound(err) {
+			fmt.Printf("#### 3c %v\n", err)
 			return err
 		}
+		fmt.Printf("#### 3d\n")
 		// at this point we have not-found condition, sync the original
 		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
 			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",
@@ -235,20 +239,23 @@ func (c *SATokenSignerController) syncWorker() error {
 	// to pick up the change
 	// TODO have a better signal for determining the level of cert trust.  This is a general problem for observing our cycles.
 	readyToPromote := false
-	signingCertKeyPairExpiry := saTokenSigner.Annotations[saTokenReadyTimeAnnotation]
-	if len(signingCertKeyPairExpiry) == 0 {
+	saTokenReadyTime := saTokenSigner.Annotations[saTokenReadyTimeAnnotation]
+	if len(saTokenReadyTime) == 0 {
 		readyToPromote = true
 	}
-	promotionTime, err := time.Parse(time.RFC3339, signingCertKeyPairExpiry)
+	promotionTime, err := time.Parse(time.RFC3339, saTokenReadyTime)
 	if err != nil {
 		readyToPromote = true
 	}
+	fmt.Printf("#### 2b comparing now=%v to promotionTime %v\n", saTokenReadyTime, promotionTime)
 	if time.Now().After(promotionTime) {
 		readyToPromote = true
 	}
 
 	// if we're past our promotion time, go ahead and synchronize over
 	if readyToPromote {
+		_, err := c.configMapClient.ConfigMaps(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
+		fmt.Printf("#### 1a time to sync! err=%v err\n", err)
 		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
