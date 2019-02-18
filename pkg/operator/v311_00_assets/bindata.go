@@ -197,6 +197,7 @@ metadata:
   namespace: kube-system
   name: system:openshift:leader-locking-kube-controller-manager
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: system::leader-locking-kube-controller-manager
 subjects:
