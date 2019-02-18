@@ -29,7 +29,11 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
-const workQueueKey = "key"
+const (
+	workQueueKey = "key"
+
+	saTokenReadyTimeAnnotation = "kube-controller-manager.openshift.io/ready-to-use"
+)
 
 type SATokenSignerController struct {
 	operatorClient  v1helpers.StaticPodOperatorClient
@@ -161,7 +165,7 @@ func (c SATokenSignerController) syncWorker() error {
 		return err
 	}
 
-	saTokenSigner, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
+	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -177,7 +181,10 @@ func (c SATokenSignerController) syncWorker() error {
 		}
 
 		saTokenSigner = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "service-account-private-key"},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorclient.OperatorNamespace, Name: "next-service-account-private-key",
+				Annotations: map[string]string{saTokenReadyTimeAnnotation: time.Now().Add(5 * time.Minute).Format(time.RFC3339)},
+			},
 			Data: map[string][]byte{
 				"service-account.key": privateKeyToPem(rsaKey),
 				"service-account.pub": publicBytes,
@@ -213,6 +220,30 @@ func (c SATokenSignerController) syncWorker() error {
 	saTokenSigningCerts.Data[fmt.Sprintf("service-account-%03d.pub", len(saTokenSigningCerts.Data)+1)] = currPublicKey
 	saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(c.configMapClient, c.eventRecorder, saTokenSigningCerts)
 	if err != nil {
+		return err
+	}
+
+	// now check to see if the next-sa-private-key has been around long enough to be promoted.  We're waiting for the kube-apiserver
+	// to pick up the change
+	// TODO have a better signal for determining the level of cert trust.  This is a general problem for observing our cycles.
+	readyToPromote := false
+	signingCertKeyPairExpiry := saTokenSigner.Annotations[saTokenReadyTimeAnnotation]
+	if len(signingCertKeyPairExpiry) == 0 {
+		readyToPromote = true
+	}
+	promotionTime, err := time.Parse(time.RFC3339, signingCertKeyPairExpiry)
+	if err != nil {
+		readyToPromote = true
+	}
+	if time.Now().After(promotionTime) {
+		readyToPromote = true
+	}
+
+	// if we're past our promotion time, go ahead and synchronize over
+	if readyToPromote {
+		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
+			operatorclient.OperatorNamespace, "next-service-account-private-key",
+			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
 	}
 
