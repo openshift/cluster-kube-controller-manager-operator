@@ -226,32 +226,25 @@ func ApplySecret(client coreclientv1.SecretsGetter, recorder events.Recorder, re
 }
 
 func SyncConfigMap(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, sourceNamespace, sourceName, targetNamespace, targetName string, ownerRefs []metav1.OwnerReference) (*corev1.ConfigMap, bool, error) {
-	fmt.Printf("#### 4a %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 	source, err := client.ConfigMaps(sourceNamespace).Get(sourceName, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
-		fmt.Printf("#### 4b %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 		deleteErr := client.ConfigMaps(targetNamespace).Delete(targetName, nil)
 		if apierrors.IsNotFound(deleteErr) {
-			fmt.Printf("#### 4c %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 			return nil, false, nil
 		}
 		if deleteErr == nil {
-			fmt.Printf("#### 4d %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 			recorder.Eventf("TargetConfigDeleted", "Deleted target configmap %s/%s because source config does not exist", targetNamespace, targetName)
 			return nil, true, nil
 		}
-		fmt.Printf("#### 4e %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 		return nil, false, deleteErr
 	case err != nil:
-		fmt.Printf("#### 4f %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 		return nil, false, err
 	default:
 		source.Namespace = targetNamespace
 		source.Name = targetName
 		source.ResourceVersion = ""
 		source.OwnerReferences = ownerRefs
-		fmt.Printf("#### 4g %v in %v to %v in %v\n", sourceName, sourceNamespace, targetName, targetNamespace)
 		return ApplyConfigMap(client, recorder, source)
 	}
 }
