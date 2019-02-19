@@ -111,26 +111,17 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	}
 	versionRecorder.SetVersion("operator", os.Getenv("OPERATOR_IMAGE_VERSION"))
 
-	staticPodControllers := staticpod.NewControllers(
-		operatorclient.TargetNamespace,
-		"kube-controller-manager",
-		"openshift-kube-controller-manager",
-		"kube-controller-manager-pod",
-		[]string{"cluster-kube-controller-manager-operator", "installer"},
-		[]string{"cluster-kube-controller-manager-operator", "prune"},
-		deploymentConfigMaps,
-		deploymentSecrets,
-		operatorClient,
-		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
-		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
-		kubeClient.CoreV1(),
-		kubeClient,
-		dynamicClient,
-		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
-		kubeInformersForNamespaces.InformersFor(""),
-		versionRecorder,
-		ctx.EventRecorder,
-	)
+	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces).
+		WithEvents(ctx.EventRecorder).
+		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
+		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
+		WithResources(operatorclient.TargetNamespace, "openshift-kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
+		WithServiceMonitor(dynamicClient).
+		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
+		ToControllers()
+	if err != nil {
+		return err
+	}
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"kube-controller-manager",
