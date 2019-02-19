@@ -192,6 +192,7 @@ func (c *PruneController) pruneAPIResources(excludedIDs []int, maxEligibleRevisi
 		if revision > maxEligibleRevisionID {
 			continue
 		}
+		fmt.Printf("#### 10a deleting %q\n", cm.Name)
 		if err := c.configMapGetter.ConfigMaps(c.targetNamespace).Delete(cm.Name, &metav1.DeleteOptions{}); err != nil {
 			return err
 		}
