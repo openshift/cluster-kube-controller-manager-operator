@@ -169,7 +169,7 @@ func (c *SATokenSignerController) syncWorker() error {
 		}
 		fmt.Printf("#### 3d\n")
 		// at this point we have not-found condition, sync the original
-		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
+		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
 			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
@@ -256,7 +256,7 @@ func (c *SATokenSignerController) syncWorker() error {
 	if readyToPromote {
 		_, err := c.configMapClient.ConfigMaps(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
 		fmt.Printf("#### 1a time to sync! err=%v err\n", err)
-		_, _, err = resourceapply.SyncConfigMap(c.configMapClient, c.eventRecorder,
+		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
