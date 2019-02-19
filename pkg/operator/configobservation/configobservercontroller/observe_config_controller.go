@@ -1,15 +1,16 @@
 package configobservercontroller
 
 import (
-	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
-	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/cloudprovider"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
@@ -23,6 +24,7 @@ func NewConfigObserver(
 	operatorClient v1helpers.OperatorClient,
 	operatorConfigInformers operatorv1informers.SharedInformerFactory,
 	kubeInformersForKubeSystemNamespace kubeinformers.SharedInformerFactory,
+	configinformers configinformers.SharedInformerFactory,
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
 	eventRecorder events.Recorder,
 ) *ConfigObserver {
@@ -31,9 +33,11 @@ func NewConfigObserver(
 			operatorClient,
 			eventRecorder,
 			configobservation.Listers{
-				ConfigmapLister: kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
-				ResourceSync:    resourceSyncer,
+				InfrastructureLister: configinformers.Config().V1().Infrastructures().Lister(),
+				ConfigmapLister:      kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
+				ResourceSync:         resourceSyncer,
 				PreRunCachesSynced: []cache.InformerSynced{
+					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
 					kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
 				},
 			},
@@ -44,6 +48,7 @@ func NewConfigObserver(
 	}
 
 	operatorConfigInformers.Operator().V1().KubeControllerManagers().Informer().AddEventHandler(c.EventHandler())
+	configinformers.Config().V1().Infrastructures().Informer().AddEventHandler(c.EventHandler())
 	kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
 
 	return c

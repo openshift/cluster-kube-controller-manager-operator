@@ -1,14 +1,14 @@
 package cloudprovider
 
 import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
+	configv1 "github.com/openshift/api/config/v1"
+	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
@@ -16,52 +16,54 @@ import (
 
 func TestObserveCloudProviderNames(t *testing.T) {
 	cases := []struct {
-		installConfig         string
-		expectedCloudProvider string
-		cloudProviderCount    int
+		platform           configv1.PlatformType
+		expected           string
+		cloudProviderCount int
 	}{{
-		installConfig:         "platform:\n  aws: {}\n",
-		expectedCloudProvider: "aws",
-		cloudProviderCount:    1,
+		platform:           configv1.AWSPlatform,
+		expected:           "aws",
+		cloudProviderCount: 1,
 	}, {
-		installConfig:      "platform:\n  libvirt: {}\n",
+		platform:           configv1.LibvirtPlatform,
 		cloudProviderCount: 0,
 	}, {
-		installConfig:      "platform:\n  none: {}\n",
+		platform:           configv1.OpenStackPlatform,
+		cloudProviderCount: 0,
+	}, {
+		platform:           configv1.GCPPlatform,
+		cloudProviderCount: 0,
+	}, {
+		platform:           configv1.NonePlatform,
+		cloudProviderCount: 0,
+	}, {
+		platform:           "",
 		cloudProviderCount: 0,
 	}}
-	for idx, c := range cases {
-		t.Logf("Testing case #%d", idx+1)
-		indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-		if err := indexer.Add(&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-config-v1",
-				Namespace: "kube-system",
-			},
-			Data: map[string]string{
-				"install-config": c.installConfig,
-			},
-		}); err != nil {
-			t.Fatal(err.Error())
-		}
-		listers := configobservation.Listers{
-			ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
-		}
-		result, errs := ObserveCloudProviderNames(listers, events.NewInMemoryRecorder("cloud"), map[string]interface{}{})
-		if len(errs) > 0 {
-			t.Fatal(errs)
-		}
-		cloudProvider, _, err := unstructured.NestedSlice(result, "extendedArguments", "cloud-provider")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if e, a := c.cloudProviderCount, len(cloudProvider); e != a {
-			t.Fatalf("expected len(cloudProvider) == %d, got %d", e, a)
-		}
-		if c.cloudProviderCount > 0 {
-			if e, a := c.expectedCloudProvider, cloudProvider[0]; e != a {
-				t.Errorf("expected cloud-provider=%s, got %s", e, a)
+	for _, c := range cases {
+		t.Run(string(c.platform), func(t *testing.T) {
+			indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			if err := indexer.Add(&configv1.Infrastructure{ObjectMeta: v1.ObjectMeta{Name: "cluster"}, Status: configv1.InfrastructureStatus{Platform: c.platform}}); err != nil {
+				t.Fatal(err.Error())
 			}
-		}
+			listers := configobservation.Listers{
+				InfrastructureLister: configlistersv1.NewInfrastructureLister(indexer),
+			}
+			result, errs := ObserveCloudProviderNames(listers, events.NewInMemoryRecorder("cloud"), map[string]interface{}{})
+			if len(errs) > 0 {
+				t.Fatal(errs)
+			}
+			cloudProvider, _, err := unstructured.NestedSlice(result, "extendedArguments", "cloud-provider")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if e, a := c.cloudProviderCount, len(cloudProvider); e != a {
+				t.Fatalf("expected len(cloudProvider) == %d, got %d", e, a)
+			}
+			if c.cloudProviderCount > 0 {
+				if e, a := c.expected, cloudProvider[0]; e != a {
+					t.Errorf("expected cloud-provider=%s, got %s", e, a)
+				}
+			}
+		})
 	}
 }
