@@ -1,5 +1,5 @@
 hash: 1037ac27126b88282406929754baf3804a68910b4e696ba1c4eb9d33855c246a
-updated: 2019-02-18T17:05:03.004204354-05:00
+updated: 2019-02-19T08:41:02.61682844-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -151,6 +151,41 @@ imports:
   - ptypes/duration
   - ptypes/struct
   - ptypes/timestamp
+- name: github.com/gonum/blas
+  version: f22b278b28ac9805aadd613a754a60c35b24ae69
+  subpackages:
+  - blas64
+  - native
+  - native/internal/math32
+- name: github.com/gonum/floats
+  version: c233463c7e827fd71a8cdb62dfda0e98f7c39ad5
+- name: github.com/gonum/graph
+  version: 50b27dea7ebbfb052dfaf91681afc6fde28d8796
+  subpackages:
+  - encoding/dot
+  - formats/dot
+  - formats/dot/ast
+  - formats/dot/internal/astx
+  - formats/dot/internal/errors
+  - formats/dot/internal/lexer
+  - formats/dot/internal/parser
+  - formats/dot/internal/token
+  - internal/ordered
+  - simple
+- name: github.com/gonum/internal
+  version: f884aa71402950fb2796dbea0d5aa9ef9cfad8ca
+  subpackages:
+  - asm/f32
+  - asm/f64
+- name: github.com/gonum/lapack
+  version: e4cdc5a0bff924bb10be88482e635bd40429f65e
+  subpackages:
+  - lapack64
+  - native
+- name: github.com/gonum/matrix
+  version: c518dec07be9a636c38a4650e217be059b5952ec
+  subpackages:
+  - mat64
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
@@ -275,6 +310,7 @@ imports:
   - pkg/operator/render
   - pkg/operator/render/options
   - pkg/operator/resource/resourceapply
+  - pkg/operator/resource/resourcegraph
   - pkg/operator/resource/resourcemerge
   - pkg/operator/resource/resourceread
   - pkg/operator/resourcesynccontroller
@@ -385,6 +421,10 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: golang.org/x/tools
+  version: 0a7d439b5fa8ee7a8f32a346b902355d03f84897
+  subpackages:
+  - container/intsets
 - name: google.golang.org/appengine
   version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
