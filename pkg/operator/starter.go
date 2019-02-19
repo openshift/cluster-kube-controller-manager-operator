@@ -14,6 +14,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
@@ -49,6 +50,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
+	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 	operatorConfigInformers := operatorv1informers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
@@ -83,6 +85,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorClient,
 		operatorConfigInformers,
 		kubeInformersForNamespaces.InformersFor("kube-system"),
+		configInformers,
 		resourceSyncController,
 		ctx.EventRecorder,
 	)
@@ -155,6 +158,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
+	configInformers.Start(ctx.Done())
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
 
