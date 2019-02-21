@@ -4,104 +4,33 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
+
+	configv1 "github.com/openshift/api/config/v1"
+	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 
 	"github.com/ghodss/yaml"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corelistersv1 "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 )
 
 func TestObserveClusterCIDRs(t *testing.T) {
 	type Test struct {
 		name            string
-		config          *corev1.ConfigMap
+		config          *configv1.Network
 		input, expected map[string]interface{}
 		expectedError   bool
 	}
 	tests := []Test{
 		{
-			"podCIDR, empty old config",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking:\n  podCIDR: podCIDR",
-				},
-			},
-			nil,
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR",
-					},
-				},
-			},
-			false,
-		},
-		{
-			"podCIDR, existing config",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking:\n  podCIDR: podCIDR",
-				},
-			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"oldPodCIDR",
-					},
-				},
-			},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR",
-					},
-				},
-			},
-			false,
-		},
-		{
 			"clusterNetworks",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2",
-				},
-			},
-			map[string]interface{}{},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"cluster-cidr": []interface{}{
-						"podCIDR1", "podCIDR2",
-					},
-				},
-			},
-			false,
-		},
-		{
-			"both podCIDR and clusterNetworks",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking:\n  clusterNetworks:\n  - cidr: podCIDR1\n  - cidr: podCIDR2\n  podCIDR: podCIDR",
-				},
+			&configv1.Network{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status: configv1.NetworkStatus{ClusterNetwork: []configv1.ClusterNetworkEntry{
+					{CIDR: "podCIDR1"}, {CIDR: "podCIDR2"},
+				}},
 			},
 			map[string]interface{}{},
 			map[string]interface{}{
@@ -115,30 +44,14 @@ func TestObserveClusterCIDRs(t *testing.T) {
 		},
 		{
 			"none, no old config",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking: {}\n",
-				},
-			},
+			&configv1.Network{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}},
 			map[string]interface{}{},
 			map[string]interface{}{},
 			true,
 		},
 		{
 			"none, existing config",
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster-config-v1",
-					Namespace: "kube-system",
-				},
-				Data: map[string]string{
-					"install-config": "networking: {}\n",
-				},
-			},
+			&configv1.Network{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
 					"cluster-cidr": []interface{}{
@@ -163,7 +76,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 			listers := configobservation.Listers{
-				ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
+				NetworkLister: configlistersv1.NewNetworkLister(indexer),
 			}
 			result, errs := ObserveClusterCIDRs(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
 			if len(errs) > 0 && !test.expectedError {
@@ -182,19 +95,11 @@ func TestObserveClusterCIDRs(t *testing.T) {
 
 func TestObserveServiceClusterIPRanges(t *testing.T) {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	if err := indexer.Add(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cluster-config-v1",
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"install-config": "networking:\n  serviceCIDR: serviceCIDR",
-		},
-	}); err != nil {
+	if err := indexer.Add(&configv1.Network{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: configv1.NetworkStatus{ServiceNetwork: []string{"serviceCIDR"}}}); err != nil {
 		t.Fatal(err.Error())
 	}
 	listers := configobservation.Listers{
-		ConfigmapLister: corelistersv1.NewConfigMapLister(indexer),
+		NetworkLister: configlistersv1.NewNetworkLister(indexer),
 	}
 	result, errs := ObserveServiceClusterIPRanges(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
 	if len(errs) > 0 {

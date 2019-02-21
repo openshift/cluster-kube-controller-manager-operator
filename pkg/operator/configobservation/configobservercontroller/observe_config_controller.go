@@ -1,7 +1,6 @@
 package configobservercontroller
 
 import (
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
@@ -23,7 +22,6 @@ type ConfigObserver struct {
 func NewConfigObserver(
 	operatorClient v1helpers.OperatorClient,
 	operatorConfigInformers operatorv1informers.SharedInformerFactory,
-	kubeInformersForKubeSystemNamespace kubeinformers.SharedInformerFactory,
 	configinformers configinformers.SharedInformerFactory,
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
 	eventRecorder events.Recorder,
@@ -34,11 +32,11 @@ func NewConfigObserver(
 			eventRecorder,
 			configobservation.Listers{
 				InfrastructureLister: configinformers.Config().V1().Infrastructures().Lister(),
-				ConfigmapLister:      kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Lister(),
+				NetworkLister:        configinformers.Config().V1().Networks().Lister(),
 				ResourceSync:         resourceSyncer,
 				PreRunCachesSynced: []cache.InformerSynced{
 					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
-					kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
+					configinformers.Config().V1().Networks().Informer().HasSynced,
 				},
 			},
 			cloudprovider.ObserveCloudProviderNames,
@@ -49,7 +47,7 @@ func NewConfigObserver(
 
 	operatorConfigInformers.Operator().V1().KubeControllerManagers().Informer().AddEventHandler(c.EventHandler())
 	configinformers.Config().V1().Infrastructures().Informer().AddEventHandler(c.EventHandler())
-	kubeInformersForKubeSystemNamespace.Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
+	configinformers.Config().V1().Networks().Informer().AddEventHandler(c.EventHandler())
 
 	return c
 }

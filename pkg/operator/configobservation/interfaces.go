@@ -1,7 +1,6 @@
 package configobservation
 
 import (
-	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -10,7 +9,7 @@ import (
 
 type Listers struct {
 	InfrastructureLister configlistersv1.InfrastructureLister
-	ConfigmapLister      corelistersv1.ConfigMapLister
+	NetworkLister        configlistersv1.NetworkLister
 
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
