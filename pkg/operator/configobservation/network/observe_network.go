@@ -1,12 +1,13 @@
 package network
 
 import (
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/network"
 	"github.com/openshift/library-go/pkg/operator/events"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 )
 
 func ObserveClusterCIDRs(genericListers configobserver.Listers, recorder events.Recorder, existingConfig map[string]interface{}) (map[string]interface{}, []error) {
@@ -26,7 +27,7 @@ func ObserveClusterCIDRs(genericListers configobserver.Listers, recorder events.
 	}
 
 	observedConfig := map[string]interface{}{}
-	clusterCIDRs, err := network.GetClusterCIDRs(listers.ConfigmapLister, recorder)
+	clusterCIDRs, err := network.GetClusterCIDRs(listers.NetworkLister, recorder)
 	if err != nil {
 		errs = append(errs, err)
 		return previouslyObservedConfig, errs
@@ -55,7 +56,7 @@ func ObserveServiceClusterIPRanges(genericListers configobserver.Listers, record
 	}
 
 	observedConfig := map[string]interface{}{}
-	serviceCIDR, err := network.GetServiceCIDR(listers.ConfigmapLister, recorder)
+	serviceCIDR, err := network.GetServiceCIDR(listers.NetworkLister, recorder)
 	if err != nil {
 		errs = append(errs, err)
 		return previouslyObservedConfig, errs
