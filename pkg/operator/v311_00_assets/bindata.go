@@ -308,7 +308,7 @@ spec:
   containers:
   - name: openshift-kube-controller-manager
     image: ${IMAGE}
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
     command: ["hyperkube", "kube-controller-manager"]
     args:
