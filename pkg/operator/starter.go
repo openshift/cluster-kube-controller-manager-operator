@@ -85,6 +85,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorClient,
 		operatorConfigInformers,
 		configInformers,
+		kubeInformersForNamespaces,
 		resourceSyncController,
 		ctx.EventRecorder,
 	)
@@ -176,6 +177,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "config"},
 	{Name: "controller-manager-kubeconfig"},
 	{Name: "serviceaccount-ca"},
+	{Name: "service-ca"},
 }
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
