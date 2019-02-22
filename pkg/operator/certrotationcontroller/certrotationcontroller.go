@@ -30,14 +30,13 @@ func NewCertRotationController(
 		certrotation.SigningRotation{
 			Namespace: operatorclient.OperatorNamespace,
 			// this is not a typo, this is the signer of the signer
-			Name: "csr-signer-signer",
-			// TODO we will probably make this much longer lived
-			Validity:          1 * 8 * time.Hour,
-			RefreshPercentage: 0.5,
-			Informer:          kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
-			Lister:            kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:            secretsGetter,
-			EventRecorder:     eventRecorder,
+			Name:          "csr-signer-signer",
+			Validity:      8 * time.Hour, // to be 10 days
+			Refresh:       4 * time.Hour, // to be 4 days
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:        secretsGetter,
+			EventRecorder: eventRecorder,
 		},
 		certrotation.CABundleRotation{
 			Namespace:     operatorclient.OperatorNamespace,
@@ -48,11 +47,11 @@ func NewCertRotationController(
 			EventRecorder: eventRecorder,
 		},
 		certrotation.TargetRotation{
-			Namespace:         operatorclient.OperatorNamespace,
-			Name:              "csr-signer",
-			Validity:          1 * 4 * time.Hour,
-			RefreshPercentage: 0.5,
-			SignerRotation: &certrotation.SignerRotation{
+			Namespace: operatorclient.OperatorNamespace,
+			Name:      "csr-signer",
+			Validity:  1 * 4 * time.Hour, // to be 5 days
+			Refresh:   2 * time.Hour,     // to be 1 day
+			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
