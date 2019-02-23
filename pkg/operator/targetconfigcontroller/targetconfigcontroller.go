@@ -248,6 +248,8 @@ func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 		lister, client, recorder,
+		// TODO until we adopt the csr signer from the installer, we need to include the initial csr signer ca
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalUserSpecifiedConfigNamespace, Name: "initial-csr-signer-ca"},
 		// include the CA we use to sign CSRs
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
 		// include the CA we use to sign the cert key pairs from from csr-signer
