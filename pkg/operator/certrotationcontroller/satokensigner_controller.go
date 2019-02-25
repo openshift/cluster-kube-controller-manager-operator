@@ -153,21 +153,17 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 }
 
 func (c *SATokenSignerController) syncWorker() error {
-	fmt.Printf("#### 3a\n")
 	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
 		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
 		if err == nil {
 			// return this error to be reported and requeue
-			fmt.Printf("#### 3b %v\n", pastBootstrapErr)
 			return pastBootstrapErr
 		}
 		if err != nil && !errors.IsNotFound(err) {
-			fmt.Printf("#### 3c %v\n", err)
 			return err
 		}
-		fmt.Printf("#### 3d\n")
 		// at this point we have not-found condition, sync the original
 		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
 			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",

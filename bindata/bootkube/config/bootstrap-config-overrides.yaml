@@ -6,9 +6,9 @@ extendedArguments:
   service-account-private-key-file:
   - "/etc/kubernetes/secrets/service-account.key"
   cluster-signing-cert-file:
-  - "/etc/kubernetes/secrets/kube-ca.crt"
+  - "/etc/kubernetes/secrets/kubelet-signer.crt"
   cluster-signing-key-file:
-  - "/etc/kubernetes/secrets/kube-ca.key"
+  - "/etc/kubernetes/secrets/kubelet-signer.key"
   secure-port:
   - "10257"
   port:
