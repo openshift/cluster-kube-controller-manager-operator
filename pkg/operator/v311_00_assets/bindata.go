@@ -200,8 +200,8 @@ roleRef:
   kind: Role
   name: system::leader-locking-kube-controller-manager
 subjects:
-  - kind: User
-    name: system:kube-controller-manager
+- kind: User
+  name: system:kube-controller-manager
 `)
 
 func v3110KubeControllerManagerLeaderElectionRolebindingYamlBytes() ([]byte, error) {
