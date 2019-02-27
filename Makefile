@@ -34,3 +34,12 @@ clean:
 	$(RM) ./cluster-kube-controller-manager-operator
 .PHONY: clean
 
+update-codegen-crds:
+	go run ./vendor/github.com/openshift/library-go/cmd/crd-schema-gen/main.go --apis-dir vendor/github.com/openshift/api
+update-codegen: update-codegen-crds
+verify-codegen-crds:
+	go run ./vendor/github.com/openshift/library-go/cmd/crd-schema-gen/main.go --apis-dir vendor/github.com/openshift/api --verify-only
+verify-codegen: verify-codegen-crds
+verify: verify-codegen
+
+.PHONY: update-codegen-crds update-codegen verify-codegen-crds verify-codegen verify
