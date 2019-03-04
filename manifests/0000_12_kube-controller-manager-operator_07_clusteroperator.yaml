@@ -3,3 +3,9 @@ kind: ClusterOperator
 metadata:
   name: kube-controller-manager
 spec: {}
+status:
+  versions:
+    - name: operator
+      version: "0.0.1-snapshot"
+    - name: kube-controller-manager
+      version: "0.0.1-snapshot-kubernetes"
