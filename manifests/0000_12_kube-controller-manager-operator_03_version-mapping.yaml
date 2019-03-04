@@ -4,5 +4,5 @@ metadata:
   namespace: openshift-kube-controller-manager-operator
   name: version-mapping
 data:
-  "0.0.0_version_hyperkube": "quay.io/openshift/origin-hyperkube:v4.0"
-  "0.0.0_version_cluster-kube-controller-manager-operator": "docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0"
+  "0.0.1-snapshot-kubernetes": "quay.io/openshift/origin-hyperkube:v4.0"
+  "0.0.1-snapshot": "docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0"
