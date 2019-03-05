@@ -36,6 +36,12 @@ func NewResourceSyncController(
 	); err != nil {
 		return nil, err
 	}
+	if err := resourceSyncController.SyncConfigMap(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "service-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "service-ca"},
+	); err != nil {
+		return nil, err
+	}
 
 	return resourceSyncController, nil
 }
