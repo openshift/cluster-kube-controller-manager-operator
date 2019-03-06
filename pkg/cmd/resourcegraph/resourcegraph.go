@@ -127,7 +127,7 @@ func Resources() resourcegraph.Resources {
 		Add(ret)
 
 	// serving cert
-	serviceCAController := resourcegraph.NewResource(resourcegraph.NewCoordinates("apps", "deployments", "openshift-service-cert-signer", "service-serving-cert-signer")).
+	serviceCAController := resourcegraph.NewResource(resourcegraph.NewCoordinates("apps", "deployments", "openshift-service-ca", "service-serving-cert-signer")).
 		From(serviceCAOperator).
 		Add(ret)
 	servingCert := resourcegraph.NewConfigMap(operatorclient.TargetNamespace, "serving-cert").
