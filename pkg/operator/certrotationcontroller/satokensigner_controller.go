@@ -64,7 +64,7 @@ func NewSATokenSignerController(
 		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		endpointClient:  kubeClient.CoreV1(),
 		podClient:       kubeClient.CoreV1(),
-		eventRecorder:   eventRecorder,
+		eventRecorder:   eventRecorder.WithComponentSuffix("sa-token-signer-controller"),
 
 		cachesSynced: []cache.InformerSynced{
 			kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().HasSynced,
