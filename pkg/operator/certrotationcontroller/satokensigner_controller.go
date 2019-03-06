@@ -94,7 +94,7 @@ func (c *SATokenSignerController) sync() error {
 		Type:   "SATokenSignerFailing",
 		Status: operatorv1.ConditionFalse,
 	}
-	if syncErr != nil {
+	if syncErr != nil && !isUnexpectedAddressesError(syncErr) {
 		condition.Status = operatorv1.ConditionTrue
 		condition.Reason = "Error"
 		condition.Message = syncErr.Error()
@@ -104,6 +104,19 @@ func (c *SATokenSignerController) sync() error {
 	}
 
 	return syncErr
+}
+
+type unexpectedAddressesError struct {
+	message string
+}
+
+func (e *unexpectedAddressesError) Error() string {
+	return e.message
+}
+
+func isUnexpectedAddressesError(err error) bool {
+	_, ok := err.(*unexpectedAddressesError)
+	return ok
 }
 
 // we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
@@ -141,7 +154,7 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 		}
 	}
 	if len(unexpectedEndpoints) != 0 {
-		err := fmt.Errorf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))
+		err := &unexpectedAddressesError{message: fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))}
 		c.eventRecorder.Event("SATokenSignerControllerStuck", err.Error())
 		return err
 	}
