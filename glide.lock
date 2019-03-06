@@ -1,5 +1,5 @@
 hash: 1037ac27126b88282406929754baf3804a68910b4e696ba1c4eb9d33855c246a
-updated: 2019-03-01T13:11:59.64799+01:00
+updated: 2019-03-06T14:09:38.806223+01:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -231,7 +231,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 5eb2215fbabe96f19654a85c6cb99700cef4e734
+  version: c2248829625ddb5fd68093d4b3220e943ed562a0
   subpackages:
   - apps
   - apps/v1
@@ -277,7 +277,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 31ef839c86359881d2c312c4f0131febc6662400
+  version: 2d89985ca24a8307e4b5db2574a62d3e6c2444b4
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -296,7 +296,7 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: 16857be794c032ba8bce3e66c2e3ac4391bc1073
+  version: 10585fdc9322d30d622279729036a07f1ff7bbe1
   subpackages:
   - pkg/assets
   - pkg/config/client
@@ -312,6 +312,7 @@ imports:
   - pkg/operator/configobserver
   - pkg/operator/configobserver/network
   - pkg/operator/events
+  - pkg/operator/management
   - pkg/operator/render
   - pkg/operator/render/options
   - pkg/operator/resource/resourceapply
@@ -429,7 +430,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 589c23e65e65055d47b9ad4a99723bc389136265
+  version: f8c04913dfb7b2339a756441456bdbe0af6eb508
   subpackages:
   - container/intsets
 - name: google.golang.org/appengine
