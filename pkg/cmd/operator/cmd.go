@@ -10,7 +10,7 @@ import (
 
 func NewOperator() *cobra.Command {
 	cmd := controllercmd.
-		NewControllerCommandConfig("openshift-cluster-kube-controller-manager-operator", version.Get(), operator.RunOperator).
+		NewControllerCommandConfig("kube-controller-manager-operator", version.Get(), operator.RunOperator).
 		NewCommand()
 	cmd.Use = "operator"
 	cmd.Short = "Start the Cluster kube-controller-manager Operator"
