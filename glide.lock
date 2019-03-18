@@ -1,5 +1,5 @@
 hash: 1037ac27126b88282406929754baf3804a68910b4e696ba1c4eb9d33855c246a
-updated: 2019-03-06T14:09:38.806223+01:00
+updated: 2019-03-18T13:16:43.303701231-04:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -99,7 +99,7 @@ imports:
   - daemon
   - journal
 - name: github.com/davecgh/go-spew
-  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
 - name: github.com/docker/docker
@@ -116,11 +116,11 @@ imports:
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
 - name: github.com/evanphx/json-patch
-  version: 5858425f75500d40c52783dce87d085a483ce135
+  version: 36442dbdb585210f8d5a1b45e67aa323c197d5c4
 - name: github.com/getsentry/raven-go
   version: 32a13797442ccb601b11761d74232773c1402d14
 - name: github.com/ghodss/yaml
-  version: 25d852aebe32c875e9c044af3eef9c7dc6bc777f
+  version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -231,7 +231,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: c2248829625ddb5fd68093d4b3220e943ed562a0
+  version: 756349b2dde816edf40630643cf42d1533e24ab3
   subpackages:
   - apps
   - apps/v1
@@ -277,7 +277,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 2d89985ca24a8307e4b5db2574a62d3e6c2444b4
+  version: 8ae2a9c33ba2a3d2ed5dc13d536ca935fc9625b9
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -296,7 +296,7 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: 10585fdc9322d30d622279729036a07f1ff7bbe1
+  version: 69ec53fc354e648d1b1bd08556e702639f494688
   subpackages:
   - pkg/assets
   - pkg/config/client
@@ -430,7 +430,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: f8c04913dfb7b2339a756441456bdbe0af6eb508
+  version: 2382e3994d48b1d22acc2c86bcad0a2aff028e32
   subpackages:
   - container/intsets
 - name: google.golang.org/appengine
