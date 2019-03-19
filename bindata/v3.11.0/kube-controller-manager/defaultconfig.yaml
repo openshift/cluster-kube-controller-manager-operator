@@ -15,8 +15,6 @@ extendedArguments:
   - "true"
   flex-volume-plugin-dir:
   - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
-  feature-gates:
-  - PersistentLocalVolumes=false # disable local volumes for 4.0, owned by sig-storage/hekumar@redhat.com
   leader-elect:
   - "true"
   leader-elect-retry-period:
