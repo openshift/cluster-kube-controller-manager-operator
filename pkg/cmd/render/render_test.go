@@ -5,11 +5,51 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+)
+
+var (
+	expectedClusterCIDR = []string{"10.128.0.0/14"}
+	expectedServiceCIDR = []string{"172.30.0.0/16"}
+	clusterAPIConfig    = `
+apiVersion: machine.openshift.io/v1beta1
+kind: Cluster
+metadata:
+  creationTimestamp: null
+  name: cluster
+  namespace: openshift-machine-api
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 10.128.0.0/14
+    serviceDomain: ""
+    services:
+      cidrBlocks:
+        - 172.30.0.0/16
+  providerSpec: {}
+status: {}
+`
+	networkConfig = `
+apiVersion: config.openshift.io/v1
+kind: Network
+metadata:
+  creationTimestamp: null
+  name: cluster
+spec:
+  clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+  networkType: OpenShiftSDN
+  serviceNetwork:
+    - 172.30.0.0/16
+status: {}
+`
 )
 
 func runRender(args ...string) (*cobra.Command, error) {
@@ -110,6 +150,59 @@ func TestRenderCommand(t *testing.T) {
 		if err != nil {
 			test.errFunc(err)
 			continue
+		}
+	}
+}
+
+func TestDiscoverRestrictedCIDRsFromNetwork(t *testing.T) {
+	renderConfig := TemplateData{}
+	if err := discoverRestrictedCIDRsFromNetwork([]byte(networkConfig), &renderConfig); err != nil {
+		t.Errorf("failed discoverCIDRs: %v", err)
+	}
+	if !reflect.DeepEqual(renderConfig.ClusterCIDR, expectedClusterCIDR) {
+		t.Errorf("Got: %v, expected: %v", renderConfig.ClusterCIDR, expectedClusterCIDR)
+	}
+	if !reflect.DeepEqual(renderConfig.ServiceClusterIPRange, expectedServiceCIDR) {
+		t.Errorf("Got: %v, expected: %v", renderConfig.ServiceClusterIPRange, expectedServiceCIDR)
+	}
+}
+
+func TestDiscoverRestrictedCIDRsFromClusterAPI(t *testing.T) {
+	renderConfig := TemplateData{}
+	if err := discoverRestrictedCIDRsFromClusterAPI([]byte(clusterAPIConfig), &renderConfig); err != nil {
+		t.Errorf("failed discoverCIDRs: %v", err)
+	}
+	if !reflect.DeepEqual(renderConfig.ClusterCIDR, expectedClusterCIDR) {
+		t.Errorf("Got: %v, expected: %v", renderConfig.ClusterCIDR, expectedClusterCIDR)
+	}
+	if !reflect.DeepEqual(renderConfig.ServiceClusterIPRange, expectedServiceCIDR) {
+		t.Errorf("Got: %v, expected: %v", renderConfig.ServiceClusterIPRange, expectedServiceCIDR)
+	}
+}
+
+func TestDiscoverRestrictedCIDRs(t *testing.T) {
+	testCase := []struct {
+		config []byte
+	}{
+		{
+			config: []byte(networkConfig),
+		},
+		{
+			config: []byte(clusterAPIConfig),
+		},
+	}
+
+	for _, tc := range testCase {
+		renderConfig := TemplateData{}
+		if err := discoverRestrictedCIDRs(tc.config, &renderConfig); err != nil {
+			t.Errorf("failed to discoverCIDRs: %v", err)
+		}
+
+		if !reflect.DeepEqual(renderConfig.ClusterCIDR, expectedClusterCIDR) {
+			t.Errorf("Got: %v, expected: %v", renderConfig.ClusterCIDR, expectedClusterCIDR)
+		}
+		if !reflect.DeepEqual(renderConfig.ServiceClusterIPRange, expectedServiceCIDR) {
+			t.Errorf("Got: %v, expected: %v", renderConfig.ServiceClusterIPRange, expectedServiceCIDR)
 		}
 	}
 }
