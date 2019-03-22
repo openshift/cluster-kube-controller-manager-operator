@@ -202,21 +202,27 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 
 func managePod(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
+	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	if len(imagePullSpec) > 0 {
 		required.Spec.Containers[0].Image = imagePullSpec
+		if len(required.Spec.InitContainers) > 0 {
+			required.Spec.InitContainers[0].Image = imagePullSpec
+		}
 	}
+	var v int
 	switch operatorConfig.Spec.LogLevel {
 	case operatorv1.Normal:
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 2))
+		v = 2
 	case operatorv1.Debug:
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 4))
+		v = 4
 	case operatorv1.Trace:
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 6))
+		v = 6
 	case operatorv1.TraceAll:
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 8))
+		v = 8
 	default:
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 2))
+		v = 2
 	}
+	required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", v))
 
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod-cm.yaml"))
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
