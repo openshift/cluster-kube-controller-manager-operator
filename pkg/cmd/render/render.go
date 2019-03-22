@@ -107,6 +107,15 @@ type TemplateData struct {
 }
 
 func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
+	if err := discoverRestrictedCIDRsFromNetwork(clusterConfigFileData, renderConfig); err != nil {
+		if err = discoverRestrictedCIDRsFromClusterAPI(clusterConfigFileData, renderConfig); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func discoverRestrictedCIDRsFromClusterAPI(clusterConfigFileData []byte, renderConfig *TemplateData) error {
 	configJson, err := yaml.YAMLToJSON(clusterConfigFileData)
 	if err != nil {
 		return err
@@ -131,6 +140,46 @@ func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *Templat
 	if serviceClusterIPRange, found, err := unstructured.NestedStringSlice(
 		clusterConfig.Object, "spec", "clusterNetwork", "services", "cidrBlocks"); found && err == nil {
 		renderConfig.ServiceClusterIPRange = serviceClusterIPRange
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func discoverRestrictedCIDRsFromNetwork(clusterConfigFileData []byte, renderConfig *TemplateData) error {
+	configJson, err := yaml.YAMLToJSON(clusterConfigFileData)
+	if err != nil {
+		return err
+	}
+	clusterConfigObj, err := runtime.Decode(unstructured.UnstructuredJSONScheme, configJson)
+	if err != nil {
+		return err
+	}
+	clusterConfig, ok := clusterConfigObj.(*unstructured.Unstructured)
+	if !ok {
+		return fmt.Errorf("unexpected object in %t", clusterConfigObj)
+	}
+	clusterCIDR, found, err := unstructured.NestedSlice(
+		clusterConfig.Object, "spec", "clusterNetwork")
+	if found && err == nil {
+		for key := range clusterCIDR {
+			slice, ok := clusterCIDR[key].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("unexpected object in %t", clusterCIDR[key])
+			}
+			if CIDR, found, err := unstructured.NestedString(slice, "cidr"); found && err == nil {
+				renderConfig.ClusterCIDR = append(renderConfig.ClusterCIDR, CIDR)
+			}
+		}
+	}
+	if err != nil {
+		return err
+	}
+	serviceCIDR, found, err := unstructured.NestedStringSlice(
+		clusterConfig.Object, "spec", "serviceNetwork")
+	if found && err == nil {
+		renderConfig.ServiceClusterIPRange = serviceCIDR
 	}
 	if err != nil {
 		return err
