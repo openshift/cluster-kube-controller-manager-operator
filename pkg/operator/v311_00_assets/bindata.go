@@ -113,9 +113,9 @@ extendedArguments:
   experimental-cluster-signing-duration:
   - "720h"
   secure-port:
-  - "10257"
-  port:
   - "0"
+  port:
+  - "10252"
   root-ca-file:
   - "/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"
   service-account-private-key-file:
@@ -335,15 +335,15 @@ spec:
       name: resource-dir
     livenessProbe:
       httpGet:
-        scheme: HTTPS
-        port: 10257
+        scheme: HTTP
+        port: 10252
         path: healthz
       initialDelaySeconds: 45
       timeoutSeconds: 10
     readinessProbe:
       httpGet:
-        scheme: HTTPS
-        port: 10257
+        scheme: HTTP
+        port: 10252
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
