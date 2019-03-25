@@ -9,6 +9,10 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kubelet-signer.crt"
   cluster-signing-key-file:
   - "/etc/kubernetes/secrets/kubelet-signer.key"
+  authentication-kubeconfig:
+  - "/etc/kubernetes/secrets/kubeconfig"
+  authorization-kubeconfig:
+  - "/etc/kubernetes/secrets/kubeconfig"
   {{if .ClusterCIDR }}
   cluster-cidr: {{range .ClusterCIDR}}
   - {{.}}{{end}}
