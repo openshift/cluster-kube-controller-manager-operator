@@ -11,6 +11,10 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kubelet-signer.key"
   secure-port:
   - "10257"
+  authentication-kubeconfig:
+  - "/etc/kubernetes/secrets/kubeconfig"
+  authorization-kubeconfig:
+  - "/etc/kubernetes/secrets/kubeconfig"
   port:
   - "0"
   {{if .ClusterCIDR }}
@@ -21,3 +25,4 @@ extendedArguments:
   service-cluster-ip-range: {{range .ServiceClusterIPRange}}
   - {{.}}{{end}}
   {{end}}
+

@@ -85,6 +85,10 @@ extendedArguments:
   - "true"
   allocate-node-cidrs:
   - "true"
+  authentication-kubeconfig:
+  - "/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig"
+  authorization-kubeconfig:
+  - "/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig"
   configure-cloud-routes:
   - "false"
   cluster-cidr:
@@ -312,6 +316,8 @@ spec:
     args:
     - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
     - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+    - --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+    - --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
     resources:
       requests:
         memory: 200Mi
