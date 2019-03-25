@@ -8,6 +8,18 @@ metadata:
     kube-controller-manager: "true"
     revision: "REVISION"
 spec:
+  initContainers:
+  - name: wait-for-host-port
+    image: ${IMAGE}
+    imagePullPolicy: IfNotPresent
+    command: ['/usr/bin/timeout', '100', "/bin/bash", "-c"] # 60 sec for graceful termination, 35 for minimum-termination-duration
+    args:
+    - |
+      echo -n "Waiting for port :10257 to be released."
+      while [ -n "$(lsof -ni :10257)" ]; do
+        echo -n "."
+        sleep 1
+      done
   containers:
   - name: kube-controller-manager-REVISION
     image: ${IMAGE}
