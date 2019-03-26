@@ -9,6 +9,10 @@ extendedArguments:
   - "/etc/kubernetes/secrets/kubelet-signer.crt"
   cluster-signing-key-file:
   - "/etc/kubernetes/secrets/kubelet-signer.key"
+  secure-port:
+  - "10257"
+  port:
+  - "0"
   {{if .ClusterCIDR }}
   cluster-cidr: {{range .ClusterCIDR}}
   - {{.}}{{end}}

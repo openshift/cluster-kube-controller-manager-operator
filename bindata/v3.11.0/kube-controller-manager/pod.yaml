@@ -40,15 +40,15 @@ spec:
       name: resource-dir
     livenessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
       initialDelaySeconds: 45
       timeoutSeconds: 10
     readinessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
