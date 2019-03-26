@@ -81,6 +81,8 @@ func v3110KubeControllerManagerCmYaml() (*asset, error) {
 var _v3110KubeControllerManagerDefaultconfigYaml = []byte(`apiVersion: kubecontrolplane.config.openshift.io/v1
 kind: KubeControllerManagerConfig
 extendedArguments:
+  cert-dir:
+  - "/var/run/kubernetes"
   enable-dynamic-provisioning:
   - "true"
   allocate-node-cidrs:
