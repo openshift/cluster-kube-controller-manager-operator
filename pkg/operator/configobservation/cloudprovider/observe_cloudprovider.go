@@ -44,6 +44,8 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		return previouslyObservedConfig, errs
 	case configv1.AWSPlatform:
 		cloudProvider = "aws"
+	case configv1.VSpherePlatform:
+		cloudProvider = "vsphere"
 	case configv1.LibvirtPlatform:
 	case configv1.OpenStackPlatform:
 		// TODO(flaper87): Enable this once we've figured out a way to write the cloud provider config in the master nodes
