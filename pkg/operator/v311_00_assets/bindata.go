@@ -310,8 +310,8 @@ spec:
     command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
     args:
     - |
-      echo -n "Waiting for port :10257 to be released."
-      while [ -n "$(lsof -ni :10257)" ]; do
+      echo -n "Waiting for port :10252 to be released."
+      while [ -n "$(lsof -ni :10252)" ]; do
         echo -n "."
         sleep 1
       done
