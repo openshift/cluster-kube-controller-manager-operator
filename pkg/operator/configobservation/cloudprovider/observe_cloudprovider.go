@@ -42,15 +42,15 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	case "":
 		recorder.Warningf("ObserveCloudProvidersFailed", "Required status.platform field is not set in infrastructures.%s/cluster", configv1.GroupName)
 		return previouslyObservedConfig, errs
-	case configv1.AWSPlatform:
+	case configv1.AWSPlatformType:
 		cloudProvider = "aws"
-	case configv1.VSpherePlatform:
+	case configv1.VSpherePlatformType:
 		cloudProvider = "vsphere"
-	case configv1.LibvirtPlatform:
-	case configv1.OpenStackPlatform:
+	case configv1.LibvirtPlatformType:
+	case configv1.OpenStackPlatformType:
 		// TODO(flaper87): Enable this once we've figured out a way to write the cloud provider config in the master nodes
 		//cloudProvider = "openstack"
-	case configv1.NonePlatform:
+	case configv1.NonePlatformType:
 	default:
 		// the new doc on the infrastructure fields requires that we treat an unrecognized thing the same bare metal.
 		// TODO find a way to indicate to the user that we didn't honor their choice
