@@ -45,6 +45,8 @@ spec:
           value: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
         - name: OPERATOR_IMAGE_VERSION
           value: "0.0.1-snapshot"
+        - name: OPERAND_IMAGE_VERSION
+          value: "0.0.1-snapshot-kubernetes"
         - name: POD_NAME
           valueFrom:
             fieldRef:
