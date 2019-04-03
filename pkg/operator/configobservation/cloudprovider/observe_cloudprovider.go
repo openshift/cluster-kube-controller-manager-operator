@@ -3,6 +3,7 @@ package cloudprovider
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -16,7 +17,7 @@ import (
 
 const (
 	targetNamespaceName       = "openshift-kube-controller-manager"
-	cloudProviderConfFilePath = "/etc/kubernetes/static-pod-resources/configmaps/cloud-config/config"
+	cloudProviderConfFilePath = "/etc/kubernetes/static-pod-resources/configmaps/cloud-config/%s"
 	configNamespace           = "openshift-config"
 )
 
@@ -26,16 +27,21 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	var errs []error
 	cloudProvidersPath := []string{"extendedArguments", "cloud-provider"}
 	cloudProviderConfPath := []string{"extendedArguments", "cloud-config"}
-
 	previouslyObservedConfig := map[string]interface{}{}
+
+	existinCloudConfig, _, err := unstructured.NestedStringSlice(existingConfig, cloudProviderConfPath...)
+	if err != nil {
+		return previouslyObservedConfig, append(errs, err)
+	}
+
 	if currentCloudProvider, _, _ := unstructured.NestedStringSlice(existingConfig, cloudProvidersPath...); len(currentCloudProvider) > 0 {
 		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, currentCloudProvider, cloudProvidersPath...); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	if currentCloudConfig, _, _ := unstructured.NestedStringSlice(existingConfig, cloudProviderConfPath...); len(currentCloudConfig) > 0 {
-		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, currentCloudConfig, cloudProviderConfPath...); err != nil {
+	if len(existinCloudConfig) > 0 {
+		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, existinCloudConfig, cloudProviderConfPath...); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -60,9 +66,6 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 
 	sourceCloudConfigMap := infrastructure.Spec.CloudConfig.Name
 	sourceCloudConfigNamespace := configNamespace
-	if len(sourceCloudConfigMap) == 0 {
-		return observedConfig, errs
-	}
 
 	err = listers.ResourceSyncer().SyncConfigMap(
 		resourcesynccontroller.ResourceLocation{
@@ -78,10 +81,23 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		errs = append(errs, err)
 		return observedConfig, errs
 	}
-	if err := unstructured.SetNestedStringSlice(observedConfig, []string{cloudProviderConfFilePath}, cloudProviderConfPath...); err != nil {
+
+	if len(sourceCloudConfigMap) == 0 {
+		return observedConfig, errs
+	}
+
+	// usually key will be simply config but we should refer it just in case
+	staticCloudConfFile := fmt.Sprintf(cloudProviderConfFilePath, infrastructure.Spec.CloudConfig.Key)
+
+	if err := unstructured.SetNestedStringSlice(observedConfig, []string{staticCloudConfFile}, cloudProviderConfPath...); err != nil {
 		recorder.Warningf("ObserverCloudProviderNames", "Failed setting cloud-config : %v", err)
 		errs = append(errs, err)
 	}
+
+	if !equality.Semantic.DeepEqual(existinCloudConfig, []string{staticCloudConfFile}) {
+		recorder.Eventf("ObserverCloudProviderNamesChanges", "CloudProvider config file changed to %s", staticCloudConfFile)
+	}
+
 	return observedConfig, errs
 }
 
