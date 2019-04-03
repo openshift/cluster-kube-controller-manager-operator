@@ -29,7 +29,7 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	cloudProviderConfPath := []string{"extendedArguments", "cloud-config"}
 	previouslyObservedConfig := map[string]interface{}{}
 
-	existinCloudConfig, _, err := unstructured.NestedStringSlice(existingConfig, cloudProviderConfPath...)
+	existingCloudConfig, _, err := unstructured.NestedStringSlice(existingConfig, cloudProviderConfPath...)
 	if err != nil {
 		return previouslyObservedConfig, append(errs, err)
 	}
@@ -40,8 +40,8 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		}
 	}
 
-	if len(existinCloudConfig) > 0 {
-		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, existinCloudConfig, cloudProviderConfPath...); err != nil {
+	if len(existingCloudConfig) > 0 {
+		if err := unstructured.SetNestedStringSlice(previouslyObservedConfig, existingCloudConfig, cloudProviderConfPath...); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -50,7 +50,7 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 
 	infrastructure, err := listers.InfrastructureLister.Get("cluster")
 	if errors.IsNotFound(err) {
-		recorder.Warningf("ObserverCloudProviderNames", "Required infrastructures.%s/cluster not found", configv1.GroupName)
+		recorder.Warningf("ObserveCloudProviderNames", "Required infrastructures.%s/cluster not found", configv1.GroupName)
 		return observedConfig, errs
 	}
 	if err != nil {
@@ -66,17 +66,22 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 
 	sourceCloudConfigMap := infrastructure.Spec.CloudConfig.Name
 	sourceCloudConfigNamespace := configNamespace
+	sourceLocation := resourcesynccontroller.ResourceLocation{
+		Namespace: sourceCloudConfigNamespace,
+		Name:      sourceCloudConfigMap,
+	}
+
+	if len(sourceCloudConfigMap) == 0 {
+		sourceLocation = resourcesynccontroller.ResourceLocation{}
+	}
 
 	err = listers.ResourceSyncer().SyncConfigMap(
 		resourcesynccontroller.ResourceLocation{
 			Namespace: targetNamespaceName,
 			Name:      "cloud-config",
 		},
-		resourcesynccontroller.ResourceLocation{
-			Namespace: sourceCloudConfigNamespace,
-			Name:      sourceCloudConfigMap,
-		},
-	)
+		sourceLocation)
+
 	if err != nil {
 		errs = append(errs, err)
 		return observedConfig, errs
@@ -90,12 +95,12 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 	staticCloudConfFile := fmt.Sprintf(cloudProviderConfFilePath, infrastructure.Spec.CloudConfig.Key)
 
 	if err := unstructured.SetNestedStringSlice(observedConfig, []string{staticCloudConfFile}, cloudProviderConfPath...); err != nil {
-		recorder.Warningf("ObserverCloudProviderNames", "Failed setting cloud-config : %v", err)
+		recorder.Warningf("ObserveCloudProviderNames", "Failed setting cloud-config : %v", err)
 		errs = append(errs, err)
 	}
 
-	if !equality.Semantic.DeepEqual(existinCloudConfig, []string{staticCloudConfFile}) {
-		recorder.Eventf("ObserverCloudProviderNamesChanges", "CloudProvider config file changed to %s", staticCloudConfFile)
+	if !equality.Semantic.DeepEqual(existingCloudConfig, []string{staticCloudConfFile}) {
+		recorder.Eventf("ObserveCloudProviderNamesChanges", "CloudProvider config file changed to %s", staticCloudConfFile)
 	}
 
 	return observedConfig, errs
