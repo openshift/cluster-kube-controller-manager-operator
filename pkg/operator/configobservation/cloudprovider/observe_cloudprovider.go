@@ -44,6 +44,8 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		return previouslyObservedConfig, errs
 	case configv1.AWSPlatformType:
 		cloudProvider = "aws"
+	case configv1.AzurePlatformType:
+		cloudProvider = "azure"
 	case configv1.VSpherePlatformType:
 		cloudProvider = "vsphere"
 	case configv1.LibvirtPlatformType:
