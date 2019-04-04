@@ -113,9 +113,11 @@ extendedArguments:
   experimental-cluster-signing-duration:
   - "720h"
   secure-port:
-  - "0"
+  - "10257"
   port:
-  - "10252"
+  - "0"
+  cert-dir:
+  - "/var/run/kubernetes"
   root-ca-file:
   - "/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"
   service-account-private-key-file:
@@ -310,8 +312,8 @@ spec:
     command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
     args:
     - |
-      echo -n "Waiting for port :10252 to be released."
-      while [ -n "$(lsof -ni :10252)" ]; do
+      echo -n "Waiting for port :10257 to be released."
+      while [ -n "$(lsof -ni :10257)" ]; do
         echo -n "."
         sleep 1
       done
@@ -335,15 +337,15 @@ spec:
       name: resource-dir
     livenessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
       initialDelaySeconds: 45
       timeoutSeconds: 10
     readinessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10

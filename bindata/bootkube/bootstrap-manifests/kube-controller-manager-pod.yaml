@@ -35,8 +35,8 @@ spec:
       readOnly: true
     livenessProbe:
       httpGet:
-        scheme: HTTP
-        port: 10252
+        scheme: HTTPS
+        port: 10257
         path: healthz
       initialDelaySeconds: 45
       timeoutSeconds: 10

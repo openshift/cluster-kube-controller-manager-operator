@@ -33,9 +33,11 @@ extendedArguments:
   experimental-cluster-signing-duration:
   - "720h"
   secure-port:
-  - "0"
+  - "10257"
   port:
-  - "10252"
+  - "0"
+  cert-dir:
+  - "/var/run/kubernetes"
   root-ca-file:
   - "/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"
   service-account-private-key-file:
