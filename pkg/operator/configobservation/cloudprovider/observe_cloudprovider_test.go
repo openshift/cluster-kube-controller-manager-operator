@@ -3,7 +3,7 @@ package cloudprovider
 import (
 	"testing"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
@@ -23,6 +23,10 @@ func TestObserveCloudProviderNames(t *testing.T) {
 	}{{
 		platform:           configv1.AWSPlatformType,
 		expected:           "aws",
+		cloudProviderCount: 1,
+	}, {
+		platform:           configv1.AzurePlatformType,
+		expected:           "azure",
 		cloudProviderCount: 1,
 	}, {
 		platform:           configv1.LibvirtPlatformType,
