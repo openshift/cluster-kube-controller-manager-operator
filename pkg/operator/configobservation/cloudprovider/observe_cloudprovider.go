@@ -70,6 +70,10 @@ func ObserveCloudProviderNames(genericListers configobserver.Listers, recorder e
 		Namespace: sourceCloudConfigNamespace,
 		Name:      sourceCloudConfigMap,
 	}
+	// we set cloudprovider configmap values only for vsphere.
+	if cloudProvider != "vsphere" {
+		sourceCloudConfigMap = ""
+	}
 
 	if len(sourceCloudConfigMap) == 0 {
 		sourceLocation = resourcesynccontroller.ResourceLocation{}
