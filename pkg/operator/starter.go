@@ -184,6 +184,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 
 	{Name: "config"},
 	{Name: "controller-manager-kubeconfig"},
+	{Name: "cloud-config", Optional: true},
 	{Name: "serviceaccount-ca"},
 	{Name: "service-ca"},
 }

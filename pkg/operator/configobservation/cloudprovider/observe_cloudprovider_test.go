@@ -11,9 +11,20 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
 )
+
+type FakeResourceSyncer struct{}
+
+func (fakeSyncer *FakeResourceSyncer) SyncConfigMap(destination, source resourcesynccontroller.ResourceLocation) error {
+	return nil
+}
+
+func (fakeSyncer *FakeResourceSyncer) SyncSecret(destination, source resourcesynccontroller.ResourceLocation) error {
+	return nil
+}
 
 func TestObserveCloudProviderNames(t *testing.T) {
 	cases := []struct {
@@ -52,6 +63,7 @@ func TestObserveCloudProviderNames(t *testing.T) {
 			}
 			listers := configobservation.Listers{
 				InfrastructureLister: configlistersv1.NewInfrastructureLister(indexer),
+				ResourceSync:         &FakeResourceSyncer{},
 			}
 			result, errs := ObserveCloudProviderNames(listers, events.NewInMemoryRecorder("cloud"), map[string]interface{}{})
 			if len(errs) > 0 {
