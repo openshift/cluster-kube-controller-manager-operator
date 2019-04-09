@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"k8s.io/klog"
 
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
@@ -47,7 +47,7 @@ func NewRenderCommand(errOut io.Writer) *cobra.Command {
 			must := func(fn func() error) {
 				if err := fn(); err != nil {
 					if cmd.HasParent() {
-						glog.Fatal(err)
+						klog.Fatal(err)
 					}
 					fmt.Fprint(renderOpts.errOut, err.Error())
 				}

@@ -3,7 +3,7 @@ package certrotationcontroller
 import (
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
@@ -34,8 +34,8 @@ func NewCertRotationController(
 	rotationDay := defaultRotationDay
 	if day != time.Duration(0) {
 		rotationDay = day
-		glog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
-		glog.Warningf("Certificate rotation base set to %q", rotationDay)
+		klog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
+		klog.Warningf("Certificate rotation base set to %q", rotationDay)
 	}
 
 	certRotator, err := certrotation.NewCertRotationController(

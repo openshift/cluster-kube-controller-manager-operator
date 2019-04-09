@@ -9,12 +9,17 @@ import (
 )
 
 type Listers struct {
+	FeatureGateLister_   configlistersv1.FeatureGateLister
 	InfrastructureLister configlistersv1.InfrastructureLister
 	NetworkLister        configlistersv1.NetworkLister
 	ConfigMapLister      corev1listers.ConfigMapLister
 
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
+}
+
+func (l Listers) FeatureGateLister() configlistersv1.FeatureGateLister {
+	return l.FeatureGateLister_
 }
 
 func (l Listers) ResourceSyncer() resourcesynccontroller.ResourceSyncer {

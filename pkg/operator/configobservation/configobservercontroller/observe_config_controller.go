@@ -1,6 +1,7 @@
 package configobservercontroller
 
 import (
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
@@ -29,29 +30,55 @@ func NewConfigObserver(
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
 	eventRecorder events.Recorder,
 ) *ConfigObserver {
+
+	interestingNamespaces := []string{
+		operatorclient.GlobalUserSpecifiedConfigNamespace,
+		operatorclient.GlobalMachineSpecifiedConfigNamespace,
+		operatorclient.TargetNamespace,
+		operatorclient.OperatorNamespace,
+	}
+	configMapPreRunCacheSynced := []cache.InformerSynced{}
+	for _, ns := range interestingNamespaces {
+		configMapPreRunCacheSynced = append(configMapPreRunCacheSynced, kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer().HasSynced)
+	}
+
 	c := &ConfigObserver{
 		ConfigObserver: configobserver.NewConfigObserver(
 			operatorClient,
 			eventRecorder,
 			configobservation.Listers{
+				FeatureGateLister_:   configinformers.Config().V1().FeatureGates().Lister(),
 				InfrastructureLister: configinformers.Config().V1().Infrastructures().Lister(),
 				NetworkLister:        configinformers.Config().V1().Networks().Lister(),
-				ResourceSync:         resourceSyncer,
-				ConfigMapLister:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
-				PreRunCachesSynced: []cache.InformerSynced{
+
+				ResourceSync:    resourceSyncer,
+				ConfigMapLister: kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
+				PreRunCachesSynced: append(configMapPreRunCacheSynced,
+					operatorConfigInformers.Operator().V1().KubeControllerManagers().Informer().HasSynced,
+
+					kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
+					kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
+
+					configinformers.Config().V1().FeatureGates().Informer().HasSynced,
 					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
 					configinformers.Config().V1().Networks().Informer().HasSynced,
-					kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
-				},
+				),
 			},
 			cloudprovider.ObserveCloudProviderNames,
+			featuregates.NewObserveFeatureFlagsFunc(nil, []string{"extendedArguments", "feature-gates"}),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
 			serviceca.ObserveServiceCA,
 		),
 	}
-	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
+
 	operatorConfigInformers.Operator().V1().KubeControllerManagers().Informer().AddEventHandler(c.EventHandler())
+
+	for _, ns := range interestingNamespaces {
+		kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
+	}
+
+	configinformers.Config().V1().FeatureGates().Informer().AddEventHandler(c.EventHandler())
 	configinformers.Config().V1().Infrastructures().Informer().AddEventHandler(c.EventHandler())
 	configinformers.Config().V1().Networks().Informer().AddEventHandler(c.EventHandler())
 

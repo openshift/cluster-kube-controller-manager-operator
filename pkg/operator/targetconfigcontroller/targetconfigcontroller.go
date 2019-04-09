@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -375,8 +375,8 @@ func (c *TargetConfigController) Run(workers int, stopCh <-chan struct{}) {
 	defer runtime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting TargetConfigController")
-	defer glog.Infof("Shutting down TargetConfigController")
+	klog.Infof("Starting TargetConfigController")
+	defer klog.Infof("Shutting down TargetConfigController")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)
