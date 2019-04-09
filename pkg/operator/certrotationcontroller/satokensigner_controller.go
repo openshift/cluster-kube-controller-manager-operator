@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -305,8 +305,8 @@ func (c *SATokenSignerController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting SATokenSignerController")
-	defer glog.Infof("Shutting down SATokenSignerController")
+	klog.Infof("Starting SATokenSignerController")
+	defer klog.Infof("Shutting down SATokenSignerController")
 
 	if !cache.WaitForCacheSync(stopCh, c.cachesSynced...) {
 		utilruntime.HandleError(fmt.Errorf("caches did not sync"))
