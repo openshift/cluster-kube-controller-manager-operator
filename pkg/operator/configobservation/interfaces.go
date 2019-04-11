@@ -5,17 +5,24 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 )
 
+var _ cloudprovider.InfrastructureLister = &Listers{}
+
 type Listers struct {
-	FeatureGateLister_   configlistersv1.FeatureGateLister
-	InfrastructureLister configlistersv1.InfrastructureLister
-	NetworkLister        configlistersv1.NetworkLister
-	ConfigMapLister      corev1listers.ConfigMapLister
+	FeatureGateLister_    configlistersv1.FeatureGateLister
+	InfrastructureLister_ configlistersv1.InfrastructureLister
+	NetworkLister         configlistersv1.NetworkLister
+	ConfigMapLister       corev1listers.ConfigMapLister
 
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
+}
+
+func (l Listers) InfrastructureLister() configlistersv1.InfrastructureLister {
+	return l.InfrastructureLister_
 }
 
 func (l Listers) FeatureGateLister() configlistersv1.FeatureGateLister {
