@@ -305,7 +305,7 @@ spec:
   - name: wait-for-host-port
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
-    command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
+    command: ['/usr/bin/timeout', '105', "/bin/bash", "-c"]
     args:
     - |
       echo -n "Waiting for port :10257 to be released."
