@@ -73,6 +73,7 @@ func NewCertRotationController(
 			EventRecorder: eventRecorder,
 		},
 		operatorClient,
+		true,
 	)
 	if err != nil {
 		return nil, err
