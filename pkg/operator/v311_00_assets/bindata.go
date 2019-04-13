@@ -303,6 +303,7 @@ metadata:
 spec:
   initContainers:
   - name: wait-for-host-port
+    terminationMessagePolicy: FallbackToLogsOnError
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
     command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
