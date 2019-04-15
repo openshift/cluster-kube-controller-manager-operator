@@ -2,6 +2,7 @@
 // sources:
 // bindata/v3.11.0/kube-controller-manager/cm.yaml
 // bindata/v3.11.0/kube-controller-manager/defaultconfig.yaml
+// bindata/v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
 // bindata/v3.11.0/kube-controller-manager/kubeconfig-cm.yaml
 // bindata/v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml
 // bindata/v3.11.0/kube-controller-manager/ns.yaml
@@ -140,6 +141,50 @@ func v3110KubeControllerManagerDefaultconfigYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/defaultconfig.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerKubeconfigCertSyncerYaml = []byte(`# TODO provide distinct trust between this and the KCM itself
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-controller-cert-syncer-kubeconfig
+  namespace: openshift-kube-controller-manager
+data:
+  kubeconfig: |
+    apiVersion: v1
+    clusters:
+      - cluster:
+          certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
+          server: https://localhost:6443
+        name: loopback
+    contexts:
+      - context:
+          cluster: loopback
+          user: kube-controller-manager
+        name: kube-controller-manager
+    current-context: kube-controller-manager
+    kind: Config
+    preferences: {}
+    users:
+      - name: kube-controller-manager
+        user:
+          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
+          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
+`)
+
+func v3110KubeControllerManagerKubeconfigCertSyncerYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerKubeconfigCertSyncerYaml, nil
+}
+
+func v3110KubeControllerManagerKubeconfigCertSyncerYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerKubeconfigCertSyncerYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -325,6 +370,8 @@ spec:
     - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
     - --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
     - --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+    - --client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
+    - --requestheader-client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/aggregator-client-ca/ca-bundle.crt
     resources:
       requests:
         memory: 200Mi
@@ -334,6 +381,8 @@ spec:
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
+    - mountPath: /etc/kubernetes/static-pod-certs
+      name: cert-dir
     livenessProbe:
       httpGet:
         scheme: HTTPS
@@ -348,6 +397,33 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
+  - name: kube-controller-manager-cert-syncer-REVISION
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: POD_NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+    image: ${OPERATOR_IMAGE}
+    imagePullPolicy: IfNotPresent
+    terminationMessagePolicy: FallbackToLogsOnError
+    command: ["cluster-kube-controller-manager-operator", "cert-syncer"]
+    args:
+      - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig
+      - --namespace=${POD_NAMESPACE}
+      - --destination-dir=/etc/kubernetes/static-pod-certs
+    resources:
+      requests:
+        memory: 50Mi
+        cpu: 10m
+    volumeMounts:
+      - mountPath: /etc/kubernetes/static-pod-resources
+        name: resource-dir
+      - mountPath: /etc/kubernetes/static-pod-certs
+        name: cert-dir
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
@@ -356,7 +432,9 @@ spec:
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION
     name: resource-dir
-
+  - hostPath:
+      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-certs
+    name: cert-dir
 `)
 
 func v3110KubeControllerManagerPodYamlBytes() ([]byte, error) {
@@ -483,6 +561,7 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/kube-controller-manager/cm.yaml":                          v3110KubeControllerManagerCmYaml,
 	"v3.11.0/kube-controller-manager/defaultconfig.yaml":               v3110KubeControllerManagerDefaultconfigYaml,
+	"v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":      v3110KubeControllerManagerKubeconfigCertSyncerYaml,
 	"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml":               v3110KubeControllerManagerKubeconfigCmYaml,
 	"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml": v3110KubeControllerManagerLeaderElectionRolebindingYaml,
 	"v3.11.0/kube-controller-manager/ns.yaml":                          v3110KubeControllerManagerNsYaml,
@@ -538,6 +617,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
 			"cm.yaml":                          {v3110KubeControllerManagerCmYaml, map[string]*bintree{}},
 			"defaultconfig.yaml":               {v3110KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"kubeconfig-cert-syncer.yaml":      {v3110KubeControllerManagerKubeconfigCertSyncerYaml, map[string]*bintree{}},
 			"kubeconfig-cm.yaml":               {v3110KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
 			"leader-election-rolebinding.yaml": {v3110KubeControllerManagerLeaderElectionRolebindingYaml, map[string]*bintree{}},
 			"ns.yaml":                          {v3110KubeControllerManagerNsYaml, map[string]*bintree{}},

@@ -13,9 +13,11 @@ import (
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/operator"
+	operatorcmd "github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/operator"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/resourcegraph"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
+	"github.com/openshift/library-go/pkg/operator/staticpod/certsyncpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/installerpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/prune"
 )
@@ -46,11 +48,12 @@ func NewSSCSCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(operator.NewOperator())
+	cmd.AddCommand(operatorcmd.NewOperator())
 	cmd.AddCommand(render.NewRenderCommand(os.Stderr))
 	cmd.AddCommand(installerpod.NewInstaller())
 	cmd.AddCommand(prune.NewPrune())
 	cmd.AddCommand(resourcegraph.NewResourceChainCommand())
+	cmd.AddCommand(certsyncpod.NewCertSyncControllerCommand(operator.CertConfigMaps, operator.CertSecrets))
 
 	return cmd
 }

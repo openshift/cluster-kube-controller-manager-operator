@@ -43,5 +43,20 @@ func NewResourceSyncController(
 		return nil, err
 	}
 
+	// kcm is re-using the generic-apiserver, so if we set the client-ca and front-proxy-ca manually, it won't try to load them
+	// dynamically from the cluster and won't crash when API isn't available
+	if err := resourceSyncController.SyncConfigMap(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "client-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-apiserver-client-ca"},
+	); err != nil {
+		return nil, err
+	}
+	if err := resourceSyncController.SyncConfigMap(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "aggregator-client-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-apiserver-aggregator-client-ca"},
+	); err != nil {
+		return nil, err
+	}
+
 	return resourceSyncController, nil
 }
