@@ -115,6 +115,25 @@ func (c TargetConfigController) sync() error {
 		return nil
 	}
 
+	// block until required certs and cas are present.  This isn't done in KAS, but that does an extra observation step
+	// which probably prevents a race.  We have observed cases where the KCM tries to install before certs are present
+	_, err = c.configMapLister.ConfigMaps(operatorclient.TargetNamespace).Get("client-ca")
+	if apierrors.IsNotFound(err) {
+		c.eventRecorder.Warning("ConfigMissing", err.Error())
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	_, err = c.configMapLister.ConfigMaps(operatorclient.TargetNamespace).Get("aggregator-client-ca")
+	if apierrors.IsNotFound(err) {
+		c.eventRecorder.Warning("ConfigMissing", err.Error())
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
 	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorConfig)
 	if err != nil {
 		return err
