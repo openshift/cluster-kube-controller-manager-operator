@@ -40,7 +40,8 @@ import (
 const workQueueKey = "key"
 
 type TargetConfigController struct {
-	targetImagePullSpec string
+	targetImagePullSpec   string
+	operatorImagePullSpec string
 
 	operatorConfigClient operatorv1client.KubeControllerManagersGetter
 	operatorClient       v1helpers.StaticPodOperatorClient
@@ -55,7 +56,7 @@ type TargetConfigController struct {
 }
 
 func NewTargetConfigController(
-	targetImagePullSpec string,
+	targetImagePullSpec, operatorImagePullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorConfigInformer operatorv1informers.KubeControllerManagerInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
@@ -65,7 +66,8 @@ func NewTargetConfigController(
 	eventRecorder events.Recorder,
 ) *TargetConfigController {
 	c := &TargetConfigController{
-		targetImagePullSpec: targetImagePullSpec,
+		targetImagePullSpec:   targetImagePullSpec,
+		operatorImagePullSpec: operatorImagePullSpec,
 
 		configMapLister:      kubeInformersForNamespaces.ConfigMapLister(),
 		secretLister:         kubeInformersForNamespaces.SecretLister(),
@@ -113,6 +115,25 @@ func (c TargetConfigController) sync() error {
 		return nil
 	}
 
+	// block until required certs and cas are present.  This isn't done in KAS, but that does an extra observation step
+	// which probably prevents a race.  We have observed cases where the KCM tries to install before certs are present
+	_, err = c.configMapLister.ConfigMaps(operatorclient.TargetNamespace).Get("client-ca")
+	if apierrors.IsNotFound(err) {
+		c.eventRecorder.Warning("ConfigMissing", err.Error())
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	_, err = c.configMapLister.ConfigMaps(operatorclient.TargetNamespace).Get("aggregator-client-ca")
+	if apierrors.IsNotFound(err) {
+		c.eventRecorder.Warning("ConfigMissing", err.Error())
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
 	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorConfig)
 	if err != nil {
 		return err
@@ -130,6 +151,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
 		"v3.11.0/kube-controller-manager/ns.yaml",
+		"v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
 		"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml",
 		"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
@@ -161,7 +183,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
-	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorConfig, c.targetImagePullSpec)
+	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorConfig, c.targetImagePullSpec, c.operatorImagePullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -200,15 +222,32 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
+	images := map[string]string{
+		"${IMAGE}":          imagePullSpec,
+		"${OPERATOR_IMAGE}": operatorImagePullSpec,
+	}
 	if len(imagePullSpec) > 0 {
-		required.Spec.Containers[0].Image = imagePullSpec
-		if len(required.Spec.InitContainers) > 0 {
-			required.Spec.InitContainers[0].Image = imagePullSpec
+		for i := range required.Spec.Containers {
+			for pat, img := range images {
+				if required.Spec.Containers[i].Image == pat {
+					required.Spec.Containers[i].Image = img
+					break
+				}
+			}
+		}
+		for i := range required.Spec.InitContainers {
+			for pat, img := range images {
+				if required.Spec.InitContainers[i].Image == pat {
+					required.Spec.InitContainers[i].Image = img
+					break
+				}
+			}
 		}
 	}
+
 	var v int
 	switch operatorConfig.Spec.LogLevel {
 	case operatorv1.Normal:

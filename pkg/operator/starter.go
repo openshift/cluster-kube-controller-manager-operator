@@ -92,6 +92,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
+		os.Getenv("OPERATOR_IMAGE"),
 		kubeInformersForNamespaces,
 		operatorConfigInformers.Operator().V1().KubeControllerManagers(),
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
@@ -117,6 +118,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
 		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
+		WithCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
 		WithServiceMonitor(dynamicClient).
 		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
 		ToControllers()
@@ -185,6 +187,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "config"},
 	{Name: "controller-manager-kubeconfig"},
 	{Name: "cloud-config", Optional: true},
+	{Name: "kube-controller-cert-syncer-kubeconfig"},
 	{Name: "serviceaccount-ca"},
 	{Name: "service-ca"},
 }
@@ -198,3 +201,10 @@ var deploymentSecrets = []revision.RevisionResource{
 	// this cert is created by the service-ca controller, which doesn't come up until after we are available. this piece of config must be optional.
 	{Name: "serving-cert", Optional: true},
 }
+
+var CertConfigMaps = []revision.RevisionResource{
+	{Name: "aggregator-client-ca"},
+	{Name: "client-ca"},
+}
+
+var CertSecrets = []revision.RevisionResource{}
