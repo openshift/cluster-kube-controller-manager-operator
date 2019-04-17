@@ -7,12 +7,12 @@ import (
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
+	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/cloudprovider"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
@@ -47,9 +47,9 @@ func NewConfigObserver(
 			operatorClient,
 			eventRecorder,
 			configobservation.Listers{
-				FeatureGateLister_:   configinformers.Config().V1().FeatureGates().Lister(),
-				InfrastructureLister: configinformers.Config().V1().Infrastructures().Lister(),
-				NetworkLister:        configinformers.Config().V1().Networks().Lister(),
+				FeatureGateLister_:    configinformers.Config().V1().FeatureGates().Lister(),
+				InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
+				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
 
 				ResourceSync:    resourceSyncer,
 				ConfigMapLister: kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
@@ -64,7 +64,10 @@ func NewConfigObserver(
 					configinformers.Config().V1().Networks().Informer().HasSynced,
 				),
 			},
-			cloudprovider.ObserveCloudProviderNames,
+			cloudprovider.NewCloudProviderObserver(
+				"openshift-kube-controller-manager",
+				[]string{"extendedArguments", "cloud-provider"},
+				[]string{"extendedArguments", "cloud-config"}),
 			featuregates.NewObserveFeatureFlagsFunc(nil, []string{"extendedArguments", "feature-gates"}),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
