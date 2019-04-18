@@ -91,7 +91,7 @@ func (c *SATokenSignerController) sync() error {
 	syncErr := c.syncWorker()
 
 	condition := operatorv1.OperatorCondition{
-		Type:   "SATokenSignerFailing",
+		Type:   "SATokenSignerDegraded",
 		Status: operatorv1.ConditionFalse,
 	}
 	if syncErr != nil && !isUnexpectedAddressesError(syncErr) {

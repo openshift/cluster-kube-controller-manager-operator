@@ -190,7 +190,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 
 	if len(errors) > 0 {
 		condition := operatorv1.OperatorCondition{
-			Type:    "TargetConfigControllerFailing",
+			Type:    "TargetConfigControllerDegraded",
 			Status:  operatorv1.ConditionTrue,
 			Reason:  "SynchronizationError",
 			Message: v1helpers.NewMultiLineAggregate(errors).Error(),
@@ -202,7 +202,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	}
 
 	condition := operatorv1.OperatorCondition{
-		Type:   "TargetConfigControllerFailing",
+		Type:   "TargetConfigControllerDegraded",
 		Status: operatorv1.ConditionFalse,
 	}
 	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
