@@ -1,5 +1,5 @@
 hash: 1179af0cd23972727fdc603b97f1f5bec329950c453232435ae2fad89c8e7e36
-updated: 2019-04-12T10:53:36.833980896-04:00
+updated: 2019-04-18T09:07:20.961030145-04:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -126,7 +126,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
 - name: github.com/gobuffalo/envy
-  version: 1e6702b55a7afe795770f86ce76c13836a591904
+  version: 043cb4b8af871b49563291e32c66bb84378a60ac
 - name: github.com/gogo/protobuf
   version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
   subpackages:
@@ -232,7 +232,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 0f522af5ff8bb3aa7a7181e163a7b9294b55cc4d
+  version: 13b403bfb6ce84ddc053bd3b401b5d67bf175efa
   subpackages:
   - apps
   - apps/v1
@@ -297,7 +297,7 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: 5565b0112c2efd6e428244bbf5b60320ee7d9cf5
+  version: 03c8496ad163d020c2dc2abf9226042bad93bfeb
   subpackages:
   - cmd/crd-schema-gen/generator
   - pkg/assets
@@ -313,6 +313,7 @@ imports:
   - pkg/crypto
   - pkg/operator/certrotation
   - pkg/operator/configobserver
+  - pkg/operator/configobserver/cloudprovider
   - pkg/operator/configobserver/featuregates
   - pkg/operator/configobserver/network
   - pkg/operator/events
@@ -327,6 +328,7 @@ imports:
   - pkg/operator/resource/retry
   - pkg/operator/resourcesynccontroller
   - pkg/operator/staticpod
+  - pkg/operator/staticpod/certsyncpod
   - pkg/operator/staticpod/controller/backingresource
   - pkg/operator/staticpod/controller/backingresource/bindata
   - pkg/operator/staticpod/controller/installer
@@ -535,7 +537,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: 8772a1fb4e1ec06c1b2301bf78f48613a53107f7
+  version: 3c74db8dd172051b029f91536c681a1b43694809
   repo: https://github.com/openshift/kubernetes-apiextensions-apiserver
   subpackages:
   - pkg/apis/apiextensions
@@ -864,7 +866,7 @@ imports:
   - pkg/util
   - pkg/util/proto
 - name: sigs.k8s.io/controller-tools
-  version: 4e23e49e5d401ca6ced86aa30262d0cf2488c504
+  version: 37aa25702e594bc28b69d0887d536e247c96021a
   repo: https://github.com/openshift/kubernetes-sigs-controller-tools
   subpackages:
   - pkg/crd/generator
