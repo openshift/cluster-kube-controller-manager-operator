@@ -6,3 +6,8 @@ metadata:
     release.openshift.io/create-only: "true"
 spec:
   managementState: Managed
+  imagePullSpec: openshift/origin-hypershift:latest
+  version: 3.11.0
+  logging:
+    level: 2
+  replicas: 2
