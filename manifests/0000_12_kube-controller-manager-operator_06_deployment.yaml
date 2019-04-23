@@ -7,6 +7,8 @@ metadata:
     app: kube-controller-manager-operator
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: kube-controller-manager-operator
@@ -18,7 +20,7 @@ spec:
     spec:
       serviceAccountName: kube-controller-manager-operator
       containers:
-      - name: operator
+      - name: kube-controller-manager-operator
         image: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
         imagePullPolicy: IfNotPresent
         ports:
