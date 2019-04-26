@@ -262,9 +262,12 @@ func v3110KubeControllerManagerLeaderElectionRolebindingYaml() (*asset, error) {
 var _v3110KubeControllerManagerNsYaml = []byte(`apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    openshift.io/node-selector: ""
   name: openshift-kube-controller-manager
   labels:
-    openshift.io/run-level: "0"`)
+    openshift.io/run-level: "0"
+`)
 
 func v3110KubeControllerManagerNsYamlBytes() ([]byte, error) {
 	return _v3110KubeControllerManagerNsYaml, nil
