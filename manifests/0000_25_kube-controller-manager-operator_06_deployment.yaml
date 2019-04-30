@@ -30,7 +30,6 @@ spec:
         command: ["cluster-kube-controller-manager-operator", "operator"]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
-        - "-v=4"
         resources:
           requests:
             memory: 50Mi
