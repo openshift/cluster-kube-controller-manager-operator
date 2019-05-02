@@ -387,7 +387,7 @@ spec:
     command: ["cluster-kube-controller-manager-operator", "cert-syncer"]
     args:
       - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig
-      - --namespace=${POD_NAMESPACE}
+      - --namespace=$(POD_NAMESPACE)
       - --destination-dir=/etc/kubernetes/static-pod-certs
     resources:
       requests:
