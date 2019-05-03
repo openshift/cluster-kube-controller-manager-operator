@@ -46,12 +46,16 @@ spec:
     - mountPath: /etc/kubernetes/static-pod-certs
       name: cert-dir
     livenessProbe:
-      httpGet:
-        scheme: HTTPS
-        port: 10257
-        path: healthz
-      initialDelaySeconds: 45
+      exec:
+        command:
+        - "/bin/bash"
+        - "-ec"
+        - |
+          find /etc/kubernetes/static-pod-resources/secrets/csr-signer -mmin -1 -exec false {} +
+          test $(curl -k --silent --output /dev/stderr --write-out \"%{http_code}\" https://localhost:10257/healthz) = 200"
+      initialDelaySeconds: 70
       timeoutSeconds: 10
+      failureThreshold: 1
     readinessProbe:
       httpGet:
         scheme: HTTPS
