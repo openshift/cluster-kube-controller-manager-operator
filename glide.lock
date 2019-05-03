@@ -1,5 +1,5 @@
 hash: 1179af0cd23972727fdc603b97f1f5bec329950c453232435ae2fad89c8e7e36
-updated: 2019-05-02T11:30:39.542592+02:00
+updated: 2019-05-03T14:49:32.86298+02:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -297,7 +297,7 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: 1255cd1766a03ded97b3afdc1990d04be168d967
+  version: 30efb8b70b661872bd0fd9de4ae37f61815bf161
   subpackages:
   - cmd/crd-schema-gen/generator
   - pkg/assets
