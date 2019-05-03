@@ -52,6 +52,7 @@ spec:
         - "-ec"
         - |
           find /etc/kubernetes/static-pod-resources/secrets/csr-signer -mmin -1 -exec false {} +
+          find /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key -mmin -1 -exec false {} +
           test $(curl -k --silent --output /dev/stderr --write-out \"%{http_code}\" https://localhost:10257/healthz) = 200"
       initialDelaySeconds: 70
       timeoutSeconds: 10
