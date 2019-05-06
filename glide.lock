@@ -1,5 +1,5 @@
-hash: 1179af0cd23972727fdc603b97f1f5bec329950c453232435ae2fad89c8e7e36
-updated: 2019-05-03T14:49:32.86298+02:00
+hash: e7f7f898226d579120e974dbbd6d0f28ef894d406d7f7c215c6f2369f2bdf27f
+updated: 2019-05-07T11:02:35.193947+02:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -232,7 +232,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 168fd4e3c55217ad0042c4ee1ec79e9ce40d5c21
+  version: 10f647f62efca0c361334c29499f68ad1a37e266
   subpackages:
   - apps
   - apps/v1
@@ -297,7 +297,8 @@ imports:
   - operator/informers/externalversions/operator/v1
   - operator/listers/operator/v1
 - name: github.com/openshift/library-go
-  version: 30efb8b70b661872bd0fd9de4ae37f61815bf161
+  version: 58224374cb6a8ff145e0d063f73b47a7b3ce7cc9
+  repo: https://github.com/mfojtik/library-go
   subpackages:
   - cmd/crd-schema-gen/generator
   - pkg/assets
@@ -345,6 +346,7 @@ imports:
   - pkg/operator/status
   - pkg/operator/unsupportedconfigoverridescontroller
   - pkg/operator/v1helpers
+  - pkg/operator/watchdog
   - pkg/serviceability
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
@@ -358,6 +360,7 @@ imports:
   version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
   subpackages:
   - prometheus
+  - prometheus/promhttp
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -848,7 +851,7 @@ imports:
   - parser
   - types
 - name: k8s.io/klog
-  version: e531227889390a39d9533dde61f590fe9f4b0035
+  version: e88f7305ac70285fef29b8acebb00ba53136eab4
 - name: k8s.io/kube-aggregator
   version: 3e0149950b0e22a3b8579db52bd50e40d0dac10e
   subpackages:
