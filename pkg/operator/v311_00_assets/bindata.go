@@ -10,6 +10,8 @@
 // bindata/v3.11.0/kube-controller-manager/pod.yaml
 // bindata/v3.11.0/kube-controller-manager/sa.yaml
 // bindata/v3.11.0/kube-controller-manager/svc.yaml
+// bindata/v3.11.0/kube-controller-manager/watchdog-role.yaml
+// bindata/v3.11.0/kube-controller-manager/watchdog-rolebinding.yaml
 // DO NOT EDIT!
 
 package v311_00_assets
@@ -512,6 +514,66 @@ func v3110KubeControllerManagerSvcYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110KubeControllerManagerWatchdogRoleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: watchdog-kube-controller-manager
+  namespace: openshift-kube-controller-manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+`)
+
+func v3110KubeControllerManagerWatchdogRoleYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerWatchdogRoleYaml, nil
+}
+
+func v3110KubeControllerManagerWatchdogRoleYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerWatchdogRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/watchdog-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110KubeControllerManagerWatchdogRolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: system:openshift:watchdog-kube-controller-manager
+roleRef:
+  kind: Role
+  name: watchdog-kube-controller-manager
+subjects:
+  - kind: User
+    name: system:kube-controller-manager`)
+
+func v3110KubeControllerManagerWatchdogRolebindingYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerWatchdogRolebindingYaml, nil
+}
+
+func v3110KubeControllerManagerWatchdogRolebindingYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerWatchdogRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/watchdog-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -574,6 +636,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/kube-controller-manager/pod.yaml":                         v3110KubeControllerManagerPodYaml,
 	"v3.11.0/kube-controller-manager/sa.yaml":                          v3110KubeControllerManagerSaYaml,
 	"v3.11.0/kube-controller-manager/svc.yaml":                         v3110KubeControllerManagerSvcYaml,
+	"v3.11.0/kube-controller-manager/watchdog-role.yaml":               v3110KubeControllerManagerWatchdogRoleYaml,
+	"v3.11.0/kube-controller-manager/watchdog-rolebinding.yaml":        v3110KubeControllerManagerWatchdogRolebindingYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -629,6 +693,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"pod.yaml":                         {v3110KubeControllerManagerPodYaml, map[string]*bintree{}},
 			"sa.yaml":                          {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
 			"svc.yaml":                         {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"watchdog-role.yaml":               {v3110KubeControllerManagerWatchdogRoleYaml, map[string]*bintree{}},
+			"watchdog-rolebinding.yaml":        {v3110KubeControllerManagerWatchdogRolebindingYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
