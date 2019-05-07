@@ -137,6 +137,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",
+		"v3.11.0/kube-controller-manager/watchdog-role.yaml",
+		"v3.11.0/kube-controller-manager/watchdog-rolebinding.yaml",
 	)
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
