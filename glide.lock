@@ -1,5 +1,5 @@
 hash: 08f64b6b998242f0521a43eeb71ab47a094ee03ded5a47e03e6a0599a0949d6c
-updated: 2019-05-17T16:06:47.248015+02:00
+updated: 2019-05-20T10:44:30.199873+02:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -110,6 +110,8 @@ imports:
   version: 5bae59e25b21498baea7f9d46e9c147ec106a42e
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
+- name: github.com/gobuffalo/envy
+  version: 043cb4b8af871b49563291e32c66bb84378a60ac
 - name: github.com/gogo/protobuf
   version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
   subpackages:
@@ -182,6 +184,8 @@ imports:
   version: 9316a62528ac99aaecb4e47eadd6dc8aa6533d58
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/joho/godotenv
+  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: ab8a2e0c74be9d3be70b3184d9acc634935ded82
 - name: github.com/jteeuwen/go-bindata
@@ -192,6 +196,8 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/markbates/inflect
+  version: d582c680dc4d29c2279628ae00e743005bfcd4fe
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -272,6 +278,7 @@ imports:
 - name: github.com/openshift/library-go
   version: e11c2bc2e9adf1607a765b64add4294ac6e58496
   subpackages:
+  - cmd/crd-schema-gen/generator
   - pkg/assets
   - pkg/certs
   - pkg/config/client
@@ -318,7 +325,6 @@ imports:
   - pkg/operator/status
   - pkg/operator/unsupportedconfigoverridescontroller
   - pkg/operator/v1helpers
-  - pkg/operator/watchdog
   - pkg/serviceability
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
@@ -349,8 +355,18 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/rogpeppe/go-internal
+  version: 6f68bf1e81f8552c7dbd47f3bc4371c2db0941a6
+  subpackages:
+  - modfile
+  - module
+  - semver
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/spf13/afero
+  version: 588a75ec4f32903aa5e39a2619ba6a4631e28424
+  subpackages:
+  - mem
 - name: github.com/spf13/cobra
   version: c439c4fa093711d42e1b01acb1235b52004753c1
 - name: github.com/spf13/pflag
@@ -404,6 +420,8 @@ imports:
   version: 2382e3994d48b1d22acc2c86bcad0a2aff028e32
   subpackages:
   - container/intsets
+  - go/ast/astutil
+  - imports
 - name: google.golang.org/appengine
   version: 311d3c5cf9373249645db030e53c37c209a8b378
   subpackages:
@@ -816,6 +834,10 @@ imports:
   version: e17681d19d3ac4837a019ece36c2a0ec31ffe985
   subpackages:
   - args
+  - generator
+  - namer
+  - parser
+  - types
 - name: k8s.io/klog
   version: 8e90cee79f823779174776412c13478955131846
 - name: k8s.io/kube-aggregator
@@ -845,6 +867,13 @@ imports:
 - name: sigs.k8s.io/controller-tools
   version: 72ae52c08b9dd626cfb64ebef0fbf40ce667939b
   repo: https://github.com/openshift/kubernetes-sigs-controller-tools
+  subpackages:
+  - pkg/crd/generator
+  - pkg/crd/util
+  - pkg/internal/codegen
+  - pkg/internal/codegen/parse
+  - pkg/internal/general
+  - pkg/util
 - name: sigs.k8s.io/structured-merge-diff
   version: e85c7b244fd2cc57bb829d73a061f93a441e63ce
   subpackages:
