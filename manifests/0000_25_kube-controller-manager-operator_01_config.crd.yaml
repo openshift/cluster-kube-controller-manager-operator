@@ -53,7 +53,6 @@ spec:
             managementState:
               description: managementState indicates whether and how the operator
                 should manage the component
-              pattern: ^(Managed|Unmanaged|Force|Removed)$
               type: string
             observedConfig:
               description: observedConfig holds a sparse config that controller has
