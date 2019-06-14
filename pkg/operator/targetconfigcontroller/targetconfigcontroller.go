@@ -156,9 +156,12 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
-	_, _, err = manageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	_, requeueDelay, _, err := manageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "secrets/csr-signer", err))
+	}
+	if requeueDelay > 0 {
+		c.queue.AddAfter(workQueueKey, requeueDelay)
 	}
 	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
@@ -289,32 +292,42 @@ func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, bool, error) {
+func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
 	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
-		return nil, false, nil
+		return nil, 0, false, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, 0, false, err
 	}
 
 	// the CSR signing controller only accepts a single cert.  make sure we only ever have one (not multiple to construct a larger chain)
 	signingCert := csrSigner.Data["tls.crt"]
 	if len(signingCert) == 0 {
-		return nil, false, nil
+		return nil, 0, false, nil
 	}
 	signingKey := csrSigner.Data["tls.key"]
 	if len(signingCert) == 0 {
-		return nil, false, nil
+		return nil, 0, false, nil
 	}
 	signingCertKeyPair, err := crypto.GetCAFromBytes(signingCert, signingKey)
 	if err != nil {
-		return nil, false, err
+		return nil, 0, false, err
 	}
 	certBytes, err := crypto.EncodeCertificates(signingCertKeyPair.Config.Certs[0])
 	if err != nil {
-		return nil, false, err
+		return nil, 0, false, err
+	}
+
+	// make sure we wait five minutes to propagate the change to other components, like kas for trust
+	useAfter := signingCertKeyPair.Config.Certs[0].NotBefore.Add(5 * time.Minute)
+	now := time.Now()
+	if useAfter.Before(now) {
+		// if we have something and it's not expired (yeah that check is missing here), delay
+		if _, err := client.Secrets(operatorclient.TargetNamespace).Get("csr-signer", metav1.GetOptions{}); err == nil {
+			return nil, useAfter.Sub(now) + 10*time.Second, false, nil
+		}
 	}
 
 	csrSigner = &corev1.Secret{
@@ -324,7 +337,8 @@ func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 			"tls.key": []byte(signingKey),
 		},
 	}
-	return resourceapply.ApplySecret(client, recorder, csrSigner)
+	secret, modified, err := resourceapply.ApplySecret(client, recorder, csrSigner)
+	return secret, 0, modified, err
 }
 
 func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
