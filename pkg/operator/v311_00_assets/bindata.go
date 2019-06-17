@@ -264,10 +264,10 @@ kind: Namespace
 metadata:
   annotations:
     openshift.io/node-selector: ""
-    openshift.io/cluster-monitoring: "true"
   name: openshift-kube-controller-manager
   labels:
     openshift.io/run-level: "0"
+    openshift.io/cluster-monitoring: "true"
 `)
 
 func v3110KubeControllerManagerNsYamlBytes() ([]byte, error) {
