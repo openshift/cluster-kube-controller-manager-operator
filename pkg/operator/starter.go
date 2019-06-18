@@ -144,7 +144,10 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorClient,
 		kubeInformersForNamespaces,
 		ctx.EventRecorder,
-		certRotationScale,
+		// this is weird, but when we turn down rotation in CI, we go fast enough that kubelets and kas are racing to observe the new signer before the signer is used.
+		// we need to establish some kind of delay or back pressure to prevent the rollout.  This ensures we don't trigger kas restart
+		// during e2e tests for now.
+		certRotationScale*8,
 	)
 	if err != nil {
 		return err
