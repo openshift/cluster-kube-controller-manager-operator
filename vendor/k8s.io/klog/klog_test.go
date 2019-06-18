@@ -18,6 +18,7 @@ package klog
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	stdLog "log"
@@ -472,7 +473,7 @@ func TestLogBacktraceAt(t *testing.T) {
 		// Need 2 appearances, one in the log header and one in the trace:
 		//   log_test.go:281: I0511 16:36:06.952398 02238 log_test.go:280] we want a stack trace here
 		//   ...
-		//   github.com/glog/glog_test.go:280 (0x41ba91)
+		//   k8s.io/klog/klog_test.go:280 (0x41ba91)
 		//   ...
 		// We could be more precise but that would require knowing the details
 		// of the traceback format, which may not be dependable.
@@ -531,5 +532,21 @@ func TestFileSizeCheck(t *testing.T) {
 			t.Fatalf("Error on test case '%v': Was expecting result equals %v, got %v",
 				name, test.expectedResult, actualResult)
 		}
+	}
+}
+
+func TestInitFlags(t *testing.T) {
+	fs1 := flag.NewFlagSet("test1", flag.PanicOnError)
+	InitFlags(fs1)
+	fs1.Set("log_dir", "/test1")
+	fs1.Set("log_file_max_size", "1")
+	fs2 := flag.NewFlagSet("test2", flag.PanicOnError)
+	InitFlags(fs2)
+	if logging.logDir != "/test1" {
+		t.Fatalf("Expected log_dir to be %q, got %q", "/test1", logging.logDir)
+	}
+	fs2.Set("log_file_max_size", "2048")
+	if logging.logFileMaxSizeMB != 2048 {
+		t.Fatal("Expected log_file_max_size to be 2048")
 	}
 }
