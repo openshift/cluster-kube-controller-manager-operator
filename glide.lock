@@ -1,5 +1,5 @@
 hash: 08f64b6b998242f0521a43eeb71ab47a094ee03ded5a47e03e6a0599a0949d6c
-updated: 2019-06-18T13:30:26.267025+02:00
+updated: 2019-07-10T15:13:27.250097507-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -97,7 +97,7 @@ imports:
   subpackages:
   - log
 - name: github.com/evanphx/json-patch
-  version: 5858425f75500d40c52783dce87d085a483ce135
+  version: 026c730a0dcc5d11f93f1cf1cc65b01247ea7b6f
 - name: github.com/getsentry/raven-go
   version: c977f96e109525a5d8fa10a19165341f601f38b0
 - name: github.com/ghodss/yaml
@@ -211,7 +211,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 37678ff76af25c454dce37f78973d47d6ec23125
+  version: 1fc8159732e8f46a0f24c51358b3dfe2a08e4fa6
   subpackages:
   - apps
   - apps/v1
@@ -257,7 +257,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 8892c0adc000741c33af70e05f4ede47725d0773
+  version: c44a8b61b9f46cd9e802384dfeda0bc9942db68a
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -270,13 +270,16 @@ imports:
   - operator/clientset/versioned
   - operator/clientset/versioned/scheme
   - operator/clientset/versioned/typed/operator/v1
+  - operator/clientset/versioned/typed/operator/v1alpha1
   - operator/informers/externalversions
   - operator/informers/externalversions/internalinterfaces
   - operator/informers/externalversions/operator
   - operator/informers/externalversions/operator/v1
+  - operator/informers/externalversions/operator/v1alpha1
   - operator/listers/operator/v1
+  - operator/listers/operator/v1alpha1
 - name: github.com/openshift/library-go
-  version: e617f832835dbbef6cdab6f18930d051f91947da
+  version: f8abdcd57c468b7f49a91caa77212c12bd05fa9f
   subpackages:
   - cmd/crd-schema-gen/generator
   - pkg/assets
@@ -512,7 +515,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: d4b26e32461e939592c021a8a75d9f1b2c809d08
+  version: ee330a2a5c6d54e58af0defc868f1258a5c47422
   repo: https://github.com/openshift/kubernetes-apiextensions-apiserver
   subpackages:
   - pkg/apis/apiextensions
@@ -825,7 +828,7 @@ imports:
 - name: k8s.io/code-generator
   version: 50b561225d70b3eb79a1faafd3dfe7b1a62cbe73
 - name: k8s.io/component-base
-  version: 4a91899592f42b2f5859587cc5a676a5b94d2ee3
+  version: f0322db00a103489b85cb3835886741a3911636b
   subpackages:
   - cli/flag
   - logs
@@ -838,7 +841,7 @@ imports:
   - parser
   - types
 - name: k8s.io/klog
-  version: e15309493592bfe9c98ae656cf2ee299f710146b
+  version: aeddeeced515f4c31fa65bfc24332b3e7763cc5c
 - name: k8s.io/kube-aggregator
   version: da8327669ac57b6e6a06676eeb7de19c9780f76d
   subpackages:
