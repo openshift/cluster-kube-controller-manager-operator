@@ -19,7 +19,7 @@ spec:
       - containerPort: 10257
     command: ["/bin/bash", "-c"]
     args:
-    - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+    - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig-loopback
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host

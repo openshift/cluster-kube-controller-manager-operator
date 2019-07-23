@@ -10,9 +10,9 @@ extendedArguments:
   cluster-signing-key-file:
   - "/etc/kubernetes/secrets/kubelet-signer.key"
   authentication-kubeconfig:
-  - "/etc/kubernetes/secrets/kubeconfig"
+  - "/etc/kubernetes/secrets/kubeconfig-loopback"
   authorization-kubeconfig:
-  - "/etc/kubernetes/secrets/kubeconfig"
+  - "/etc/kubernetes/secrets/kubeconfig-loopback"
   {{if .ClusterCIDR }}
   cluster-cidr: {{range .ClusterCIDR}}
   - {{.}}{{end}}
