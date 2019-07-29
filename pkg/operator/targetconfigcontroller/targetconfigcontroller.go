@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	"k8s.io/klog"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,10 +19,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
-	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
@@ -43,8 +40,7 @@ type TargetConfigController struct {
 	targetImagePullSpec   string
 	operatorImagePullSpec string
 
-	operatorConfigClient operatorv1client.KubeControllerManagersGetter
-	operatorClient       v1helpers.StaticPodOperatorClient
+	operatorClient v1helpers.StaticPodOperatorClient
 
 	kubeClient      kubernetes.Interface
 	configMapLister corev1listers.ConfigMapLister
@@ -58,9 +54,7 @@ type TargetConfigController struct {
 func NewTargetConfigController(
 	targetImagePullSpec, operatorImagePullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	operatorConfigInformer operatorv1informers.KubeControllerManagerInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
-	operatorConfigClient operatorv1client.KubeControllerManagersGetter,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
@@ -69,17 +63,16 @@ func NewTargetConfigController(
 		targetImagePullSpec:   targetImagePullSpec,
 		operatorImagePullSpec: operatorImagePullSpec,
 
-		configMapLister:      kubeInformersForNamespaces.ConfigMapLister(),
-		secretLister:         kubeInformersForNamespaces.SecretLister(),
-		operatorConfigClient: operatorConfigClient,
-		operatorClient:       operatorClient,
-		kubeClient:           kubeClient,
-		eventRecorder:        eventRecorder.WithComponentSuffix("target-config-controller"),
+		configMapLister: kubeInformersForNamespaces.ConfigMapLister(),
+		secretLister:    kubeInformersForNamespaces.SecretLister(),
+		operatorClient:  operatorClient,
+		kubeClient:      kubeClient,
+		eventRecorder:   eventRecorder.WithComponentSuffix("target-config-controller"),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigController"),
 	}
 
-	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
+	operatorClient.Informer().AddEventHandler(c.eventHandler())
 	namespacedKubeInformers.Rbac().V1().Roles().Informer().AddEventHandler(c.eventHandler())
 	namespacedKubeInformers.Rbac().V1().RoleBindings().Informer().AddEventHandler(c.eventHandler())
 	namespacedKubeInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
@@ -98,12 +91,12 @@ func NewTargetConfigController(
 }
 
 func (c TargetConfigController) sync() error {
-	operatorConfig, err := c.operatorConfigClient.KubeControllerManagers().Get("cluster", metav1.GetOptions{})
+	operatorSpec, _, _, err := c.operatorClient.GetStaticPodOperatorStateWithQuorum()
 	if err != nil {
 		return err
 	}
 
-	switch operatorConfig.Spec.ManagementState {
+	switch operatorSpec.ManagementState {
 	case operatorv1.Managed:
 	case operatorv1.Unmanaged:
 		return nil
@@ -111,11 +104,11 @@ func (c TargetConfigController) sync() error {
 		// TODO probably just fail
 		return nil
 	default:
-		c.eventRecorder.Warningf("ManagementStateUnknown", "Unrecognized operator management state %q", operatorConfig.Spec.ManagementState)
+		c.eventRecorder.Warningf("ManagementStateUnknown", "Unrecognized operator management state %q", operatorSpec.ManagementState)
 		return nil
 	}
 
-	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorConfig)
+	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorSpec)
 	if err != nil {
 		return err
 	}
@@ -127,7 +120,7 @@ func (c TargetConfigController) sync() error {
 }
 
 // createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
-func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager) (bool, error) {
+func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
@@ -144,7 +137,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		}
 	}
 
-	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorConfig)
+	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
@@ -167,7 +160,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
-	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorConfig, c.targetImagePullSpec, c.operatorImagePullSpec)
+	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -196,17 +189,17 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	return false, nil
 }
 
-func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager) (*corev1.ConfigMap, bool, error) {
+func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorSpec.ObservedConfig.Raw, operatorSpec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorConfig *operatorv1.KubeControllerManager, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
@@ -233,7 +226,7 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 	}
 
 	var v int
-	switch operatorConfig.Spec.LogLevel {
+	switch operatorSpec.LogLevel {
 	case operatorv1.Normal:
 		v = 2
 	case operatorv1.Debug:
@@ -256,7 +249,7 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod-cm.yaml"))
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
-	configMap.Data["forceRedeploymentReason"] = operatorConfig.Spec.ForceRedeploymentReason
+	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
 	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, configMap)
 }
