@@ -3,6 +3,7 @@ package configobservercontroller
 import (
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/clustername"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
@@ -68,6 +69,7 @@ func NewConfigObserver(
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
 			serviceca.ObserveServiceCA,
+			clustername.ObserveInfraID,
 		),
 	}
 

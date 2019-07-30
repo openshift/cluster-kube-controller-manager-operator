@@ -1,14 +1,18 @@
 package targetconfigcontroller
 
 import (
+	"bytes"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -108,6 +112,12 @@ func (c TargetConfigController) sync() error {
 		return nil
 	}
 
+	// block until config is observed and specific paths are present
+	if err := isRequiredConfigPresent(operatorSpec.ObservedConfig.Raw); err != nil {
+		c.eventRecorder.Warning("ConfigMissing", err.Error())
+		return err
+	}
+
 	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorSpec)
 	if err != nil {
 		return err
@@ -116,6 +126,40 @@ func (c TargetConfigController) sync() error {
 		return fmt.Errorf("synthetic requeue request")
 	}
 
+	return nil
+}
+
+func isRequiredConfigPresent(config []byte) error {
+	if len(config) == 0 {
+		return fmt.Errorf("no observedConfig")
+	}
+
+	existingConfig := map[string]interface{}{}
+	if err := json.NewDecoder(bytes.NewBuffer(config)).Decode(&existingConfig); err != nil {
+		return fmt.Errorf("error parsing config, %v", err)
+	}
+
+	requiredPaths := [][]string{
+		{"extendedArguments", "cluster-name"},
+	}
+	for _, requiredPath := range requiredPaths {
+		configVal, found, err := unstructured.NestedFieldNoCopy(existingConfig, requiredPath...)
+		if err != nil {
+			return fmt.Errorf("error reading %v from config, %v", strings.Join(requiredPath, "."), err)
+		}
+		if !found {
+			return fmt.Errorf("%v missing from config", strings.Join(requiredPath, "."))
+		}
+		if configVal == nil {
+			return fmt.Errorf("%v null in config", strings.Join(requiredPath, "."))
+		}
+		if configValSlice, ok := configVal.([]interface{}); ok && len(configValSlice) == 0 {
+			return fmt.Errorf("%v empty in config", strings.Join(requiredPath, "."))
+		}
+		if configValString, ok := configVal.(string); ok && len(configValString) == 0 {
+			return fmt.Errorf("%v empty in config", strings.Join(requiredPath, "."))
+		}
+	}
 	return nil
 }
 
