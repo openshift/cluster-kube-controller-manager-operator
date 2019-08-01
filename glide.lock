@@ -1,5 +1,5 @@
 hash: 0b28ff8f07a8c519d99c0626c937b41f94a9dc0f7902076313d5fd64090b6fa2
-updated: 2019-07-29T11:03:10.475479264-07:00
+updated: 2019-08-01T19:27:21.355582959-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -97,7 +97,7 @@ imports:
   subpackages:
   - log
 - name: github.com/evanphx/json-patch
-  version: 5858425f75500d40c52783dce87d085a483ce135
+  version: 026c730a0dcc5d11f93f1cf1cc65b01247ea7b6f
 - name: github.com/getsentry/raven-go
   version: c977f96e109525a5d8fa10a19165341f601f38b0
 - name: github.com/ghodss/yaml
@@ -205,7 +205,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: fbd0b90af4842eaeff52bfa8e45424696178b5ac
+  version: 0922aa5a655be314e20a3e0e94f4f2b105100154
   subpackages:
   - apps
   - apps/v1
@@ -262,7 +262,7 @@ imports:
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: 387489859705725fb06d2ccf8b7885bf357cae20
+  version: 1810ce5f54ff4a1a4fea05e06024896a4885eb05
   subpackages:
   - pkg/assets
   - pkg/certs
@@ -314,6 +314,8 @@ imports:
   - pkg/serviceability
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pkg/profile
   version: f6fe06335df110bcf1ed6d4e852b760bfc15beee
 - name: github.com/prometheus/client_golang
@@ -391,11 +393,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 2382e3994d48b1d22acc2c86bcad0a2aff028e32
+  version: 5f95ed5921efa3338dc38833ce4ce39317f8b6e9
   subpackages:
   - container/intsets
 - name: google.golang.org/appengine
-  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
+  version: fb139bde60fa77cede04f226b4d5a3cf68dcce27
   subpackages:
   - internal
   - internal/base
@@ -808,7 +810,7 @@ imports:
   subpackages:
   - args
 - name: k8s.io/klog
-  version: 8e90cee79f823779174776412c13478955131846
+  version: 6a023d6d0e0954feabd46dc2d3a6a2c3c991fe1a
 - name: k8s.io/kube-aggregator
   version: da8327669ac57b6e6a06676eeb7de19c9780f76d
   subpackages:
@@ -842,7 +844,5 @@ imports:
   - typed
   - value
 - name: sigs.k8s.io/yaml
-  version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
-testImports:
-- name: github.com/pkg/errors
-  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+  version: 4cd0c284b15f1735b8cc247df097d262b8903f9f
+testImports: []
