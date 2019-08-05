@@ -1,5 +1,5 @@
 hash: 0b28ff8f07a8c519d99c0626c937b41f94a9dc0f7902076313d5fd64090b6fa2
-updated: 2019-08-01T19:27:21.355582959-04:00
+updated: 2019-08-04T00:40:50.506396031+02:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -97,7 +97,7 @@ imports:
   subpackages:
   - log
 - name: github.com/evanphx/json-patch
-  version: 026c730a0dcc5d11f93f1cf1cc65b01247ea7b6f
+  version: cb8f3b5f9db3c390f2cdf6e67f7e6ea3b339a197
 - name: github.com/getsentry/raven-go
   version: c977f96e109525a5d8fa10a19165341f601f38b0
 - name: github.com/ghodss/yaml
@@ -262,7 +262,7 @@ imports:
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: 1810ce5f54ff4a1a4fea05e06024896a4885eb05
+  version: cab1b771d4dcaacbe1333de6edde4e272f012b8d
   subpackages:
   - pkg/assets
   - pkg/certs
@@ -393,7 +393,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 5f95ed5921efa3338dc38833ce4ce39317f8b6e9
+  version: 1d1727260058c6d58ebfdeb982c4657342282355
   subpackages:
   - container/intsets
 - name: google.golang.org/appengine
