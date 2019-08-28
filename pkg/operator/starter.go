@@ -173,6 +173,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "cloud-config", Optional: true},
 	{Name: "kube-controller-cert-syncer-kubeconfig"},
 	{Name: "serviceaccount-ca"},
+	{Name: "trusted-ca-bundle"},
 	{Name: "service-ca"},
 }
 

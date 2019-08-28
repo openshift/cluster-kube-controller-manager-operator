@@ -86,6 +86,8 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem/
+        name: trusted-ca-bundle
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
@@ -97,3 +99,6 @@ spec:
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-certs
     name: cert-dir
+  - hostPath:
+      path: /etc/kubernetes/static-pod-resources/configmaps/trusted-ca-bundle
+    name: trusted-ca-bundle

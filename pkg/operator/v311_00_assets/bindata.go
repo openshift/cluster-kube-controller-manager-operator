@@ -10,6 +10,7 @@
 // bindata/v3.11.0/kube-controller-manager/pod.yaml
 // bindata/v3.11.0/kube-controller-manager/sa.yaml
 // bindata/v3.11.0/kube-controller-manager/svc.yaml
+// bindata/v3.11.0/kube-controller-manager/trusted-ca-cm.yaml
 // DO NOT EDIT!
 
 package v311_00_assets
@@ -399,6 +400,8 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem/
+        name: trusted-ca-bundle
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
@@ -410,6 +413,9 @@ spec:
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-certs
     name: cert-dir
+  - hostPath:
+      path: /etc/kubernetes/static-pod-resources/configmaps/trusted-ca-bundle
+    name: trusted-ca-bundle
 `)
 
 func v3110KubeControllerManagerPodYamlBytes() ([]byte, error) {
@@ -482,6 +488,29 @@ func v3110KubeControllerManagerSvcYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110KubeControllerManagerTrustedCaCmYaml = []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-apiserver
+  name: trusted-ca-bundle
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"`)
+
+func v3110KubeControllerManagerTrustedCaCmYamlBytes() ([]byte, error) {
+	return _v3110KubeControllerManagerTrustedCaCmYaml, nil
+}
+
+func v3110KubeControllerManagerTrustedCaCmYaml() (*asset, error) {
+	bytes, err := v3110KubeControllerManagerTrustedCaCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/kube-controller-manager/trusted-ca-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -544,6 +573,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/kube-controller-manager/pod.yaml":                         v3110KubeControllerManagerPodYaml,
 	"v3.11.0/kube-controller-manager/sa.yaml":                          v3110KubeControllerManagerSaYaml,
 	"v3.11.0/kube-controller-manager/svc.yaml":                         v3110KubeControllerManagerSvcYaml,
+	"v3.11.0/kube-controller-manager/trusted-ca-cm.yaml":               v3110KubeControllerManagerTrustedCaCmYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -599,6 +629,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"pod.yaml":                         {v3110KubeControllerManagerPodYaml, map[string]*bintree{}},
 			"sa.yaml":                          {v3110KubeControllerManagerSaYaml, map[string]*bintree{}},
 			"svc.yaml":                         {v3110KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"trusted-ca-cm.yaml":               {v3110KubeControllerManagerTrustedCaCmYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
