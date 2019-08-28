@@ -17,9 +17,13 @@ spec:
     imagePullPolicy: {{ .ImagePullPolicy }}
     ports:
       - containerPort: 10257
-    command: ["/bin/bash", "-c"]
+    command: ["hyperkube", "kube-controller-manager"]
     args:
-    - exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }} --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+    - --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }}
+    - --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+    - --logtostderr=false
+    - --alsologtostderr
+    - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
@@ -33,6 +37,8 @@ spec:
     - mountPath: /etc/kubernetes/config
       name: config
       readOnly: true
+    - mountPath: /var/log/bootstrap-control-plane
+      name: logs
     livenessProbe:
       httpGet:
         scheme: HTTPS
@@ -53,3 +59,6 @@ spec:
   - hostPath:
       path: /etc/ssl/certs
     name: ssl-certs-host
+  - hostPath:
+      path: /var/log/bootstrap-control-plane
+    name: logs
