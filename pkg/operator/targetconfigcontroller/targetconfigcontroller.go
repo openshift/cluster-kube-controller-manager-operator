@@ -27,7 +27,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
@@ -167,13 +167,13 @@ func isRequiredConfigPresent(config []byte) error {
 func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
 
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v311_00_assets.Asset,
-		"v3.11.0/kube-controller-manager/ns.yaml",
-		"v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
-		"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml",
-		"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml",
-		"v3.11.0/kube-controller-manager/svc.yaml",
-		"v3.11.0/kube-controller-manager/sa.yaml",
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v411_00_assets.Asset,
+		"v4.1.0/kube-controller-manager/ns.yaml",
+		"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
+		"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml",
+		"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml",
+		"v4.1.0/kube-controller-manager/svc.yaml",
+		"v4.1.0/kube-controller-manager/sa.yaml",
 	)
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
@@ -234,8 +234,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 }
 
 func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/cm.yaml"))
-	defaultConfig := v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/defaultconfig.yaml")
+	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
+	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorSpec.ObservedConfig.Raw, operatorSpec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
@@ -244,7 +244,7 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 }
 
 func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
-	required := resourceread.ReadPodV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod.yaml"))
+	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
 		"${IMAGE}":          imagePullSpec,
@@ -291,7 +291,7 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key")
 	}
 
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/kube-controller-manager/pod-cm.yaml"))
+	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod-cm.yaml"))
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
 	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
