@@ -119,9 +119,9 @@ extendedArguments:
   service-account-private-key-file:
   - "/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"
   cluster-signing-cert-file:
-  - "/etc/kubernetes/static-pod-resources/secrets/csr-signer/tls.crt"
+  - "/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt"
   cluster-signing-key-file:
-  - "/etc/kubernetes/static-pod-resources/secrets/csr-signer/tls.key"
+  - "/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"
   kube-api-qps:
   - "150" # this is a historical values
   kube-api-burst:

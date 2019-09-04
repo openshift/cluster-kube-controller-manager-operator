@@ -191,4 +191,6 @@ var CertConfigMaps = []revision.RevisionResource{
 	{Name: "client-ca"},
 }
 
-var CertSecrets = []revision.RevisionResource{}
+var CertSecrets = []revision.RevisionResource{
+	{Name: "csr-signer"},
+}
