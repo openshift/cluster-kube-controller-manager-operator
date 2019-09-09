@@ -256,7 +256,6 @@ func (c *SATokenSignerController) syncWorker() error {
 	if err != nil {
 		readyToPromote = true
 	}
-	fmt.Printf("#### 2b comparing now=%v to promotionTime %v\n", saTokenReadyTime, promotionTime)
 	if time.Now().After(promotionTime) {
 		readyToPromote = true
 	}
@@ -264,7 +263,6 @@ func (c *SATokenSignerController) syncWorker() error {
 	// if we're past our promotion time, go ahead and synchronize over
 	if readyToPromote {
 		_, err := c.configMapClient.ConfigMaps(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
-		fmt.Printf("#### 1a time to sync! err=%v err\n", err)
 		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
