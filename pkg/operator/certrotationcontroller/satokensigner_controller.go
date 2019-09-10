@@ -235,13 +235,12 @@ func (c *SATokenSignerController) syncWorker() error {
 			hasThisPublicKey = true
 		}
 	}
-	if hasThisPublicKey {
-		return nil
-	}
-	saTokenSigningCerts.Data[fmt.Sprintf("service-account-%03d.pub", len(saTokenSigningCerts.Data)+1)] = currPublicKey
-	saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(c.configMapClient, c.eventRecorder, saTokenSigningCerts)
-	if err != nil {
-		return err
+	if !hasThisPublicKey {
+		saTokenSigningCerts.Data[fmt.Sprintf("service-account-%03d.pub", len(saTokenSigningCerts.Data)+1)] = currPublicKey
+		saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(c.configMapClient, c.eventRecorder, saTokenSigningCerts)
+		if err != nil {
+			return err
+		}
 	}
 
 	// now check to see if the next-sa-private-key has been around long enough to be promoted.  We're waiting for the kube-apiserver
@@ -262,8 +261,7 @@ func (c *SATokenSignerController) syncWorker() error {
 
 	// if we're past our promotion time, go ahead and synchronize over
 	if readyToPromote {
-		_, err := c.configMapClient.ConfigMaps(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
-		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
+		_, _, err := resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
