@@ -1,7 +1,6 @@
 all: build
 .PHONY: all
 
-
 # Include the library makefile
 include $(addprefix ./vendor/github.com/openshift/library-go/alpha-build-machinery/make/, \
 	golang.mk \
@@ -10,13 +9,18 @@ include $(addprefix ./vendor/github.com/openshift/library-go/alpha-build-machine
 	targets/openshift/images.mk \
 )
 
+# Exclude e2e tests from unit testing
+GO_TEST_PACKAGES :=./pkg/... ./cmd/...
+
+IMAGE_REGISTRY :=registry.svc.ci.openshift.org
+
 # This will call a macro called "build-image" which will generate image specific targets based on the parameters:
 # $0 - macro name
-# $1 - target suffix
-# $2 - Dockerfile path
-# $3 - context directory for image build
-# It will generate target "image-$(1)" for builing the image an binding it as a prerequisite to target "images".
-$(call build-image,origin-$(GO_PACKAGE),./Dockerfile,.)
+# $1 - target name
+# $2 - image ref
+# $3 - Dockerfile path
+# $4 - context directory for image build
+$(call build-image,ocp-cluster-kube-controller-manager-operator,$(IMAGE_REGISTRY)/ocp/4.2:cluster-kube-controller-manager-operator, ./Dockerfile.rhel7,.)
 
 # This will call a macro called "add-bindata" which will generate bindata specific targets based on the parameters:
 # $0 - macro name
@@ -29,16 +33,13 @@ $(call build-image,origin-$(GO_PACKAGE),./Dockerfile,.)
 # and also hooked into {update,verify}-generated for broader integration.
 $(call add-bindata,v4.1.0,./bindata/v4.1.0/...,bindata,v411_00_assets,pkg/operator/v411_00_assets/bindata.go)
 
-
 clean:
 	$(RM) ./cluster-kube-controller-manager-operator
 .PHONY: clean
 
-GO_TEST_PACKAGES :=./pkg/... ./cmd/...
-
-.PHONY: test-e2e
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: test-unit
+.PHONY: test-e2e
 
 CRD_SCHEMA_GEN_VERSION := v1.0.0
 crd-schema-gen:
