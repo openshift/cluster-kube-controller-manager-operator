@@ -7,7 +7,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
-
 	test "github.com/openshift/cluster-kube-controller-manager-operator/test/library"
 )
 
