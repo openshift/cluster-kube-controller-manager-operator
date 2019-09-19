@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
+	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,6 +293,20 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key")
 	}
 
+	var observedConfig map[string]interface{}
+	if err := yaml.Unmarshal(operatorSpec.ObservedConfig.Raw, &observedConfig); err != nil {
+		return nil, false, fmt.Errorf("failed to unmarshal the observedConfig: %v", err)
+	}
+	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %v", err)
+	}
+
+	proxyEnvVars := proxyMapToEnvVars(proxyConfig)
+	for i, container := range required.Spec.Containers {
+		required.Spec.Containers[i].Env = append(container.Env, proxyEnvVars...)
+	}
+
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod-cm.yaml"))
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
 	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
@@ -535,4 +551,19 @@ func (c *TargetConfigController) namespaceEventHandler() cache.ResourceEventHand
 			}
 		},
 	}
+}
+
+func proxyMapToEnvVars(proxyConfig map[string]string) []corev1.EnvVar {
+	if proxyConfig == nil {
+		return nil
+	}
+
+	envVars := []corev1.EnvVar{}
+	for k, v := range proxyConfig {
+		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
+	}
+
+	// need to sort the slice so that kube-apiserver-pod configmap does not change all the time
+	sort.Slice(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
+	return envVars
 }
