@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
+	"github.com/openshift/library-go/pkg/operator/configobserver/proxy"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -47,6 +48,7 @@ func NewConfigObserver(
 				FeatureGateLister_:    configinformers.Config().V1().FeatureGates().Lister(),
 				InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
 				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
+				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
 
 				ResourceSync:    resourceSyncer,
 				ConfigMapLister: kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
@@ -59,6 +61,7 @@ func NewConfigObserver(
 					configinformers.Config().V1().FeatureGates().Informer().HasSynced,
 					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
 					configinformers.Config().V1().Networks().Informer().HasSynced,
+					configinformers.Config().V1().Proxies().Informer().HasSynced,
 				),
 			},
 			cloudprovider.NewCloudProviderObserver(
@@ -68,6 +71,7 @@ func NewConfigObserver(
 			featuregates.NewObserveFeatureFlagsFunc(nil, []string{"extendedArguments", "feature-gates"}),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
+			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
 		),
@@ -82,6 +86,7 @@ func NewConfigObserver(
 	configinformers.Config().V1().FeatureGates().Informer().AddEventHandler(c.EventHandler())
 	configinformers.Config().V1().Infrastructures().Informer().AddEventHandler(c.EventHandler())
 	configinformers.Config().V1().Networks().Informer().AddEventHandler(c.EventHandler())
+	configinformers.Config().V1().Proxies().Informer().AddEventHandler(c.EventHandler())
 
 	return c
 }

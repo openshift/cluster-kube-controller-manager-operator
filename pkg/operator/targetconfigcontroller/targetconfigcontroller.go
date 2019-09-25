@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/ghodss/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +28,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
+	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
@@ -236,7 +240,14 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorSpec.ObservedConfig.Raw, operatorSpec.UnsupportedConfigOverrides.Raw)
+	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
+		&kubecontrolplanev1.KubeControllerManagerConfig{},
+		configMap,
+		"config.yaml",
+		nil,
+		defaultConfig,
+		operatorSpec.ObservedConfig.Raw,
+		operatorSpec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}
@@ -289,6 +300,20 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 	} else if err == nil {
 		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt")
 		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key")
+	}
+
+	var observedConfig map[string]interface{}
+	if err := yaml.Unmarshal(operatorSpec.ObservedConfig.Raw, &observedConfig); err != nil {
+		return nil, false, fmt.Errorf("failed to unmarshal the observedConfig: %v", err)
+	}
+	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %v", err)
+	}
+
+	proxyEnvVars := proxyMapToEnvVars(proxyConfig)
+	for i, container := range required.Spec.Containers {
+		required.Spec.Containers[i].Env = append(container.Env, proxyEnvVars...)
 	}
 
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod-cm.yaml"))
@@ -535,4 +560,19 @@ func (c *TargetConfigController) namespaceEventHandler() cache.ResourceEventHand
 			}
 		},
 	}
+}
+
+func proxyMapToEnvVars(proxyConfig map[string]string) []corev1.EnvVar {
+	if proxyConfig == nil {
+		return nil
+	}
+
+	envVars := []corev1.EnvVar{}
+	for k, v := range proxyConfig {
+		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
+	}
+
+	// need to sort the slice so that kube-controller-manager-pod configmap does not change all the time
+	sort.Slice(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
+	return envVars
 }
