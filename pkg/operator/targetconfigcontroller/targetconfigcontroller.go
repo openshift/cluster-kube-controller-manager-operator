@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
+	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
@@ -238,7 +240,14 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorSpec.ObservedConfig.Raw, operatorSpec.UnsupportedConfigOverrides.Raw)
+	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
+		&kubecontrolplanev1.KubeControllerManagerConfig{},
+		configMap,
+		"config.yaml",
+		nil,
+		defaultConfig,
+		operatorSpec.ObservedConfig.Raw,
+		operatorSpec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}
@@ -563,7 +572,7 @@ func proxyMapToEnvVars(proxyConfig map[string]string) []corev1.EnvVar {
 		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 	}
 
-	// need to sort the slice so that kube-apiserver-pod configmap does not change all the time
+	// need to sort the slice so that kube-controller-manager-pod configmap does not change all the time
 	sort.Slice(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 	return envVars
 }
