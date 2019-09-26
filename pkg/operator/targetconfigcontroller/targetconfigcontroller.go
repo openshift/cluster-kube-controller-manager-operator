@@ -29,6 +29,7 @@ import (
 	"k8s.io/klog"
 
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
+	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
@@ -189,6 +190,10 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
+	_, _, err = manageClusterPolicyControllerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
+	}
 	_, _, err = manageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
@@ -254,6 +259,23 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
+func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml"))
+	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml")
+	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
+		&openshiftcontrolplanev1.OpenShiftControllerManagerConfig{},
+		configMap,
+		"config.yaml",
+		nil,
+		defaultConfig,
+		operatorSpec.ObservedConfig.Raw,
+		operatorSpec.UnsupportedConfigOverrides.Raw)
+	if err != nil {
+		return nil, false, err
+	}
+	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
 func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
@@ -294,6 +316,7 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 		v = 2
 	}
 	required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", v))
+	required.Spec.Containers[1].Args = append(required.Spec.Containers[1].Args, fmt.Sprintf("-v=%d", v))
 
 	if _, err := secretsGetter.Secrets(required.Namespace).Get("serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err

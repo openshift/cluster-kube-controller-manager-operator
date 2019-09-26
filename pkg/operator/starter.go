@@ -169,6 +169,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "kube-controller-manager-pod"},
 
 	{Name: "config"},
+	{Name: "cluster-policy-controller-config"},
 	{Name: "controller-manager-kubeconfig"},
 	{Name: "cloud-config", Optional: true},
 	{Name: "kube-controller-cert-syncer-kubeconfig"},
