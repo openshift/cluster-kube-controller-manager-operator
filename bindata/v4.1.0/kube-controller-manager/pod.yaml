@@ -21,7 +21,48 @@ spec:
         echo -n "."
         sleep 1
       done
+  - name: wait-for-cpc-host-port
+    terminationMessagePolicy: FallbackToLogsOnError
+    image: ${IMAGE}
+    imagePullPolicy: IfNotPresent
+    command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
+    args:
+    - |
+      echo -n "Waiting for port :10357 to be released."
+      while [ -n "$(lsof -ni :10357)" ]; do
+        echo -n "."
+        sleep 1
+      done
   containers:
+  - name: cluster-policy-controller-REVISION
+    image: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
+    imagePullPolicy: IfNotPresent
+    command: ["cluster-policy-controller", "start"]
+    args:
+    - --config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
+    resources:
+      requests:
+        memory: 200Mi
+        cpu: 100m
+    ports:
+      - containerPort: 10357
+    volumeMounts:
+    - mountPath: /etc/kubernetes/static-pod-resources
+      name: resource-dir
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
   - name: kube-controller-manager-REVISION
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent

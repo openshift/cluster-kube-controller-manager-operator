@@ -10,3 +10,7 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-hyperkube:v4.0
+  - name: cluster-policy-controller
+    from:
+      kind: DockerImage
+      name: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
