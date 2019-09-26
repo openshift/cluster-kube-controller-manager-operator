@@ -123,11 +123,13 @@ extendedArguments:
   cluster-signing-key-file:
   - "/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"
   kube-api-qps:
-  - "150" # this is a historical values
+  - "150" # this is a historical value
   kube-api-burst:
-  - "300" # this is a historical values
-
-`)
+  - "300" # this is a historical value
+  feature-gates:
+  - "NodeDisruptionExclusion=true"
+  - "ServiceNodeExclusion=true"
+  - "LegacyNodeRoleBehavior=false"`)
 
 func v410KubeControllerManagerDefaultconfigYamlBytes() ([]byte, error) {
 	return _v410KubeControllerManagerDefaultconfigYaml, nil

@@ -21,3 +21,7 @@ extendedArguments:
   service-cluster-ip-range: {{range .ServiceClusterIPRange}}
   - {{.}}{{end}}
   {{end}}
+  feature-gates:
+  - "NodeDisruptionExclusion=true"
+  - "ServiceNodeExclusion=true"
+  - "LegacyNodeRoleBehavior=false"
