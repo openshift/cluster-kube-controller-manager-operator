@@ -65,11 +65,11 @@ func (d *definition) Run(ctx context.Context, args ...string) error {
 	if err != nil {
 		return err
 	}
-	tok, err := f.GetToken()
-	if err != nil {
-		return err
-	}
+	tok := f.GetToken(ctx)
 	pos := tok.Pos(from.Start.Offset)
+	if !pos.IsValid() {
+		return fmt.Errorf("invalid position %v", from.Start.Offset)
+	}
 	ident, err := source.Identifier(ctx, view, f, pos)
 	if err != nil {
 		return err
@@ -80,9 +80,9 @@ func (d *definition) Run(ctx context.Context, args ...string) error {
 	var result interface{}
 	switch d.query.Emulate {
 	case "":
-		result, err = buildDefinition(view, ident)
+		result, err = buildDefinition(ctx, view, ident)
 	case emulateGuru:
-		result, err = buildGuruDefinition(view, ident)
+		result, err = buildGuruDefinition(ctx, view, ident)
 	default:
 		return fmt.Errorf("unknown emulation for definition: %s", d.query.Emulate)
 	}
@@ -105,8 +105,8 @@ func (d *definition) Run(ctx context.Context, args ...string) error {
 	return nil
 }
 
-func buildDefinition(view source.View, ident *source.IdentifierInfo) (*Definition, error) {
-	content, err := ident.Hover(nil)
+func buildDefinition(ctx context.Context, view source.View, ident *source.IdentifierInfo) (*Definition, error) {
+	content, err := ident.Hover(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,19 +116,16 @@ func buildDefinition(view source.View, ident *source.IdentifierInfo) (*Definitio
 	}, nil
 }
 
-func buildGuruDefinition(view source.View, ident *source.IdentifierInfo) (*guru.Definition, error) {
+func buildGuruDefinition(ctx context.Context, view source.View, ident *source.IdentifierInfo) (*guru.Definition, error) {
 	loc := newLocation(view.FileSet(), ident.Declaration.Range)
-	pkg, err := ident.File.GetPackage()
-	if err != nil {
-		return nil, err
-	}
+	pkg := ident.File.GetPackage(ctx)
 	// guru does not support ranges
 	loc.End = loc.Start
 	// Behavior that attempts to match the expected output for guru. For an example
 	// of the format, see the associated definition tests.
 	buf := &bytes.Buffer{}
-	q := types.RelativeTo(pkg.Types)
-	qualifyName := ident.Declaration.Object.Pkg() != pkg.Types
+	q := types.RelativeTo(pkg.GetTypes())
+	qualifyName := ident.Declaration.Object.Pkg() != pkg.GetTypes()
 	name := ident.Name
 	var suffix interface{}
 	switch obj := ident.Declaration.Object.(type) {

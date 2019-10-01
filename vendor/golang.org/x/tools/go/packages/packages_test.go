@@ -72,7 +72,7 @@ func testLoadImportsGraph(t *testing.T, exporter packagestest.Exporter) {
 		Name: "golang.org/fake",
 		Files: map[string]interface{}{
 			"a/a.go":             `package a; const A = 1`,
-			"b/b.go":             `package b; import ("golang.org/fake/a"; _ "errors"); var B = a.A`,
+			"b/b.go":             `package b; import ("golang.org/fake/a"; _ "container/list"); var B = a.A`,
 			"c/c.go":             `package c; import (_ "golang.org/fake/b"; _ "unsafe")`,
 			"c/c2.go":            "// +build ignore\n\n" + `package c; import _ "fmt"`,
 			"subdir/d/d.go":      `package d`,
@@ -93,19 +93,30 @@ func testLoadImportsGraph(t *testing.T, exporter packagestest.Exporter) {
 	// Check graph topology.
 	graph, all := importGraph(initial)
 	wantGraph := `
-  errors
+  container/list
   golang.org/fake/a
   golang.org/fake/b
 * golang.org/fake/c
 * golang.org/fake/e
 * golang.org/fake/subdir/d
+* golang.org/fake/subdir/d [golang.org/fake/subdir/d.test]
+* golang.org/fake/subdir/d.test
+* golang.org/fake/subdir/d_test [golang.org/fake/subdir/d.test]
+  math/bits
   unsafe
-  golang.org/fake/b -> errors
+  golang.org/fake/b -> container/list
   golang.org/fake/b -> golang.org/fake/a
   golang.org/fake/c -> golang.org/fake/b
   golang.org/fake/c -> unsafe
   golang.org/fake/e -> golang.org/fake/b
   golang.org/fake/e -> golang.org/fake/c
+  golang.org/fake/subdir/d [golang.org/fake/subdir/d.test] -> math/bits
+  golang.org/fake/subdir/d.test -> golang.org/fake/subdir/d [golang.org/fake/subdir/d.test]
+  golang.org/fake/subdir/d.test -> golang.org/fake/subdir/d_test [golang.org/fake/subdir/d.test]
+  golang.org/fake/subdir/d.test -> os (pruned)
+  golang.org/fake/subdir/d.test -> testing (pruned)
+  golang.org/fake/subdir/d.test -> testing/internal/testdeps (pruned)
+  golang.org/fake/subdir/d_test [golang.org/fake/subdir/d.test] -> golang.org/fake/subdir/d [golang.org/fake/subdir/d.test]
 `[1:]
 
 	if graph != wantGraph {
@@ -121,7 +132,7 @@ func testLoadImportsGraph(t *testing.T, exporter packagestest.Exporter) {
 	// Check graph topology.
 	graph, all = importGraph(initial)
 	wantGraph = `
-  errors
+  container/list
   golang.org/fake/a
   golang.org/fake/b
 * golang.org/fake/c
@@ -132,7 +143,7 @@ func testLoadImportsGraph(t *testing.T, exporter packagestest.Exporter) {
 * golang.org/fake/subdir/d_test [golang.org/fake/subdir/d.test]
   math/bits
   unsafe
-  golang.org/fake/b -> errors
+  golang.org/fake/b -> container/list
   golang.org/fake/b -> golang.org/fake/a
   golang.org/fake/c -> golang.org/fake/b
   golang.org/fake/c -> unsafe
@@ -162,7 +173,7 @@ func testLoadImportsGraph(t *testing.T, exporter packagestest.Exporter) {
 		{"golang.org/fake/b", "b", "package", "b.go"},
 		{"golang.org/fake/c", "c", "package", "c.go"}, // c2.go is ignored
 		{"golang.org/fake/e", "main", "command", "e.go e2.go"},
-		{"errors", "errors", "package", "errors.go"},
+		{"container/list", "list", "package", "list.go"},
 		{"golang.org/fake/subdir/d", "d", "package", "d.go"},
 		{"golang.org/fake/subdir/d.test", "main", "command", "0.go"},
 		{"unsafe", "unsafe", "package", ""},
@@ -1268,7 +1279,10 @@ func testRedundantQueries(t *testing.T, exporter packagestest.Exporter) {
 		}}})
 	defer exported.Cleanup()
 
-	initial, err := packages.Load(exported.Config, "errors", "iamashamedtousethedisabledqueryname=errors")
+	cfg := *exported.Config
+	cfg.Tests = false
+
+	initial, err := packages.Load(&cfg, "errors", "iamashamedtousethedisabledqueryname=errors")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1501,6 +1515,8 @@ func testConfigDefaultEnv(t *testing.T, exporter packagestest.Exporter) {
 		driverScript packagestest.Writer
 	)
 	switch runtime.GOOS {
+	case "android":
+		t.Skip("doesn't run on android")
 	case "windows":
 		// TODO(jayconrod): write an equivalent batch script for windows.
 		// Hint: "type" can be used to read a file to stdout.
@@ -1703,6 +1719,7 @@ func importGraph(initial []*packages.Package) (string, map[string]*packages.Pack
 				}
 				// math/bits took on a dependency on unsafe in 1.12, which breaks some
 				// tests. As a short term hack, prune that edge.
+				// ditto for ("errors", "internal/reflectlite") in 1.13.
 				// TODO(matloob): think of a cleaner solution, or remove math/bits from the test.
 				if p.ID == "math/bits" && imp.ID == "unsafe" {
 					continue
