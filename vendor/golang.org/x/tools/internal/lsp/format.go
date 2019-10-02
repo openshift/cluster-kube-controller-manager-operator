@@ -2,22 +2,22 @@ package lsp
 
 import (
 	"context"
-	"go/token"
 
 	"golang.org/x/tools/internal/lsp/protocol"
 	"golang.org/x/tools/internal/lsp/source"
 )
 
 // formatRange formats a document with a given range.
-func formatRange(ctx context.Context, v source.View, uri protocol.DocumentURI, rng *protocol.Range) ([]protocol.TextEdit, error) {
-	f, err := v.GetFile(ctx, fromProtocolURI(uri))
+func formatRange(ctx context.Context, v source.View, uri string, rng *protocol.Range) ([]protocol.TextEdit, error) {
+	sourceURI, err := fromProtocolURI(uri)
 	if err != nil {
 		return nil, err
 	}
-	tok, err := f.GetToken()
+	f, err := v.GetFile(ctx, sourceURI)
 	if err != nil {
 		return nil, err
 	}
+	tok := f.GetToken(ctx)
 	var r source.Range
 	if rng == nil {
 		r.Start = tok.Pos(0)
@@ -25,21 +25,19 @@ func formatRange(ctx context.Context, v source.View, uri protocol.DocumentURI, r
 	} else {
 		r = fromProtocolRange(tok, *rng)
 	}
-	content, err := f.Read()
-	if err != nil {
-		return nil, err
-	}
 	edits, err := source.Format(ctx, f, r)
 	if err != nil {
 		return nil, err
 	}
-	return toProtocolEdits(tok, content, edits), nil
+	return toProtocolEdits(ctx, f, edits), nil
 }
 
-func toProtocolEdits(tok *token.File, content []byte, edits []source.TextEdit) []protocol.TextEdit {
+func toProtocolEdits(ctx context.Context, f source.File, edits []source.TextEdit) []protocol.TextEdit {
 	if edits == nil {
 		return nil
 	}
+	tok := f.GetToken(ctx)
+	content := f.GetContent(ctx)
 	// When a file ends with an empty line, the newline character is counted
 	// as part of the previous line. This causes the formatter to insert
 	// another unnecessary newline on each formatting. We handle this case by

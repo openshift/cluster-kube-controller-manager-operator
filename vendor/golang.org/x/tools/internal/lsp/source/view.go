@@ -8,7 +8,9 @@ import (
 	"context"
 	"go/ast"
 	"go/token"
+	"go/types"
 
+	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -17,7 +19,7 @@ import (
 // package does not directly access the file system.
 type View interface {
 	GetFile(ctx context.Context, uri URI) (File, error)
-	SetContent(ctx context.Context, uri URI, content []byte) (View, error)
+	SetContent(ctx context.Context, uri URI, content []byte) error
 	FileSet() *token.FileSet
 }
 
@@ -26,11 +28,22 @@ type View interface {
 // building blocks for most queries. Users of the source package can abstract
 // the loading of packages into their own caching systems.
 type File interface {
-	GetAST() (*ast.File, error)
-	GetFileSet() (*token.FileSet, error)
-	GetPackage() (*packages.Package, error)
-	GetToken() (*token.File, error)
-	Read() ([]byte, error)
+	GetAST(ctx context.Context) *ast.File
+	GetFileSet(ctx context.Context) *token.FileSet
+	GetPackage(ctx context.Context) Package
+	GetToken(ctx context.Context) *token.File
+	GetContent(ctx context.Context) []byte
+}
+
+// Package represents a Go package that has been type-checked. It maintains
+// only the relevant fields of a *go/packages.Package.
+type Package interface {
+	GetFilenames() []string
+	GetSyntax() []*ast.File
+	GetErrors() []packages.Error
+	GetTypes() *types.Package
+	GetTypesInfo() *types.Info
+	GetActionGraph(ctx context.Context, a *analysis.Analyzer) (*Action, error)
 }
 
 // Range represents a start and end position.

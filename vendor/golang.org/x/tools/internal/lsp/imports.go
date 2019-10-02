@@ -11,26 +11,23 @@ import (
 	"golang.org/x/tools/internal/lsp/source"
 )
 
-func organizeImports(ctx context.Context, v source.View, uri protocol.DocumentURI) ([]protocol.TextEdit, error) {
-	f, err := v.GetFile(ctx, fromProtocolURI(uri))
+func organizeImports(ctx context.Context, v source.View, uri string) ([]protocol.TextEdit, error) {
+	sourceURI, err := fromProtocolURI(uri)
 	if err != nil {
 		return nil, err
 	}
-	tok, err := f.GetToken()
+	f, err := v.GetFile(ctx, sourceURI)
 	if err != nil {
 		return nil, err
 	}
+	tok := f.GetToken(ctx)
 	r := source.Range{
 		Start: tok.Pos(0),
 		End:   tok.Pos(tok.Size()),
 	}
-	content, err := f.Read()
+	edits, err := source.Imports(ctx, f, r)
 	if err != nil {
 		return nil, err
 	}
-	edits, err := source.Imports(ctx, tok, content, r)
-	if err != nil {
-		return nil, err
-	}
-	return toProtocolEdits(tok, content, edits), nil
+	return toProtocolEdits(ctx, f, edits), nil
 }

@@ -11,7 +11,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/token"
+
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/internal/tool"
 )
@@ -24,12 +27,16 @@ type Application struct {
 	// Embed the basic profiling flags supported by the tool package
 	tool.Profile
 
-	// We include the server directly for now, so the flags work even without the verb.
-	// TODO: Remove this when we stop allowing the server verb by default.
-	Server Server
+	// We include the server configuration directly for now, so the flags work
+	// even without the verb.
+	// TODO: Remove this when we stop allowing the serve verb by default.
+	Serve Serve
 
 	// An initial, common go/packages configuration
 	Config packages.Config
+
+	// Support for remote lsp server
+	Remote string `flag:"remote" help:"*EXPERIMENTAL* - forward all commands to a remote lsp"`
 }
 
 // Name implements tool.Application returning the binary name.
@@ -63,14 +70,19 @@ gopls flags are:
 // If no arguments are passed it will invoke the server sub command, as a
 // temporary measure for compatibility.
 func (app *Application) Run(ctx context.Context, args ...string) error {
+	app.Serve.app = app
 	if len(args) == 0 {
-		tool.Main(ctx, &app.Server, args)
+		tool.Main(ctx, &app.Serve, args)
 		return nil
 	}
 	app.Config.Mode = packages.LoadSyntax
 	app.Config.Tests = true
 	if app.Config.Fset == nil {
 		app.Config.Fset = token.NewFileSet()
+	}
+	app.Config.Context = ctx
+	app.Config.ParseFile = func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
+		return parser.ParseFile(fset, filename, src, parser.AllErrors|parser.ParseComments)
 	}
 	command, args := args[0], args[1:]
 	for _, c := range app.commands() {
@@ -87,7 +99,7 @@ func (app *Application) Run(ctx context.Context, args ...string) error {
 // The command is specified by the first non flag argument.
 func (app *Application) commands() []tool.Application {
 	return []tool.Application{
-		&app.Server,
+		&app.Serve,
 		&query{app: app},
 	}
 }
