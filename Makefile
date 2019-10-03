@@ -7,6 +7,7 @@ include $(addprefix ./vendor/github.com/openshift/library-go/alpha-build-machine
 	targets/openshift/bindata.mk \
 	targets/openshift/deps.mk \
 	targets/openshift/images.mk \
+	targets/openshift/crd-schema-gen.mk \
 )
 
 # Exclude e2e tests from unit testing
@@ -41,24 +42,14 @@ test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: test-unit
 .PHONY: test-e2e
 
-CRD_SCHEMA_GEN_VERSION := v1.0.0
-crd-schema-gen:
-	git clone -b $(CRD_SCHEMA_GEN_VERSION) --single-branch --depth 1 https://github.com/openshift/crd-schema-gen.git $(CRD_SCHEMA_GEN_GOPATH)/src/github.com/openshift/crd-schema-gen
-	GOPATH=$(CRD_SCHEMA_GEN_GOPATH) GOBIN=$(CRD_SCHEMA_GEN_GOPATH)/bin go install $(CRD_SCHEMA_GEN_GOPATH)/src/github.com/openshift/crd-schema-gen/cmd/crd-schema-gen
-.PHONY: crd-schema-gen
+# Set crd-schema-gen variables
+CRD_SCHEMA_GEN_APIS :=./vendor/github.com/openshift/api/operator/v1
+CRD_SCHEMA_GEN_VERSION :=v0.2.1
 
-update-codegen-crds: CRD_SCHEMA_GEN_GOPATH :=$(shell mktemp -d)
-update-codegen-crds: crd-schema-gen
-	$(CRD_SCHEMA_GEN_GOPATH)/bin/crd-schema-gen --apis-dir vendor/github.com/openshift/api/operator/v1
-.PHONY: update-codegen-crds
+$(call add-crd-gen,manifests,$(CRD_SCHEMA_GEN_APIS),./manifests,./manifests)
+
 update-codegen: update-codegen-crds
 .PHONY: update-codegen
 
-verify-codegen-crds: CRD_SCHEMA_GEN_GOPATH :=$(shell mktemp -d)
-verify-codegen-crds: crd-schema-gen
-	$(CRD_SCHEMA_GEN_GOPATH)/bin/crd-schema-gen --apis-dir vendor/github.com/openshift/api/operator/v1 --verify-only
-.PHONY: verify-codegen-crds
 verify-codegen: verify-codegen-crds
 .PHONY: verify-codegen
-
-verify: verify-codegen
