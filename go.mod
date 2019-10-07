@@ -12,6 +12,7 @@ require (
 	github.com/gonum/internal v0.0.0-20170731230106-e57e4534cf9b // indirect
 	github.com/gonum/lapack v0.0.0-20170731225844-5ed4b826becd // indirect
 	github.com/gonum/matrix v0.0.0-20170731230223-dd6034299e42 // indirect
+	github.com/jteeuwen/go-bindata v0.0.0-00010101000000-000000000000
 	github.com/openshift/api v0.0.0-20191001124347-8033e226059b
 	github.com/openshift/client-go v0.0.0-20191001081553-3b0e988f8cb0
 	github.com/openshift/library-go v0.0.0-20190927184318-c355e2019bb3
