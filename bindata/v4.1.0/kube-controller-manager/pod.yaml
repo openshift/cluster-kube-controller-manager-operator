@@ -36,7 +36,7 @@ spec:
   containers:
   - name: cluster-policy-controller-REVISION
     image: quay.io/openshift/origin-cluster-policy-controller:v4.3
-    imagePullPolicy: {{ .ImagePullPolicy }}
+    imagePullPolicy: IfNotPresent
     command: ["cluster-policy-controller", "start"]
     args:
     - --config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
