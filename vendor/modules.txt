@@ -137,7 +137,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20191001124347-8033e226059b => github.com/openshift/api v3.9.1-0.20191008181517-e4fd21196097+incompatible
+# github.com/openshift/api v0.0.0-20191014195513-c9253efc14f4 => github.com/openshift/api v3.9.1-0.20191014195513-c9253efc14f4+incompatible
 github.com/openshift/api
 github.com/openshift/api/apps
 github.com/openshift/api/apps/v1
