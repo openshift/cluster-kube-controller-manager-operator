@@ -34,41 +34,6 @@ spec:
         sleep 1
       done
   containers:
-  - name: cluster-policy-controller-REVISION
-    image: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
-    imagePullPolicy: IfNotPresent
-    command: ["cluster-policy-controller", "start"]
-    args:
-      - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-      - --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-      - --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-      - --client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
-      - --requestheader-client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/aggregator-client-ca/ca-bundle.crt
-    resources:
-      requests:
-        memory: 200Mi
-        cpu: 100m
-    ports:
-      - containerPort: 10357
-    volumeMounts:
-    - mountPath: /etc/kubernetes/static-pod-resources
-      name: resource-dir
-    - mountPath: /etc/kubernetes/static-pod-certs
-      name: cert-dir
-    livenessProbe:
-      httpGet:
-        scheme: HTTPS
-        port: 10357
-        path: healthz
-      initialDelaySeconds: 45
-      timeoutSeconds: 10
-    readinessProbe:
-      httpGet:
-        scheme: HTTPS
-        port: 10357
-        path: healthz
-      initialDelaySeconds: 10
-      timeoutSeconds: 10
   - name: kube-controller-manager-REVISION
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
@@ -103,6 +68,37 @@ spec:
       httpGet:
         scheme: HTTPS
         port: 10257
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
+  - name: cluster-policy-controller-REVISION
+    image: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
+    imagePullPolicy: IfNotPresent
+    command: ["cluster-policy-controller", "start"]
+    args:
+      - --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
+    resources:
+      requests:
+        memory: 200Mi
+        cpu: 100m
+    ports:
+      - containerPort: 10357
+    volumeMounts:
+      - mountPath: /etc/kubernetes/static-pod-resources
+        name: resource-dir
+      - mountPath: /etc/kubernetes/static-pod-certs
+        name: cert-dir
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10

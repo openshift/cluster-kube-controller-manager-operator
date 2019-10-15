@@ -1,0 +1,9 @@
+apiVersion: openshiftcontrolplane.config.openshift.io/v1
+kind: OpenShiftControllerManagerConfig
+kubeClientConfig:
+  kubeConfig: /etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+servingInfo:
+  clientCA: /etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
+  certFile: /etc/kubernetes/static-pod-resources/serving-cert/tls.crt
+  keyFile: /etc/kubernetes/static-pod-resources/serving-cert/tls.key
+
