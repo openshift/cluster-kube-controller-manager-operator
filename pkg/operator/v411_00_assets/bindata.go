@@ -352,7 +352,11 @@ spec:
     imagePullPolicy: IfNotPresent
     command: ["cluster-policy-controller", "start"]
     args:
-    - --config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
+      - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+      - --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+      - --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+      - --client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
+      - --requestheader-client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/aggregator-client-ca/ca-bundle.crt
     resources:
       requests:
         memory: 200Mi
@@ -362,6 +366,8 @@ spec:
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
+    - mountPath: /etc/kubernetes/static-pod-certs
+      name: cert-dir
     livenessProbe:
       httpGet:
         scheme: HTTPS
