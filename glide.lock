@@ -1,5 +1,5 @@
 hash: 980eeb0aa4f9e7de7622b17addf4af2b7c4534cfda1705f87bdc9d9bf316970c
-updated: 2019-10-01T17:09:08.534789847+02:00
+updated: 2019-10-15T08:56:46.776296-04:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -39,7 +39,7 @@ imports:
   subpackages:
   - capnslog
 - name: github.com/davecgh/go-spew
-  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/emicklei/go-restful
@@ -81,13 +81,13 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/gonum/blas
-  version: 37e82626499e1df7c54aeaba0959fd6e7e8dc1e4
+  version: f22b278b28ac9805aadd613a754a60c35b24ae69
   subpackages:
   - blas64
   - native
   - native/internal/math32
 - name: github.com/gonum/floats
-  version: f74b330d45c56584a6ea7a27f5c64ea2900631e9
+  version: c233463c7e827fd71a8cdb62dfda0e98f7c39ad5
 - name: github.com/gonum/graph
   version: 50b27dea7ebbfb052dfaf91681afc6fde28d8796
   subpackages:
@@ -102,17 +102,17 @@ imports:
   - internal/ordered
   - simple
 - name: github.com/gonum/internal
-  version: e57e4534cf9b3b00ef6c0175f59d8d2d34f60914
+  version: f884aa71402950fb2796dbea0d5aa9ef9cfad8ca
   subpackages:
   - asm/f32
   - asm/f64
 - name: github.com/gonum/lapack
-  version: 5ed4b826becd1807e09377508f51756586d1a98c
+  version: e4cdc5a0bff924bb10be88482e635bd40429f65e
   subpackages:
   - lapack64
   - native
 - name: github.com/gonum/matrix
-  version: dd6034299e4242c9f0ea36735e6d4264dfcb3f9f
+  version: c518dec07be9a636c38a4650e217be059b5952ec
   subpackages:
   - mat64
 - name: github.com/google/go-cmp
@@ -168,7 +168,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 8033e226059b9ef589a39782e067aab940519cae
+  version: b9365caf92e3834096c29112ca4d514454310846
   subpackages:
   - apps
   - apps/v1
@@ -225,7 +225,7 @@ imports:
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: c355e2019bb35b1ae2b060208fdad8b488c28838
+  version: e7604f697814119030413cce8e3638dcdef69c63
   subpackages:
   - pkg/assets
   - pkg/certs
@@ -263,6 +263,7 @@ imports:
   - pkg/operator/staticpod/controller/backingresource/bindata
   - pkg/operator/staticpod/controller/installer
   - pkg/operator/staticpod/controller/installer/bindata
+  - pkg/operator/staticpod/controller/installerstate
   - pkg/operator/staticpod/controller/monitoring
   - pkg/operator/staticpod/controller/monitoring/bindata
   - pkg/operator/staticpod/controller/node
@@ -437,7 +438,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: 7d6a1875575e09256dc552b4c0e450dcd02bd10e
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: f221b8435cfb71e54062f6c6e99e9ade30b124d5
 - name: k8s.io/api
   version: 95b840bb6a1f5f0462af804c8589396d294d4914
   subpackages:
@@ -815,7 +816,7 @@ imports:
 - name: k8s.io/code-generator
   version: cd179ad6a2693011d6f2fa5cd64c6680ee99379f
 - name: k8s.io/component-base
-  version: 10a404db9bd02b0f562a4bd90a1dae2ca1df19f8
+  version: 41066ddd0b23ea7c0604554087089b9d744bd764
   subpackages:
   - cli/flag
   - featuregate
