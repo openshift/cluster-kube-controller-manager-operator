@@ -29,6 +29,7 @@ import (
 	"k8s.io/klog"
 
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
+	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
@@ -262,7 +263,7 @@ func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, r
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml"))
 	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
-		&kubecontrolplanev1.KubeControllerManagerConfig{},
+		&openshiftcontrolplanev1.OpenShiftControllerManagerConfig{},
 		configMap,
 		"config.yaml",
 		nil,

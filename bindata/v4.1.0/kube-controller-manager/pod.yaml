@@ -74,6 +74,7 @@ spec:
   - name: cluster-policy-controller-REVISION
     image: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
     imagePullPolicy: IfNotPresent
+    terminationMessagePolicy: FallbackToLogsOnError
     command: ["cluster-policy-controller", "start"]
     args:
       - --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml

@@ -109,6 +109,7 @@ kind: OpenShiftControllerManagerConfig
 kubeClientConfig:
   kubeConfig: /etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
 servingInfo:
+  bindAddress: 0.0.0.0:10357
   clientCA: /etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
   certFile: /etc/kubernetes/static-pod-resources/serving-cert/tls.crt
   keyFile: /etc/kubernetes/static-pod-resources/serving-cert/tls.key
@@ -439,6 +440,7 @@ spec:
   - name: cluster-policy-controller-REVISION
     image: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
     imagePullPolicy: IfNotPresent
+    terminationMessagePolicy: FallbackToLogsOnError
     command: ["cluster-policy-controller", "start"]
     args:
       - --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
