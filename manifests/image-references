@@ -13,4 +13,4 @@ spec:
   - name: cluster-policy-controller
     from:
       kind: DockerImage
-      name: registry.svc.ci.openshift.org/ocp/4.3:cluster-policy-controller
+      name: quay.io/openshift/origin-cluster-policy-controller:v4.3

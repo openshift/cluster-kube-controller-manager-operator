@@ -46,8 +46,9 @@ import (
 const workQueueKey = "key"
 
 type TargetConfigController struct {
-	targetImagePullSpec   string
-	operatorImagePullSpec string
+	targetImagePullSpec             string
+	operatorImagePullSpec           string
+	clusterPolicyControllerPullSpec string
 
 	operatorClient v1helpers.StaticPodOperatorClient
 
@@ -61,7 +62,7 @@ type TargetConfigController struct {
 }
 
 func NewTargetConfigController(
-	targetImagePullSpec, operatorImagePullSpec string,
+	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorClient v1helpers.StaticPodOperatorClient,
@@ -69,8 +70,9 @@ func NewTargetConfigController(
 	eventRecorder events.Recorder,
 ) *TargetConfigController {
 	c := &TargetConfigController{
-		targetImagePullSpec:   targetImagePullSpec,
-		operatorImagePullSpec: operatorImagePullSpec,
+		targetImagePullSpec:             targetImagePullSpec,
+		operatorImagePullSpec:           operatorImagePullSpec,
+		clusterPolicyControllerPullSpec: clusterPolicyControllerPullSpec,
 
 		configMapLister: kubeInformersForNamespaces.ConfigMapLister(),
 		secretLister:    kubeInformersForNamespaces.SecretLister(),
@@ -213,7 +215,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
-	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec)
+	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -276,12 +278,13 @@ func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, r
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
-		"${IMAGE}":          imagePullSpec,
-		"${OPERATOR_IMAGE}": operatorImagePullSpec,
+		"${IMAGE}":                           imagePullSpec,
+		"${OPERATOR_IMAGE}":                  operatorImagePullSpec,
+		"${CLUSTER_POLICY_CONTROLLER_IMAGE}": clusterPolicyControllerPullSpec,
 	}
 	if len(imagePullSpec) > 0 {
 		for i := range required.Spec.Containers {

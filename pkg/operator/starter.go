@@ -76,6 +76,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
+		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
 		kubeInformersForNamespaces,
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorClient,

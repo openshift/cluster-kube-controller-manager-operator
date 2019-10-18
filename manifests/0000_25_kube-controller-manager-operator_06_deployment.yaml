@@ -44,6 +44,8 @@ spec:
           value: quay.io/openshift/origin-hyperkube:v4.0
         - name: OPERATOR_IMAGE
           value: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
+        - name: CLUSTER_POLICY_CONTROLLER_IMAGE
+          value: quay.io/openshift/origin-cluster-policy-controller:v4.3
         - name: OPERATOR_IMAGE_VERSION
           value: "0.0.1-snapshot"
         - name: OPERAND_IMAGE_VERSION
