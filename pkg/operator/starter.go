@@ -76,6 +76,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
+		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
 		kubeInformersForNamespaces,
 		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorClient,
@@ -169,6 +170,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "kube-controller-manager-pod"},
 
 	{Name: "config"},
+	{Name: "cluster-policy-controller-config"},
 	{Name: "controller-manager-kubeconfig"},
 	{Name: "cloud-config", Optional: true},
 	{Name: "kube-controller-cert-syncer-kubeconfig"},
