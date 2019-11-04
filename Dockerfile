@@ -8,4 +8,5 @@ RUN mkdir -p /usr/share/bootkube/manifests
 COPY --from=builder /go/src/github.com/openshift/cluster-kube-controller-manager-operator/bindata/bootkube/* /usr/share/bootkube/manifests/
 COPY --from=builder /go/src/github.com/openshift/cluster-kube-controller-manager-operator/cluster-kube-controller-manager-operator /usr/bin/
 COPY manifests /manifests
+COPY vendor/github.com/openshift/api/operator/v1/0000_25_kube-controller-manager-operator_01_config.crd.yaml /manifests
 LABEL io.openshift.release.operator true
