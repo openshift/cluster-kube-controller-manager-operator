@@ -1,0 +1,27 @@
+# goodmod.yaml
+# This file is tracking branches and tags used in go.mod file replaces
+# Please follow https://github.com/mfojtik/goodmod#installation to get the tool.
+# Run `$ goodmod replace --apply` to apply these rules on `go.mod`
+#
+rules:
+  - paths:
+    - k8s.io/*
+    excludes:
+    - k8s.io/klog
+    - k8s.io/utils
+    - k8s.io/gengo
+    tag: kubernetes-1.16.2
+
+  # TODO: Do we really need to pin this?
+  - paths:
+    - k8s.io/gengo
+    commit: 26a664648505d962332bda642b27306bc10d1082
+
+  - paths:
+    - github.com/openshift/*
+    branch: master
+
+  - paths:
+    - github.com/jteeuwen/go-bindata
+    commit: a0ff2567cfb70903282db057e799fd826784d41d
+
