@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -64,7 +63,6 @@ type TargetConfigController struct {
 func NewTargetConfigController(
 	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
@@ -83,20 +81,26 @@ func NewTargetConfigController(
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigController"),
 	}
 
+	// this is for our general configuration input and our status output in case another actor changes it
 	operatorClient.Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Rbac().V1().Roles().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Rbac().V1().RoleBindings().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
 
-	// for config
+	// these are for watching our outputs in case someone changes them
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Rbac().V1().Roles().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Rbac().V1().RoleBindings().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
+	// we only watch our output namespace
+	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+
+	// for configmaps and secrets from our inputs
 	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
-
-	// we only watch some namespaces
-	namespacedKubeInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
 
 	return c
 }
