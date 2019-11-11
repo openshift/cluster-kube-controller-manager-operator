@@ -100,7 +100,6 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
 		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
-		WithServiceMonitor(dynamicClient).
 		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
 		ToControllers()
 	if err != nil {
