@@ -4,6 +4,8 @@
 // bindata/v4.1.0/kube-controller-manager/defaultconfig.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cm.yaml
+// bindata/v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml
+// bindata/v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml
 // bindata/v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml
 // bindata/v4.1.0/kube-controller-manager/ns.yaml
 // bindata/v4.1.0/kube-controller-manager/pod-cm.yaml
@@ -227,6 +229,81 @@ func v410KubeControllerManagerKubeconfigCmYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/kubeconfig-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml = []byte(`# This role is necessary to create leader lock configmap for upgrades 4.2-> 4.3
+# cluster-policy-controller is split from openshift-controller-manager in 4.3
+# leader lock in openshift-controller-manager NamespaceSecurityAllocationController and in ClusterPolicyController
+# cluster-policy-controller container runs in ns openshift-kube-controller-manager static pod
+# The lock, role, and rolebinding can be removed in 4.4
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: system:openshift:leader-election-lock-cluster-policy-controller
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+`)
+
+func v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml, nil
+}
+
+func v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYaml = []byte(`# This rolebinding binds role for creation of leader lock configmap for upgrades 4.2-> 4.3
+# cluster-policy-controller is split from openshift-controller-manager in 4.3
+# leader lock in openshift-controller-manager NamespaceSecurityAllocationController and in ClusterPolicyController
+# cluster-policy-controller container runs in ns openshift-kube-controller-manager static pod
+# The locks, role, and rolebinding can be removed in 4.4
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: system:openshift:leader-election-lock-cluster-policy-controller
+roleRef:
+  kind: Role
+  name: system:openshift:leader-election-lock-cluster-policy-controller
+subjects:
+- kind: User
+  name: system:kube-controller-manager
+- kind: ServiceAccount
+  name: namespace-security-allocation-controller
+  namespace: openshift-infra
+`)
+
+func v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYaml, nil
+}
+
+func v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -534,16 +611,18 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v4.1.0/kube-controller-manager/cm.yaml":                          v410KubeControllerManagerCmYaml,
-	"v4.1.0/kube-controller-manager/defaultconfig.yaml":               v410KubeControllerManagerDefaultconfigYaml,
-	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":      v410KubeControllerManagerKubeconfigCertSyncerYaml,
-	"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml":               v410KubeControllerManagerKubeconfigCmYaml,
-	"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml": v410KubeControllerManagerLeaderElectionRolebindingYaml,
-	"v4.1.0/kube-controller-manager/ns.yaml":                          v410KubeControllerManagerNsYaml,
-	"v4.1.0/kube-controller-manager/pod-cm.yaml":                      v410KubeControllerManagerPodCmYaml,
-	"v4.1.0/kube-controller-manager/pod.yaml":                         v410KubeControllerManagerPodYaml,
-	"v4.1.0/kube-controller-manager/sa.yaml":                          v410KubeControllerManagerSaYaml,
-	"v4.1.0/kube-controller-manager/svc.yaml":                         v410KubeControllerManagerSvcYaml,
+	"v4.1.0/kube-controller-manager/cm.yaml":                                                    v410KubeControllerManagerCmYaml,
+	"v4.1.0/kube-controller-manager/defaultconfig.yaml":                                         v410KubeControllerManagerDefaultconfigYaml,
+	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":                                v410KubeControllerManagerKubeconfigCertSyncerYaml,
+	"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml":                                         v410KubeControllerManagerKubeconfigCmYaml,
+	"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml":        v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml,
+	"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml": v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYaml,
+	"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml":                           v410KubeControllerManagerLeaderElectionRolebindingYaml,
+	"v4.1.0/kube-controller-manager/ns.yaml":                                                    v410KubeControllerManagerNsYaml,
+	"v4.1.0/kube-controller-manager/pod-cm.yaml":                                                v410KubeControllerManagerPodCmYaml,
+	"v4.1.0/kube-controller-manager/pod.yaml":                                                   v410KubeControllerManagerPodYaml,
+	"v4.1.0/kube-controller-manager/sa.yaml":                                                    v410KubeControllerManagerSaYaml,
+	"v4.1.0/kube-controller-manager/svc.yaml":                                                   v410KubeControllerManagerSvcYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -589,16 +668,18 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v4.1.0": {nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
-			"cm.yaml":                          {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
-			"defaultconfig.yaml":               {v410KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
-			"kubeconfig-cert-syncer.yaml":      {v410KubeControllerManagerKubeconfigCertSyncerYaml, map[string]*bintree{}},
-			"kubeconfig-cm.yaml":               {v410KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
-			"leader-election-rolebinding.yaml": {v410KubeControllerManagerLeaderElectionRolebindingYaml, map[string]*bintree{}},
-			"ns.yaml":                          {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
-			"pod-cm.yaml":                      {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
-			"pod.yaml":                         {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
-			"sa.yaml":                          {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
-			"svc.yaml":                         {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"cm.yaml":                     {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":          {v410KubeControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"kubeconfig-cert-syncer.yaml": {v410KubeControllerManagerKubeconfigCertSyncerYaml, map[string]*bintree{}},
+			"kubeconfig-cm.yaml":          {v410KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
+			"leader-election-cluster-policy-controller-role.yaml":        {v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml, map[string]*bintree{}},
+			"leader-election-cluster-policy-controller-rolebinding.yaml": {v410KubeControllerManagerLeaderElectionClusterPolicyControllerRolebindingYaml, map[string]*bintree{}},
+			"leader-election-rolebinding.yaml":                           {v410KubeControllerManagerLeaderElectionRolebindingYaml, map[string]*bintree{}},
+			"ns.yaml":                                                    {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
+			"pod-cm.yaml":                                                {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
+			"pod.yaml":                                                   {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
+			"sa.yaml":                                                    {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
+			"svc.yaml":                                                   {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
