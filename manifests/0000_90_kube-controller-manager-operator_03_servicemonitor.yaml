@@ -24,47 +24,4 @@ spec:
   selector:
     matchLabels:
       app: kube-controller-manager-operator
----
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
-metadata:
-  name: kube-controller-manager-operator
-  namespace: openshift-kube-controller-manager-operator
-spec:
-  groups:
-  - name: cluster-version
-    rules:
-    - alert: KubeControllerManagerDown
-      annotations:
-        message: KubeControllerManager has disappeared from Prometheus target discovery.
-      expr: |
-        absent(up{job="kube-controller-manager"} == 1)
-      for: 15m
-      labels:
-        severity: critical
----
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
-metadata:
-  name: kube-controller-manager-operator
-  namespace: openshift-kube-controller-manager-operator
-spec:
-  groups:
-  - name: cluster-version
-    rules:
-    - alert: PodDisruptionBudgetAtLimit
-      annotations:
-        message: The pod disruption budget is preventing further disruption to pods because it is at the minimum allowed level.
-      expr: |
-        kube_poddisruptionbudget_status_expected_pods == on(poddisruptionbudget, service) kube_poddisruptionbudget_status_desired_healthy
-      for: 15m
-      labels:
-        severity: warning
-    - alert: PodDisruptionBudgetLimit
-      annotations:
-        message: The pod disruption budget is below the minimum number allowed pods.
-      expr: |
-        kube_poddisruptionbudget_status_expected_pods < on(poddisruptionbudget, service) kube_poddisruptionbudget_status_desired_healthy
-      for: 15m
-      labels:
-        severity: critical
+
