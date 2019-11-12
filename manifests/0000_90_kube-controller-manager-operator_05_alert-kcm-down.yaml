@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kube-controller-manager-operator
+  namespace: openshift-kube-controller-manager-operator
+spec:
+  groups:
+    - name: cluster-version
+      rules:
+        - alert: KubeControllerManagerDown
+          annotations:
+            message: KubeControllerManager has disappeared from Prometheus target discovery.
+          expr: |
+            absent(up{job="kube-controller-manager"} == 1)
+          for: 15m
+          labels:
+            severity: critical
