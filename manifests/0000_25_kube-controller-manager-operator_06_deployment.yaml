@@ -5,6 +5,8 @@ metadata:
   name: kube-controller-manager-operator
   labels:
     app: kube-controller-manager-operator
+  annotations:
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 spec:
   replicas: 1
   strategy:
