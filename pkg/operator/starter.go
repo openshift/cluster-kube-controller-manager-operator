@@ -23,17 +23,12 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
 	// This kube client use protobuf, do not use it for CR
 	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
-	if err != nil {
-		return err
-	}
-	dynamicClient, err := dynamic.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -100,7 +95,6 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
 		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
-		WithServiceMonitor(dynamicClient).
 		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
 		ToControllers()
 	if err != nil {
