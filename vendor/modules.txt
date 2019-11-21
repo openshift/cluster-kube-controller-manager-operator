@@ -189,7 +189,7 @@ github.com/openshift/client-go/config/informers/externalversions/config
 github.com/openshift/client-go/config/informers/externalversions/config/v1
 github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
 github.com/openshift/client-go/config/listers/config/v1
-# github.com/openshift/library-go v0.0.0-20190927184318-c355e2019bb3 => github.com/openshift/library-go v0.0.0-20191118102510-4e2c7112d252
+# github.com/openshift/library-go v0.0.0-20190927184318-c355e2019bb3 => github.com/openshift/library-go v0.0.0-20191121124438-7c776f7cc17a
 github.com/openshift/library-go/alpha-build-machinery
 github.com/openshift/library-go/alpha-build-machinery/make
 github.com/openshift/library-go/alpha-build-machinery/make/lib
