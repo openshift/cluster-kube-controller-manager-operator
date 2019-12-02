@@ -1,5 +1,5 @@
-hash: 323916fae6ba7ff5988087e7a35b87cd011c20cc3e5bfdcb63b6205a96a3f166
-updated: 2019-09-10T17:52:32.594601191+02:00
+hash: e3fcd6b720f2586059ec225a96593eda91e84a232d5910613027605fd571f48a
+updated: 2019-11-14T22:51:49.736006375+01:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -89,7 +89,7 @@ imports:
   - daemon
   - journal
 - name: github.com/davecgh/go-spew
-  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/emicklei/go-restful
@@ -101,7 +101,7 @@ imports:
 - name: github.com/getsentry/raven-go
   version: c977f96e109525a5d8fa10a19165341f601f38b0
 - name: github.com/ghodss/yaml
-  version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+  version: 25d852aebe32c875e9c044af3eef9c7dc6bc777f
 - name: github.com/go-openapi/jsonpointer
   version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
@@ -205,7 +205,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 763878ba9fae6d87ab1d8310aa0c01fe7dd2499a
+  version: d4a64ec2cbd86f11ea74dfdcf6520d5833d0c6cd
   subpackages:
   - apps
   - apps/v1
@@ -262,7 +262,7 @@ imports:
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: 7d4acc018c610623ee1413b1e7aebe2ac675d35f
+  version: 8ab60e64997ac0990ef30a4e01481056dec95568
   subpackages:
   - pkg/assets
   - pkg/certs
@@ -281,6 +281,7 @@ imports:
   - pkg/operator/configobserver/cloudprovider
   - pkg/operator/configobserver/featuregates
   - pkg/operator/configobserver/network
+  - pkg/operator/configobserver/proxy
   - pkg/operator/events
   - pkg/operator/genericoperatorclient
   - pkg/operator/loglevel
@@ -299,6 +300,7 @@ imports:
   - pkg/operator/staticpod/controller/backingresource/bindata
   - pkg/operator/staticpod/controller/installer
   - pkg/operator/staticpod/controller/installer/bindata
+  - pkg/operator/staticpod/controller/installerstate
   - pkg/operator/staticpod/controller/monitoring
   - pkg/operator/staticpod/controller/monitoring/bindata
   - pkg/operator/staticpod/controller/node
@@ -355,7 +357,7 @@ imports:
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: cdfb69ac37fc6fa907650654115ebebb3aae2087
+  version: 65e2d4e15006aab9813ff8769e768bbf4bb667a0
   subpackages:
   - context
   - http/httpguts
@@ -804,7 +806,7 @@ imports:
 - name: k8s.io/code-generator
   version: 50b561225d70b3eb79a1faafd3dfe7b1a62cbe73
 - name: k8s.io/component-base
-  version: f3799749b6b739bf4bb6ef1c79e63081bf109f15
+  version: 4a91899592f42b2f5859587cc5a676a5b94d2ee3
   subpackages:
   - cli/flag
   - logs
@@ -813,7 +815,7 @@ imports:
   subpackages:
   - args
 - name: k8s.io/klog
-  version: 8139d8cb77af419532b33dfa7dd09fbc5f1d344f
+  version: e531227889390a39d9533dde61f590fe9f4b0035
 - name: k8s.io/kube-aggregator
   version: da8327669ac57b6e6a06676eeb7de19c9780f76d
   subpackages:
