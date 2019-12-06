@@ -77,7 +77,6 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
 		kubeInformersForNamespaces,
-		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace),
 		operatorClient,
 		kubeClient,
 		ctx.EventRecorder,
