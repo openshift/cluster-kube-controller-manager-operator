@@ -1,6 +1,7 @@
 package certrotationcontroller
 
 import (
+	"context"
 	"time"
 
 	"k8s.io/klog"
@@ -82,8 +83,8 @@ func NewCertRotationController(
 	return ret, nil
 }
 
-func (c *CertRotationController) Run(workers int, stopCh <-chan struct{}) {
+func (c *CertRotationController) Run(ctx context.Context, workers int) {
 	for _, certRotator := range c.certRotators {
-		go certRotator.Run(workers, stopCh)
+		go certRotator.Run(ctx, workers)
 	}
 }
