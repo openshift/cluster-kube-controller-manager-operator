@@ -1,0 +1,17 @@
+# This role is necessary to create leader lock configmap for upgrades 4.2-> 4.3
+# cluster-policy-controller is split from openshift-controller-manager in 4.3
+# leader lock in openshift-controller-manager NamespaceSecurityAllocationController and in ClusterPolicyController
+# cluster-policy-controller container runs in ns openshift-kube-controller-manager static pod
+# The lock, role, and rolebinding can be removed in 4.4
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: kube-system
+  name: system:openshift:leader-election-lock-kube-controller-manager
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
