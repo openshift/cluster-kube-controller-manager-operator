@@ -141,19 +141,19 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
-	configInformers.Start(ctx.Done())
-	kubeInformersForNamespaces.Start(ctx.Done())
-	dynamicInformers.Start(ctx.Done())
+	configInformers.Start(ctx.Ctx.Done())
+	kubeInformersForNamespaces.Start(ctx.Ctx.Done())
+	dynamicInformers.Start(ctx.Ctx.Done())
 
-	go staticPodControllers.Run(ctx.Done())
-	go targetConfigController.Run(1, ctx.Done())
-	go configObserver.Run(1, ctx.Done())
-	go clusterOperatorStatus.Run(1, ctx.Done())
-	go resourceSyncController.Run(1, ctx.Done())
-	go certRotationController.Run(1, ctx.Done())
-	go saTokenController.Run(1, ctx.Done())
+	go staticPodControllers.Run(ctx.Ctx, 1)
+	go targetConfigController.Run(1, ctx.Ctx.Done())
+	go configObserver.Run(ctx.Ctx, 1)
+	go clusterOperatorStatus.Run(ctx.Ctx, 1)
+	go resourceSyncController.Run(ctx.Ctx, 1)
+	go certRotationController.Run(ctx.Ctx, 1)
+	go saTokenController.Run(1, ctx.Ctx.Done())
 
-	<-ctx.Done()
+	<-ctx.Ctx.Done()
 	return fmt.Errorf("stopped")
 }
 

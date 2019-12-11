@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -306,8 +307,7 @@ func (c *InstallerController) manageInstallationPods(operatorSpec *operatorv1.St
 				return true, err
 			}
 
-			pendingNewRevision := operatorStatus.LatestAvailableRevision > currNodeState.TargetRevision
-			newCurrNodeState, installerPodFailed, reason, err := c.newNodeStateForInstallInProgress(currNodeState, pendingNewRevision)
+			newCurrNodeState, installerPodFailed, reason, err := c.newNodeStateForInstallInProgress(currNodeState, operatorStatus.LatestAvailableRevision)
 			if err != nil {
 				return true, err
 			}
@@ -517,7 +517,7 @@ func setAvailableProgressingNodeInstallerFailingConditions(newStatus *operatorv1
 }
 
 // newNodeStateForInstallInProgress returns the new NodeState, whether it was killed by OOM or an error
-func (c *InstallerController) newNodeStateForInstallInProgress(currNodeState *operatorv1.NodeStatus, newRevisionPending bool) (status *operatorv1.NodeStatus, installerPodFailed bool, reason string, err error) {
+func (c *InstallerController) newNodeStateForInstallInProgress(currNodeState *operatorv1.NodeStatus, latestRevisionAvailable int32) (status *operatorv1.NodeStatus, installerPodFailed bool, reason string, err error) {
 	ret := currNodeState.DeepCopy()
 	installerPod, err := c.podsGetter.Pods(c.targetNamespace).Get(getInstallerPodName(currNodeState.TargetRevision, currNodeState.NodeName), metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -536,11 +536,11 @@ func (c *InstallerController) newNodeStateForInstallInProgress(currNodeState *op
 
 	switch installerPod.Status.Phase {
 	case corev1.PodSucceeded:
-		if newRevisionPending {
+		if pendingNewRevision := latestRevisionAvailable > currNodeState.TargetRevision; pendingNewRevision {
 			// stop early, don't wait for ready static pod because a new revision is waiting
 			ret.LastFailedRevision = currNodeState.TargetRevision
 			ret.TargetRevision = 0
-			ret.LastFailedRevisionErrors = []string{fmt.Sprintf("static pod of revision has been installed, but is not ready while new revision %d is pending", currNodeState.TargetRevision)}
+			ret.LastFailedRevisionErrors = []string{fmt.Sprintf("static pod of revision %d has been installed, but is not ready while new revision %d is pending", currNodeState.TargetRevision, latestRevisionAvailable)}
 			return ret, false, "new revision pending", nil
 		}
 
@@ -843,23 +843,23 @@ func (c InstallerController) sync() error {
 }
 
 // Run starts the kube-apiserver and blocks until stopCh is closed.
-func (c *InstallerController) Run(workers int, stopCh <-chan struct{}) {
+func (c *InstallerController) Run(ctx context.Context, workers int) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
 	klog.Infof("Starting InstallerController")
 	defer klog.Infof("Shutting down InstallerController")
-	if !cache.WaitForCacheSync(stopCh, c.cachesToSync...) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.cachesToSync...) {
 		return
 	}
 
 	// doesn't matter what workers say, only start one.
-	go wait.Until(c.runWorker, time.Second, stopCh)
+	go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 
-	<-stopCh
+	<-ctx.Done()
 }
 
-func (c *InstallerController) runWorker() {
+func (c *InstallerController) runWorker(ctx context.Context) {
 	for c.processNextWorkItem() {
 	}
 }
