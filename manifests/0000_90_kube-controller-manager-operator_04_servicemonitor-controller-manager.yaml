@@ -3,6 +3,8 @@ kind: Role
 metadata:
   name: prometheus-k8s
   namespace: openshift-kube-controller-manager
+  annotations:
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 rules:
 - apiGroups:
   - ""
@@ -20,6 +22,8 @@ kind: RoleBinding
 metadata:
   name: prometheus-k8s
   namespace: openshift-kube-controller-manager
+  annotations:
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -36,6 +40,8 @@ metadata:
     k8s-app: kube-controller-manager
   name: kube-controller-manager
   namespace: openshift-kube-controller-manager
+  annotations:
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 spec:
   endpoints:
   - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
