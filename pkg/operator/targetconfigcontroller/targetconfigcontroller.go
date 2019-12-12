@@ -221,6 +221,11 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
 
+	err = ensureKubeControllerManagerTrustedCA(c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/trusted-ca-bundle", err))
+	}
+
 	if len(errors) > 0 {
 		condition := operatorv1.OperatorCondition{
 			Type:    "TargetConfigControllerDegraded",
@@ -477,6 +482,28 @@ func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 	csrSignerCA.Data["ca-bundle.crt"] = string(caBytes)
 
 	return resourceapply.ApplyConfigMap(client, recorder, csrSignerCA)
+}
+
+func ensureKubeControllerManagerTrustedCA(client corev1client.CoreV1Interface, recorder events.Recorder) error {
+	required := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/trusted-ca-cm.yaml"))
+	cmCLient := client.ConfigMaps(operatorclient.TargetNamespace)
+
+	cm, err := cmCLient.Get("trusted-ca-bundle", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			_, err = cmCLient.Create(required)
+		}
+		return err
+	}
+
+	// update if modified by the user
+	if val, ok := cm.Labels["config.openshift.io/inject-trusted-cabundle"]; !ok || val != "true" {
+		cm.Labels["config.openshift.io/inject-trusted-cabundle"] = "true"
+		_, err = cmCLient.Update(cm)
+		return err
+	}
+
+	return err
 }
 
 // Run starts the kube-controller-manager and blocks until stopCh is closed.
