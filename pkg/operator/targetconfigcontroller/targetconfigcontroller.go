@@ -228,6 +228,11 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
 
+	err = ensureKubeControllerManagerTrustedCA(c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/trusted-ca-bundle", err))
+	}
+
 	if len(errors) > 0 {
 		condition := operatorv1.OperatorCondition{
 			Type:    "TargetConfigControllerDegraded",
@@ -313,28 +318,35 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 		}
 	}
 
-	var v int
+	containerArgsWithLoglevel := required.Spec.Containers[0].Args
+	if argsCount := len(containerArgsWithLoglevel); argsCount > 1 {
+		return nil, false, fmt.Errorf("expected only one container argument, got %d", argsCount)
+	}
+	if !strings.Contains(containerArgsWithLoglevel[0], "exec hyperkube kube-controller-manager") {
+		return nil, false, fmt.Errorf("exec hyperkube kube-controller-manager not found in first argument %q", containerArgsWithLoglevel[0])
+	}
+
+	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
 	switch operatorSpec.LogLevel {
 	case operatorv1.Normal:
-		v = 2
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 2)
 	case operatorv1.Debug:
-		v = 4
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 4)
 	case operatorv1.Trace:
-		v = 6
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 6)
 	case operatorv1.TraceAll:
-		v = 8
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 8)
 	default:
-		v = 2
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 2)
 	}
-	required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", v))
-	required.Spec.Containers[1].Args = append(required.Spec.Containers[1].Args, fmt.Sprintf("-v=%d", v))
 
 	if _, err := secretsGetter.Secrets(required.Namespace).Get("serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
 	} else if err == nil {
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt")
-		required.Spec.Containers[0].Args = append(required.Spec.Containers[0].Args, "--tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key")
+		containerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
+		containerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key"
 	}
+	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
 
 	var observedConfig map[string]interface{}
 	if err := yaml.Unmarshal(operatorSpec.ObservedConfig.Raw, &observedConfig); err != nil {
@@ -503,6 +515,28 @@ func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 	csrSignerCA.Data["ca-bundle.crt"] = string(caBytes)
 
 	return resourceapply.ApplyConfigMap(client, recorder, csrSignerCA)
+}
+
+func ensureKubeControllerManagerTrustedCA(client corev1client.CoreV1Interface, recorder events.Recorder) error {
+	required := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/trusted-ca-cm.yaml"))
+	cmCLient := client.ConfigMaps(operatorclient.TargetNamespace)
+
+	cm, err := cmCLient.Get("trusted-ca-bundle", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			_, err = cmCLient.Create(required)
+		}
+		return err
+	}
+
+	// update if modified by the user
+	if val, ok := cm.Labels["config.openshift.io/inject-trusted-cabundle"]; !ok || val != "true" {
+		cm.Labels["config.openshift.io/inject-trusted-cabundle"] = "true"
+		_, err = cmCLient.Update(cm)
+		return err
+	}
+
+	return err
 }
 
 // Run starts the kube-controller-manager and blocks until stopCh is closed.
