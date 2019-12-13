@@ -16,6 +16,7 @@
 // bindata/v4.1.0/kube-controller-manager/pod.yaml
 // bindata/v4.1.0/kube-controller-manager/sa.yaml
 // bindata/v4.1.0/kube-controller-manager/svc.yaml
+// bindata/v4.1.0/kube-controller-manager/trusted-ca-cm.yaml
 // DO NOT EDIT!
 
 package v411_00_assets
@@ -554,14 +555,19 @@ spec:
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
-    command: ["hyperkube", "kube-controller-manager"]
+    command: ["/bin/bash", "-ec"]
     args:
-    - --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml
-    - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-    - --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-    - --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-    - --client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
-    - --requestheader-client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/aggregator-client-ca/ca-bundle.crt
+        - |
+          if [ -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt ]; then
+            echo "Copying system trust bundle"
+            cp -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          fi
+          exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml \
+            --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig \
+            --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig \
+            --authorization-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig \
+            --client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt \
+            --requestheader-client-ca-file=/etc/kubernetes/static-pod-certs/configmaps/aggregator-client-ca/ca-bundle.crt
     resources:
       requests:
         memory: 200Mi
@@ -729,6 +735,30 @@ func v410KubeControllerManagerSvcYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v410KubeControllerManagerTrustedCaCmYaml = []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: trusted-ca-bundle
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+`)
+
+func v410KubeControllerManagerTrustedCaCmYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerTrustedCaCmYaml, nil
+}
+
+func v410KubeControllerManagerTrustedCaCmYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerTrustedCaCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/trusted-ca-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -797,6 +827,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/pod.yaml":                                                             v410KubeControllerManagerPodYaml,
 	"v4.1.0/kube-controller-manager/sa.yaml":                                                              v410KubeControllerManagerSaYaml,
 	"v4.1.0/kube-controller-manager/svc.yaml":                                                             v410KubeControllerManagerSvcYaml,
+	"v4.1.0/kube-controller-manager/trusted-ca-cm.yaml":                                                   v410KubeControllerManagerTrustedCaCmYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -858,6 +889,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"pod.yaml":                                                             {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
 			"sa.yaml":                                                              {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
 			"svc.yaml":                                                             {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"trusted-ca-cm.yaml":                                                   {v410KubeControllerManagerTrustedCaCmYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
