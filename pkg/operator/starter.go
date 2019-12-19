@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -26,13 +27,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func RunOperator(ctx *controllercmd.ControllerContext) error {
+func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
 	// This kube client use protobuf, do not use it for CR
-	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
+	kubeClient, err := kubernetes.NewForConfig(cc.ProtoKubeConfig)
 	if err != nil {
 		return err
 	}
-	configClient, err := configv1client.NewForConfig(ctx.KubeConfig)
+	configClient, err := configv1client.NewForConfig(cc.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -46,7 +47,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		operatorclient.TargetNamespace,
 		"kube-system",
 	)
-	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(ctx.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
+	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(cc.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		kubeInformersForNamespaces,
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
-		ctx.EventRecorder,
+		cc.EventRecorder,
 	)
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		configInformers,
 		kubeInformersForNamespaces,
 		resourceSyncController,
-		ctx.EventRecorder,
+		cc.EventRecorder,
 	)
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
@@ -75,7 +76,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		kubeInformersForNamespaces,
 		operatorClient,
 		kubeClient,
-		ctx.EventRecorder,
+		cc.EventRecorder,
 	)
 
 	// don't change any versions until we sync
@@ -90,7 +91,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	versionRecorder.SetVersion("raw-internal", status.VersionForOperatorFromEnv())
 
 	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces).
-		WithEvents(ctx.EventRecorder).
+		WithEvents(cc.EventRecorder).
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
 		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
@@ -114,7 +115,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		configInformers.Config().V1().ClusterOperators(),
 		operatorClient,
 		versionRecorder,
-		ctx.EventRecorder,
+		cc.EventRecorder,
 	)
 
 	certRotationScale, err := certrotation.GetCertRotationScale(kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
@@ -127,7 +128,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		operatorClient,
 		kubeInformersForNamespaces,
-		ctx.EventRecorder,
+		cc.EventRecorder,
 		// this is weird, but when we turn down rotation in CI, we go fast enough that kubelets and kas are racing to observe the new signer before the signer is used.
 		// we need to establish some kind of delay or back pressure to prevent the rollout.  This ensures we don't trigger kas restart
 		// during e2e tests for now.
@@ -136,24 +137,24 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
-	saTokenController, err := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, ctx.EventRecorder)
+	saTokenController, err := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
 	if err != nil {
 		return err
 	}
 
-	configInformers.Start(ctx.Ctx.Done())
-	kubeInformersForNamespaces.Start(ctx.Ctx.Done())
-	dynamicInformers.Start(ctx.Ctx.Done())
+	configInformers.Start(ctx.Done())
+	kubeInformersForNamespaces.Start(ctx.Done())
+	dynamicInformers.Start(ctx.Done())
 
-	go staticPodControllers.Run(ctx.Ctx, 1)
-	go targetConfigController.Run(1, ctx.Ctx.Done())
-	go configObserver.Run(ctx.Ctx, 1)
-	go clusterOperatorStatus.Run(ctx.Ctx, 1)
-	go resourceSyncController.Run(ctx.Ctx, 1)
-	go certRotationController.Run(ctx.Ctx, 1)
-	go saTokenController.Run(1, ctx.Ctx.Done())
+	go staticPodControllers.Run(ctx, 1)
+	go targetConfigController.Run(1, ctx.Done())
+	go configObserver.Run(ctx, 1)
+	go clusterOperatorStatus.Run(ctx, 1)
+	go resourceSyncController.Run(ctx, 1)
+	go certRotationController.Run(ctx, 1)
+	go saTokenController.Run(1, ctx.Done())
 
-	<-ctx.Ctx.Done()
+	<-ctx.Done()
 	return fmt.Errorf("stopped")
 }
 
