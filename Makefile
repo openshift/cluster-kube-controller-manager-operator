@@ -6,6 +6,7 @@ include $(addprefix ./vendor/github.com/openshift/library-go/alpha-build-machine
 	golang.mk \
 	targets/openshift/bindata.mk \
 	targets/openshift/images.mk \
+	targets/openshift/deps.mk \
 )
 
 # Exclude e2e tests from unit testing
