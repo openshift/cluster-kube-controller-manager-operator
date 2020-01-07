@@ -118,7 +118,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20191217141120-791af96035a5 => github.com/openshift/api v3.9.1-0.20191209132752-992bc3a41fe6+incompatible
+# github.com/openshift/api v0.0.0-20191219160953-2f4dddbbf3e6
 github.com/openshift/api
 github.com/openshift/api/apps
 github.com/openshift/api/apps/v1
@@ -165,7 +165,7 @@ github.com/openshift/api/template
 github.com/openshift/api/template/v1
 github.com/openshift/api/user
 github.com/openshift/api/user/v1
-# github.com/openshift/client-go v0.0.0-20191216194936-57f413491e9e => github.com/openshift/client-go v0.0.0-20191205152420-9faca5198b4f
+# github.com/openshift/client-go v0.0.0-20191216194936-57f413491e9e
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
@@ -174,7 +174,7 @@ github.com/openshift/client-go/config/informers/externalversions/config
 github.com/openshift/client-go/config/informers/externalversions/config/v1
 github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
 github.com/openshift/client-go/config/listers/config/v1
-# github.com/openshift/library-go v0.0.0-20191218095328-1c12909e5923 => github.com/openshift/library-go v0.0.0-20191218095328-1c12909e5923
+# github.com/openshift/library-go v0.0.0-20200106191802-9821002633e8
 github.com/openshift/library-go/alpha-build-machinery
 github.com/openshift/library-go/alpha-build-machinery/make
 github.com/openshift/library-go/alpha-build-machinery/make/lib
