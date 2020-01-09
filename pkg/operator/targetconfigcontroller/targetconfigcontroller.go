@@ -189,6 +189,9 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
 		"v4.1.0/kube-controller-manager/svc.yaml",
 		"v4.1.0/kube-controller-manager/sa.yaml",
+		"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
+		"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml",
+		"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml",
 	)
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
@@ -222,6 +225,10 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
+	}
+	err = ensureLocalhostRecoverySAToken(c.kubeClient.CoreV1(), recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "serviceaccount/localhost-recovery-client", err))
 	}
 	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec)
 	if err != nil {
@@ -289,6 +296,55 @@ func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, r
 		return nil, false, err
 	}
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
+func ensureLocalhostRecoverySAToken(client corev1client.CoreV1Interface, recorder events.Recorder) error {
+	requiredSA := resourceread.ReadServiceAccountV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml"))
+	requiredToken := resourceread.ReadSecretV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-token.yaml"))
+
+	saClient := client.ServiceAccounts(operatorclient.TargetNamespace)
+	serviceAccount, err := saClient.Get(requiredSA.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// The default token secrets get random names so we have created a custom secret
+	// to be populated with SA token so we have a stable name.
+	secretsClient := client.Secrets(operatorclient.TargetNamespace)
+	token, err := secretsClient.Get(requiredToken.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Token creation / injection for a SA is asynchronous.
+	// We will report and error if it's missing, go degraded and get re-queued when the SA token is updated.
+
+	uid := token.Annotations[corev1.ServiceAccountUIDKey]
+	if len(uid) == 0 {
+		return fmt.Errorf("secret %s/%s hasn't been populated with SA token yet: missing SA UID", token.Namespace, token.Name)
+	}
+
+	if uid != string(serviceAccount.UID) {
+		return fmt.Errorf("secret %s/%s hasn't been populated with current SA token yet: SA UID mismatch", token.Namespace, token.Name)
+	}
+
+	if len(token.Data) == 0 {
+		return fmt.Errorf("secret %s/%s hasn't been populated with any data yet", token.Namespace, token.Name)
+	}
+
+	// Explicitly check that the fields we use are there, so we find out easily if some are removed or renamed.
+
+	_, ok := token.Data["token"]
+	if !ok {
+		return fmt.Errorf("secret %s/%s hasn't been populated with current SA token yet", token.Namespace, token.Name)
+	}
+
+	_, ok = token.Data["ca.crt"]
+	if !ok {
+		return fmt.Errorf("secret %s/%s hasn't been populated with current SA token root CA yet", token.Namespace, token.Name)
+	}
+
+	return err
 }
 
 func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string) (*corev1.ConfigMap, bool, error) {
