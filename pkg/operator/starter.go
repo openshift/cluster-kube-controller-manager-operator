@@ -180,6 +180,9 @@ var deploymentSecrets = []revision.RevisionResource{
 
 	// this cert is created by the service-ca controller, which doesn't come up until after we are available. this piece of config must be optional.
 	{Name: "serving-cert", Optional: true},
+
+	// this needs to be revisioned as certsyncer's kubeconfig isn't wired to be live reloaded, nor will be autorecovery
+	{Name: "localhost-recovery-client-token"},
 }
 
 var CertConfigMaps = []revision.RevisionResource{

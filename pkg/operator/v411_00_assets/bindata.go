@@ -11,6 +11,9 @@
 // bindata/v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml
 // bindata/v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml
 // bindata/v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml
+// bindata/v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml
+// bindata/v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml
+// bindata/v4.1.0/kube-controller-manager/localhost-recovery-token.yaml
 // bindata/v4.1.0/kube-controller-manager/ns.yaml
 // bindata/v4.1.0/kube-controller-manager/pod-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/pod.yaml
@@ -257,7 +260,7 @@ data:
     apiVersion: v1
     clusters:
       - cluster:
-          certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
+          certificate-authority: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/ca.crt
           server: https://localhost:6443
         name: loopback
     contexts:
@@ -271,8 +274,7 @@ data:
     users:
       - name: kube-controller-manager
         user:
-          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
-          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
+          tokenFile: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/token
 `)
 
 func v410KubeControllerManagerKubeconfigCmYamlBytes() ([]byte, error) {
@@ -459,6 +461,81 @@ func v410KubeControllerManagerLeaderElectionRolebindingYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerLocalhostRecoveryClientCrbYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:operator:kube-controller-manager-recovery
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: localhost-recovery-client
+  namespace: openshift-kube-controller-manager
+`)
+
+func v410KubeControllerManagerLocalhostRecoveryClientCrbYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerLocalhostRecoveryClientCrbYaml, nil
+}
+
+func v410KubeControllerManagerLocalhostRecoveryClientCrbYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerLocalhostRecoveryClientCrbYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerLocalhostRecoverySaYaml = []byte(`apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: localhost-recovery-client
+  namespace: openshift-kube-controller-manager
+`)
+
+func v410KubeControllerManagerLocalhostRecoverySaYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerLocalhostRecoverySaYaml, nil
+}
+
+func v410KubeControllerManagerLocalhostRecoverySaYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerLocalhostRecoverySaYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerLocalhostRecoveryTokenYaml = []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  name: localhost-recovery-client-token
+  namespace: openshift-kube-controller-manager
+  annotations:
+    kubernetes.io/service-account.name: localhost-recovery-client
+type: kubernetes.io/service-account-token
+`)
+
+func v410KubeControllerManagerLocalhostRecoveryTokenYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerLocalhostRecoveryTokenYaml, nil
+}
+
+func v410KubeControllerManagerLocalhostRecoveryTokenYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerLocalhostRecoveryTokenYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/localhost-recovery-token.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -822,6 +899,9 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml":        v410KubeControllerManagerLeaderElectionKubeControllerManagerRoleKubeSystemYaml,
 	"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml": v410KubeControllerManagerLeaderElectionKubeControllerManagerRolebindingKubeSystemYaml,
 	"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml":                                     v410KubeControllerManagerLeaderElectionRolebindingYaml,
+	"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml":                                   v410KubeControllerManagerLocalhostRecoveryClientCrbYaml,
+	"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml":                                           v410KubeControllerManagerLocalhostRecoverySaYaml,
+	"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml":                                        v410KubeControllerManagerLocalhostRecoveryTokenYaml,
 	"v4.1.0/kube-controller-manager/ns.yaml":                                                              v410KubeControllerManagerNsYaml,
 	"v4.1.0/kube-controller-manager/pod-cm.yaml":                                                          v410KubeControllerManagerPodCmYaml,
 	"v4.1.0/kube-controller-manager/pod.yaml":                                                             v410KubeControllerManagerPodYaml,
@@ -884,6 +964,9 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"leader-election-kube-controller-manager-role-kube-system.yaml":        {v410KubeControllerManagerLeaderElectionKubeControllerManagerRoleKubeSystemYaml, map[string]*bintree{}},
 			"leader-election-kube-controller-manager-rolebinding-kube-system.yaml": {v410KubeControllerManagerLeaderElectionKubeControllerManagerRolebindingKubeSystemYaml, map[string]*bintree{}},
 			"leader-election-rolebinding.yaml":                                     {v410KubeControllerManagerLeaderElectionRolebindingYaml, map[string]*bintree{}},
+			"localhost-recovery-client-crb.yaml":                                   {v410KubeControllerManagerLocalhostRecoveryClientCrbYaml, map[string]*bintree{}},
+			"localhost-recovery-sa.yaml":                                           {v410KubeControllerManagerLocalhostRecoverySaYaml, map[string]*bintree{}},
+			"localhost-recovery-token.yaml":                                        {v410KubeControllerManagerLocalhostRecoveryTokenYaml, map[string]*bintree{}},
 			"ns.yaml":                                                              {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
 			"pod-cm.yaml":                                                          {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
 			"pod.yaml":                                                             {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
