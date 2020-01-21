@@ -135,6 +135,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		"v3.11.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
 		"v3.11.0/kube-controller-manager/kubeconfig-cm.yaml",
 		"v3.11.0/kube-controller-manager/leader-election-rolebinding.yaml",
+		"v3.11.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
+		"v3.11.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
 		"v3.11.0/kube-controller-manager/svc.yaml",
 		"v3.11.0/kube-controller-manager/sa.yaml",
 	)
