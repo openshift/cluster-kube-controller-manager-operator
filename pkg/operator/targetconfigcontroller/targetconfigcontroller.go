@@ -178,7 +178,10 @@ func isRequiredConfigPresent(config []byte) error {
 func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
 
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, v411_00_assets.Asset,
+	directResourceResults := resourceapply.ApplyDirectly(
+		resourceapply.NewKubeClientHolder(c.kubeClient),
+		c.eventRecorder,
+		v411_00_assets.Asset,
 		"v4.1.0/kube-controller-manager/ns.yaml",
 		"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
 		"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml",
