@@ -207,15 +207,15 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
 	}
-	_, _, err = manageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	_, _, err = ManageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
 	}
-	_, _, err = manageCSRCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
+	_, _, err = ManageCSRCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
-	_, requeueDelay, _, err := manageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	_, requeueDelay, _, err := ManageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "secrets/csr-signer", err))
 	}
@@ -441,7 +441,7 @@ func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client c
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func ManageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 		lister,
@@ -456,7 +456,7 @@ func manageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
+func ManageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
 	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
@@ -505,7 +505,7 @@ func manageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 	return secret, 0, modified, err
 }
 
-func manageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func ManageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
 	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
