@@ -68,7 +68,11 @@ func NewConfigObserver(
 				"openshift-kube-controller-manager",
 				[]string{"extendedArguments", "cloud-provider"},
 				[]string{"extendedArguments", "cloud-config"}),
-			featuregates.NewObserveFeatureFlagsFunc(nil, []string{"extendedArguments", "feature-gates"}),
+			featuregates.NewObserveFeatureFlagsFunc(
+				nil,
+				nil,
+				[]string{"extendedArguments", "feature-gates"},
+			),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
 			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
