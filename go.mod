@@ -10,11 +10,13 @@ require (
 	github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
 	github.com/openshift/library-go v0.0.0-20200127110935-527e40ed17d9
 	github.com/pkg/errors v0.8.1
+	github.com/prometheus/common v0.6.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1
+	k8s.io/apiserver v0.17.1
 	k8s.io/client-go v0.17.1
 	k8s.io/component-base v0.17.1
 	k8s.io/klog v1.0.0
