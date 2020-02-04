@@ -269,7 +269,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 
 func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
-	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/defaultconfig.yaml")
+	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&kubecontrolplanev1.KubeControllerManagerConfig{},
 		configMap,

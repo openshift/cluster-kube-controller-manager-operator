@@ -205,7 +205,7 @@ func (r *renderOpts) Run() error {
 	}
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
-		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "kube-controller-manager", "defaultconfig.yaml"))},
+		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "defaultconfig.yaml"))},
 		mustReadTemplateFile(filepath.Join(r.generic.TemplatesDir, "config", "bootstrap-config-overrides.yaml")),
 		&renderConfig,
 		nil,
