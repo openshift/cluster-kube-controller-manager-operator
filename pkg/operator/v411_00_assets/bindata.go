@@ -628,7 +628,7 @@ spec:
         sleep 1
       done
   containers:
-  - name: kube-controller-manager-REVISION
+  - name: kube-controller-manager
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
@@ -670,7 +670,7 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
-  - name: cluster-policy-controller-REVISION
+  - name: cluster-policy-controller
     image: ${CLUSTER_POLICY_CONTROLLER_IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
@@ -702,7 +702,7 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
-  - name: kube-controller-manager-cert-syncer-REVISION
+  - name: kube-controller-manager-cert-syncer
     env:
       - name: POD_NAME
         valueFrom:
@@ -729,7 +729,7 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
-  - name: kube-controller-manager-recovery-controller-REVISION
+  - name: kube-controller-manager-recovery-controller
     env:
     - name: POD_NAMESPACE
       valueFrom:
