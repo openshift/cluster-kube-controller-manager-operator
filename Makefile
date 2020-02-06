@@ -36,7 +36,3 @@ $(call add-bindata,v4.1.0,./bindata/v4.1.0/...,bindata,v411_00_assets,pkg/operat
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: test-unit
 .PHONY: test-e2e
-
-clean:
-	$(RM) ./cluster-kube-controller-manager-operator
-.PHONY: clean
