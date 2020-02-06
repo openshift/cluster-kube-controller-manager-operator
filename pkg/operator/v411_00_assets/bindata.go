@@ -597,6 +597,8 @@ kind: Pod
 metadata:
   name: kube-controller-manager
   namespace: openshift-kube-controller-manager
+  annotations:
+    kubectl.kubernetes.io/default-logs-container: kube-controller-manager
   labels:
     app: kube-controller-manager
     kube-controller-manager: "true"
