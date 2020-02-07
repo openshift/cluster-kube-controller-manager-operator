@@ -18,6 +18,7 @@ import (
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
+	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
 	"github.com/openshift/library-go/pkg/operator/status"
@@ -142,6 +143,16 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 
+	staleConditions := staleconditions.NewRemoveStaleConditions(
+		[]string{
+			// the static pod operator used to directly set these. this removes those conditions since the static pod operator was updated.
+			// these can be removed in 4.5
+			"Available", "Progressing",
+		},
+		operatorClient,
+		cc.EventRecorder,
+	)
+
 	configInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
@@ -153,6 +164,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go resourceSyncController.Run(ctx, 1)
 	go certRotationController.Run(ctx, 1)
 	go saTokenController.Run(1, ctx.Done())
+	go staleConditions.Run(ctx, 1)
 
 	<-ctx.Done()
 	return fmt.Errorf("stopped")
