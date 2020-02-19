@@ -21,7 +21,7 @@ The metrics are collected from following components:
 
 The configuration for the Kubernetes Controller Manager is coming from:
 
-* a [default config](https://github.com/openshift/cluster-kube-controller-manager-operator/blob/master/bindata/v4.1.0/kube-controller-manager/defaultconfig.yaml)
+* a [default config](https://github.com/openshift/cluster-kube-controller-manager-operator/blob/master/bindata/v4.1.0/config/defaultconfig.yaml)
 
 
 ## Debugging
