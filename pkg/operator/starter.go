@@ -186,7 +186,6 @@ var deploymentConfigMaps = []revision.RevisionResource{
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
 var deploymentSecrets = []revision.RevisionResource{
-	{Name: "csr-signer"},
 	{Name: "kube-controller-manager-client-cert-key"},
 	{Name: "service-account-private-key"},
 
