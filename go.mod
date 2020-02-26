@@ -6,17 +6,17 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
-	github.com/openshift/api v0.0.0-20200116145750-0e2ff1e215dd
-	github.com/openshift/build-machinery-go v0.0.0-20200210090402-3b072832771e
+	github.com/openshift/api v0.0.0-20200210091934-a0e53e94816b
+	github.com/openshift/build-machinery-go v0.0.0-20200211121458-5e3d6e570160
 	github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
-	github.com/openshift/library-go v0.0.0-20200206082234-e7b0b487de39
+	github.com/openshift/library-go v0.0.0-20200226171210-caa110959f91
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	k8s.io/api v0.17.1
-	k8s.io/apimachinery v0.17.1
+	k8s.io/api v0.17.2
+	k8s.io/apimachinery v0.17.2
 	k8s.io/apiserver v0.17.1
 	k8s.io/client-go v0.17.1
 	k8s.io/component-base v0.17.1
