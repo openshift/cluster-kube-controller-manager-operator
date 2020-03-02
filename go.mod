@@ -6,7 +6,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
-	github.com/openshift/api v0.0.0-20200116145750-0e2ff1e215dd
+	github.com/openshift/api v0.0.0-20200217161739-c99157bc6492
 	github.com/openshift/build-machinery-go v0.0.0-20200210090402-3b072832771e
 	github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
 	github.com/openshift/library-go v0.0.0-20200206082234-e7b0b487de39
