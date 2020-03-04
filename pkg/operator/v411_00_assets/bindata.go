@@ -217,8 +217,9 @@ data:
     apiVersion: v1
     clusters:
       - cluster:
-          certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
+          certificate-authority: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/ca.crt
           server: https://localhost:6443
+          tls-server-name: localhost-recovery
         name: loopback
     contexts:
       - context:
@@ -231,8 +232,7 @@ data:
     users:
       - name: kube-controller-manager
         user:
-          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
-          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
+        tokenFile: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/token
 `)
 
 func v410KubeControllerManagerKubeconfigCertSyncerYamlBytes() ([]byte, error) {
@@ -260,7 +260,7 @@ data:
     apiVersion: v1
     clusters:
       - cluster:
-          certificate-authority: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/ca.crt
+          certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
           server: https://localhost:6443
         name: loopback
     contexts:
@@ -274,7 +274,8 @@ data:
     users:
       - name: kube-controller-manager
         user:
-          tokenFile: /etc/kubernetes/static-pod-resources/secrets/localhost-recovery-client-token/token
+          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
+          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
 `)
 
 func v410KubeControllerManagerKubeconfigCmYamlBytes() ([]byte, error) {
@@ -745,7 +746,6 @@ spec:
       - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig
       - --namespace=$(POD_NAMESPACE)
       - --listen=0.0.0.0:9443
-      - --tls-server-name=localhost-recovery
       - -v=2
     resources:
       requests:
