@@ -151,7 +151,6 @@ spec:
       - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig
       - --namespace=$(POD_NAMESPACE)
       - --listen=0.0.0.0:9443
-      - --tls-server-name=localhost-recovery
       - -v=2
     resources:
       requests:
