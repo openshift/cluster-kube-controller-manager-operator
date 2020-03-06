@@ -14,6 +14,8 @@
 // bindata/v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml
 // bindata/v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml
 // bindata/v4.1.0/kube-controller-manager/localhost-recovery-token.yaml
+// bindata/v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml
+// bindata/v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml
 // bindata/v4.1.0/kube-controller-manager/ns.yaml
 // bindata/v4.1.0/kube-controller-manager/pod-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/pod.yaml
@@ -541,6 +543,86 @@ func v410KubeControllerManagerLocalhostRecoveryTokenYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  name: system:openshift:controller:namespace-security-allocation-controller
+rules:
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - rangeallocations
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update`)
+
+func v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml, nil
+}
+
+func v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  name: system:openshift:controller:namespace-security-allocation-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:controller:namespace-security-allocation-controller
+subjects:
+- kind: ServiceAccount
+  name: namespace-security-allocation-controller
+  namespace: openshift-infra`)
+
+func v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYaml, nil
+}
+
+func v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v410KubeControllerManagerNsYaml = []byte(`apiVersion: v1
 kind: Namespace
 metadata:
@@ -929,6 +1011,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml":                                   v410KubeControllerManagerLocalhostRecoveryClientCrbYaml,
 	"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml":                                           v410KubeControllerManagerLocalhostRecoverySaYaml,
 	"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml":                                        v410KubeControllerManagerLocalhostRecoveryTokenYaml,
+	"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml":            v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml,
+	"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml":     v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYaml,
 	"v4.1.0/kube-controller-manager/ns.yaml":                                                              v410KubeControllerManagerNsYaml,
 	"v4.1.0/kube-controller-manager/pod-cm.yaml":                                                          v410KubeControllerManagerPodCmYaml,
 	"v4.1.0/kube-controller-manager/pod.yaml":                                                             v410KubeControllerManagerPodYaml,
@@ -996,12 +1080,14 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"localhost-recovery-client-crb.yaml":                                   {v410KubeControllerManagerLocalhostRecoveryClientCrbYaml, map[string]*bintree{}},
 			"localhost-recovery-sa.yaml":                                           {v410KubeControllerManagerLocalhostRecoverySaYaml, map[string]*bintree{}},
 			"localhost-recovery-token.yaml":                                        {v410KubeControllerManagerLocalhostRecoveryTokenYaml, map[string]*bintree{}},
-			"ns.yaml":                                                              {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
-			"pod-cm.yaml":                                                          {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
-			"pod.yaml":                                                             {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
-			"sa.yaml":                                                              {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
-			"svc.yaml":                                                             {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
-			"trusted-ca-cm.yaml":                                                   {v410KubeControllerManagerTrustedCaCmYaml, map[string]*bintree{}},
+			"namespace-security-allocation-controller-clusterrole.yaml":            {v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml, map[string]*bintree{}},
+			"namespace-security-allocation-controller-clusterrolebinding.yaml":     {v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterrolebindingYaml, map[string]*bintree{}},
+			"ns.yaml":            {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
+			"pod-cm.yaml":        {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
+			"pod.yaml":           {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
+			"sa.yaml":            {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
+			"svc.yaml":           {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
+			"trusted-ca-cm.yaml": {v410KubeControllerManagerTrustedCaCmYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
