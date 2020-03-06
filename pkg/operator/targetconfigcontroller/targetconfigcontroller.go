@@ -190,6 +190,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
 		"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
 		"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
+		"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml",
+		"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml",
 		"v4.1.0/kube-controller-manager/svc.yaml",
 		"v4.1.0/kube-controller-manager/sa.yaml",
 		"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
