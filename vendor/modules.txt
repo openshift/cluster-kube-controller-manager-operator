@@ -118,7 +118,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20200116145750-0e2ff1e215dd
+# github.com/openshift/api v0.0.0-20200217161739-c99157bc6492
 github.com/openshift/api
 github.com/openshift/api/apps
 github.com/openshift/api/apps/v1
@@ -165,7 +165,7 @@ github.com/openshift/api/template
 github.com/openshift/api/template/v1
 github.com/openshift/api/user
 github.com/openshift/api/user/v1
-# github.com/openshift/build-machinery-go v0.0.0-20200210090402-3b072832771e
+# github.com/openshift/build-machinery-go v0.0.0-20200211121458-5e3d6e570160
 github.com/openshift/build-machinery-go
 github.com/openshift/build-machinery-go/make
 github.com/openshift/build-machinery-go/make/lib
