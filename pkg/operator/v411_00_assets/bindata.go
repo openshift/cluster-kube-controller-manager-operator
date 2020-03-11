@@ -274,8 +274,8 @@ data:
     users:
       - name: kube-controller-manager
         user:
-          client-certificate: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.crt
-          client-key: /etc/kubernetes/static-pod-resources/secrets/kube-controller-manager-client-cert-key/tls.key
+          client-certificate: /etc/kubernetes/static-pod-certs/secrets/kube-controller-manager-client-cert-key/tls.crt
+          client-key: /etc/kubernetes/static-pod-certs/secrets/kube-controller-manager-client-cert-key/tls.key
 `)
 
 func v410KubeControllerManagerKubeconfigCmYamlBytes() ([]byte, error) {
