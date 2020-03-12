@@ -131,6 +131,116 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 		t.Fatalf("error querying prometheus: %v", err)
 	}
 }
+
+func TestTargetConfigController(t *testing.T) {
+	// This test deletes everything managed by the target config controller and expects it to be recreated
+	tests := []struct {
+		name         string
+		resourceName string
+		namespace    string
+	}{
+		{
+			name:         "targetconfigcontroller KCM config",
+			resourceName: "config",
+			namespace:    operatorclient.TargetNamespace,
+		},
+		{
+			name:         "targetconfigcontroller cluster policy controller config",
+			resourceName: "cluster-policy-controller-config",
+			namespace:    operatorclient.TargetNamespace,
+		},
+		{
+			name:         "targetconfigcontroller csr-signer-ca",
+			resourceName: "csr-signer-ca",
+			namespace:    operatorclient.OperatorNamespace,
+		},
+	}
+
+	kubeConfig, err := test.NewClientConfigForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
+			if err != nil {
+				t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
+			}
+		})
+	}
+}
+
+func TestResourceSyncController(t *testing.T) {
+	// This test deletes everything managed by the resource sync controller and expects it to be recreated
+	tests := []struct {
+		name         string
+		resourceName string
+		namespace    string
+	}{
+		{
+			name:         "resourcesynccontroller csr-controller-ca",
+			resourceName: "csr-controller-ca",
+			namespace:    operatorclient.OperatorNamespace,
+		},
+		{
+			name:         "resourcesynccontroller service-ca",
+			resourceName: "service-ca",
+			namespace:    operatorclient.TargetNamespace,
+		},
+		{
+			name:         "resourcesynccontroller client-ca",
+			resourceName: "client-ca",
+			namespace:    operatorclient.TargetNamespace,
+		},
+		{
+			name:         "resourcesynccontroller aggregator-client-ca",
+			resourceName: "aggregator-client-ca",
+			namespace:    operatorclient.TargetNamespace,
+		},
+	}
+
+	kubeConfig, err := test.NewClientConfigForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err = testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
+			if err != nil {
+				t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
+			}
+		})
+	}
+}
+
+func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config string) error {
+	err := kubeClient.CoreV1().ConfigMaps(namespace).Delete(config, &metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	err = wait.Poll(time.Second*5, time.Second*120, func() (bool, error) {
+		_, err := kubeClient.CoreV1().ConfigMaps(namespace).Get(config, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	})
+	return err
+}
+
 func TestKCMRecovery(t *testing.T) {
 	// This is an e2e test to verify that KCM can recover from having its lease configmap deleted
 	// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
