@@ -22,27 +22,34 @@ type Options struct {
 func NewCertRecoveryControllerCommand(ctx context.Context) *cobra.Command {
 	o := &Options{}
 
-	cmd := controllercmd.
-		NewControllerCommandConfig("cert-recovery-controller", version.Get(), func(ctx context.Context, controllerContext *controllercmd.ControllerContext) error {
-			o.controllerContext = controllerContext
+	ccc := controllercmd.NewControllerCommandConfig("cert-recovery-controller", version.Get(), func(ctx context.Context, controllerContext *controllercmd.ControllerContext) error {
+		o.controllerContext = controllerContext
 
-			err := o.Validate(ctx)
-			if err != nil {
-				return err
-			}
+		err := o.Validate(ctx)
+		if err != nil {
+			return err
+		}
 
-			err = o.Complete(ctx)
-			if err != nil {
-				return err
-			}
+		err = o.Complete(ctx)
+		if err != nil {
+			return err
+		}
 
-			err = o.Run(ctx)
-			if err != nil {
-				return err
-			}
+		err = o.Run(ctx)
+		if err != nil {
+			return err
+		}
 
-			return nil
-		}).NewCommandWithContext(ctx)
+		return nil
+	})
+
+	// Disable serving for recovery as it introduces a dependency on kube-system::extension-apiserver-authentication
+	// configmap which prevents it to start as the CA bundle is expired.
+	// TODO: Remove when the internal logic can start serving without extension-apiserver-authentication
+	//  	 and live reload extension-apiserver-authentication after it is available
+	ccc.DisableServing = true
+
+	cmd := ccc.NewCommandWithContext(ctx)
 	cmd.Use = "cert-recovery-controller"
 	cmd.Short = "Start the Cluster Certificate Recovery Controller"
 
