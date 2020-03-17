@@ -1,6 +1,7 @@
 package certrotationcontroller
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -36,6 +37,7 @@ const (
 )
 
 type SATokenSignerController struct {
+	ctx             context.Context
 	operatorClient  v1helpers.StaticPodOperatorClient
 	secretClient    corev1client.SecretsGetter
 	configMapClient corev1client.ConfigMapsGetter
@@ -51,6 +53,7 @@ type SATokenSignerController struct {
 }
 
 func NewSATokenSignerController(
+	ctx context.Context,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	kubeClient kubernetes.Interface,
@@ -59,6 +62,7 @@ func NewSATokenSignerController(
 ) (*SATokenSignerController, error) {
 
 	ret := &SATokenSignerController{
+		ctx:             ctx,
 		operatorClient:  operatorClient,
 		secretClient:    v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
@@ -128,7 +132,7 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 	}
 
 	nodeIPs := sets.String{}
-	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
+	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(c.ctx, metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
 	if err != nil {
 		return err
 	}
@@ -136,7 +140,7 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 		nodeIPs.Insert(pod.Status.HostIP)
 	}
 
-	kubeEndpoints, err := c.endpointClient.Endpoints("default").Get("kubernetes", metav1.GetOptions{})
+	kubeEndpoints, err := c.endpointClient.Endpoints("default").Get(c.ctx, "kubernetes", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -169,7 +173,7 @@ func (c *SATokenSignerController) syncWorker() error {
 	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
-		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
+		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get(c.ctx, "service-account-private-key", metav1.GetOptions{})
 		if err == nil {
 			// return this error to be reported and requeue
 			return pastBootstrapErr
@@ -184,7 +188,7 @@ func (c *SATokenSignerController) syncWorker() error {
 		return err
 	}
 
-	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get("next-service-account-private-key", metav1.GetOptions{})
+	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get(c.ctx, "next-service-account-private-key", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -218,7 +222,7 @@ func (c *SATokenSignerController) syncWorker() error {
 		c.queue.AddAfter(workQueueKey, 5*time.Minute+10*time.Second)
 	}
 
-	saTokenSigningCerts, err := c.configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get("sa-token-signing-certs", metav1.GetOptions{})
+	saTokenSigningCerts, err := c.configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get(c.ctx, "sa-token-signing-certs", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
