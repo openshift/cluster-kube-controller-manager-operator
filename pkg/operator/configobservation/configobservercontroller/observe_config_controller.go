@@ -1,12 +1,10 @@
 package configobservercontroller
 
 import (
+	"k8s.io/client-go/tools/cache"
+
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/clustername"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
@@ -14,11 +12,16 @@ import (
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	"k8s.io/client-go/tools/cache"
+
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/clustername"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
 type ConfigObserver struct {
-	*configobserver.ConfigObserver
+	factory.Controller
 }
 
 func NewConfigObserver(
@@ -40,8 +43,19 @@ func NewConfigObserver(
 		configMapPreRunCacheSynced = append(configMapPreRunCacheSynced, kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer().HasSynced)
 	}
 
+	informers := []factory.Informer{
+		operatorClient.Informer(),
+		configinformers.Config().V1().FeatureGates().Informer(),
+		configinformers.Config().V1().Infrastructures().Informer(),
+		configinformers.Config().V1().Networks().Informer(),
+		configinformers.Config().V1().Proxies().Informer(),
+	}
+	for _, ns := range interestingNamespaces {
+		informers = append(informers, kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer())
+	}
+
 	c := &ConfigObserver{
-		ConfigObserver: configobserver.NewConfigObserver(
+		Controller: configobserver.NewConfigObserver(
 			operatorClient,
 			eventRecorder,
 			configobservation.Listers{
@@ -64,6 +78,7 @@ func NewConfigObserver(
 					configinformers.Config().V1().Proxies().Informer().HasSynced,
 				),
 			},
+			informers,
 			cloudprovider.NewCloudProviderObserver(
 				"openshift-kube-controller-manager",
 				[]string{"extendedArguments", "cloud-provider"},
@@ -80,17 +95,6 @@ func NewConfigObserver(
 			clustername.ObserveInfraID,
 		),
 	}
-
-	operatorClient.Informer().AddEventHandler(c.EventHandler())
-
-	for _, ns := range interestingNamespaces {
-		kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer().AddEventHandler(c.EventHandler())
-	}
-
-	configinformers.Config().V1().FeatureGates().Informer().AddEventHandler(c.EventHandler())
-	configinformers.Config().V1().Infrastructures().Informer().AddEventHandler(c.EventHandler())
-	configinformers.Config().V1().Networks().Informer().AddEventHandler(c.EventHandler())
-	configinformers.Config().V1().Proxies().Informer().AddEventHandler(c.EventHandler())
 
 	return c
 }
