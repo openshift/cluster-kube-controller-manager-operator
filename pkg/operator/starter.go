@@ -2,7 +2,6 @@ package operator
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -143,7 +142,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 
-	staleConditions := staleconditions.NewRemoveStaleConditions(
+	staleConditions := staleconditions.NewRemoveStaleConditionsController(
 		[]string{
 			// the static pod operator used to directly set these. this removes those conditions since the static pod operator was updated.
 			// these can be removed in 4.5
@@ -157,7 +156,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
 
-	go staticPodControllers.Run(ctx, 1)
+	go staticPodControllers.Start(ctx)
 	go targetConfigController.Run(1, ctx.Done())
 	go configObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
@@ -167,7 +166,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go staleConditions.Run(ctx, 1)
 
 	<-ctx.Done()
-	return fmt.Errorf("stopped")
+	return nil
 }
 
 // deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.

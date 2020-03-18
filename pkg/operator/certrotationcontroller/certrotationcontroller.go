@@ -13,13 +13,14 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/library-go/pkg/controller/factory"
 )
 
 // defaultRotationDay is the default rotation base for all cert rotation operations.
 const defaultRotationDay = 24 * time.Hour
 
 type CertRotationController struct {
-	certRotators []*certrotation.CertRotationController
+	certRotators []factory.Controller
 }
 
 func NewCertRotationController(
@@ -39,7 +40,7 @@ func NewCertRotationController(
 		klog.Warningf("Certificate rotation base set to %q", rotationDay)
 	}
 
-	certRotator, err := certrotation.NewCertRotationController(
+	certRotator := certrotation.NewCertRotationController(
 		"CSRSigningCert",
 		certrotation.SigningRotation{
 			Namespace: operatorclient.OperatorNamespace,
@@ -74,10 +75,9 @@ func NewCertRotationController(
 			EventRecorder: eventRecorder,
 		},
 		operatorClient,
+		eventRecorder,
 	)
-	if err != nil {
-		return nil, err
-	}
+
 	ret.certRotators = append(ret.certRotators, certRotator)
 
 	return ret, nil
