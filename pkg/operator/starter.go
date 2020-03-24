@@ -70,6 +70,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
+		ctx,
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
 		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
@@ -81,7 +82,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	// don't change any versions until we sync
 	versionRecorder := status.NewVersionGetter()
-	clusterOperator, err := configClient.ConfigV1().ClusterOperators().Get("kube-controller-manager", metav1.GetOptions{})
+	clusterOperator, err := configClient.ConfigV1().ClusterOperators().Get(ctx, "kube-controller-manager", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -137,7 +138,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-	saTokenController, err := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
+	saTokenController, err := certrotationcontroller.NewSATokenSignerController(ctx, operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
 	if err != nil {
 		return err
 	}

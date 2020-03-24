@@ -32,7 +32,8 @@ func TestOperatorNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = kubeClient.CoreV1().Namespaces().Get(operatorclient.OperatorNamespace, metav1.GetOptions{})
+
+	_, err = kubeClient.CoreV1().Namespaces().Get(context.Background(), operatorclient.OperatorNamespace, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,16 +62,20 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
 	name := names.SimpleNameGenerator.GenerateName("pdbtest-")
-	_, err = kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
+	_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-	})
+	},
+		metav1.CreateOptions{},
+	)
 	if err != nil {
 		t.Fatalf("could not create test namespace: %v", err)
 	}
-	defer kubeClient.CoreV1().Namespaces().Delete(name, &metav1.DeleteOptions{})
+	defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 
 	labels := map[string]string{"app": "pdbtest"}
 	err = pdbCreate(policyClient, name, labels)
@@ -81,7 +86,7 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 	testTimeout := time.Second * 120
 
 	err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-		if _, err := policyClient.PodDisruptionBudgets(name).List(metav1.ListOptions{LabelSelector: "app=pbtest"}); err != nil {
+		if _, err := policyClient.PodDisruptionBudgets(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pbtest"}); err != nil {
 			return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
 		}
 		return true, nil
@@ -97,7 +102,7 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 	var pods *corev1.PodList
 	// Poll to confirm pod is running
 	wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-		pods, err = kubeClient.CoreV1().Pods(name).List(metav1.ListOptions{LabelSelector: "app=pdbtest"})
+		pods, err = kubeClient.CoreV1().Pods(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pdbtest"})
 		if err != nil {
 			return false, err
 		}
@@ -108,7 +113,7 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 	})
 
 	// Now check for alert
-	prometheusClient, err := metrics.NewPrometheusClient(kubeClient, routeClient)
+	prometheusClient, err := metrics.NewPrometheusClient(ctx, kubeClient, routeClient)
 	if err != nil {
 		t.Fatalf("error creating route client for prometheus: %v", err)
 	}
@@ -224,12 +229,13 @@ func TestResourceSyncController(t *testing.T) {
 }
 
 func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config string) error {
-	err := kubeClient.CoreV1().ConfigMaps(namespace).Delete(config, &metav1.DeleteOptions{})
+	ctx := context.Background()
+	err := kubeClient.CoreV1().ConfigMaps(namespace).Delete(ctx, config, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 	err = wait.Poll(time.Second*5, time.Second*120, func() (bool, error) {
-		_, err := kubeClient.CoreV1().ConfigMaps(namespace).Get(config, metav1.GetOptions{})
+		_, err := kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, config, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
@@ -253,15 +259,17 @@ func TestKCMRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
 	// Try to delete the kube controller manager's configmap in kube-system
-	err = kubeClient.CoreV1().ConfigMaps("kube-system").Delete("kube-controller-manager", &metav1.DeleteOptions{})
+	err = kubeClient.CoreV1().ConfigMaps("kube-system").Delete(ctx, "kube-controller-manager", metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check to see that the configmap then gets recreated
 	err = wait.Poll(time.Second*5, time.Second*300, func() (bool, error) {
-		_, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get("kube-controller-manager", metav1.GetOptions{})
+		_, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "kube-controller-manager", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
@@ -286,7 +294,7 @@ func pdbCreate(client *policyclientv1beta1.PolicyV1beta1Client, name string, lab
 			Selector:     &metav1.LabelSelector{MatchLabels: labels},
 		},
 	}
-	_, err := client.PodDisruptionBudgets(name).Create(pdb)
+	_, err := client.PodDisruptionBudgets(name).Create(context.Background(), pdb, metav1.CreateOptions{})
 	return err
 }
 
@@ -311,6 +319,6 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 			},
 		},
 	}
-	_, err := client.CoreV1().Pods(name).Create(pod)
+	_, err := client.CoreV1().Pods(name).Create(context.Background(), pod, metav1.CreateOptions{})
 	return err
 }

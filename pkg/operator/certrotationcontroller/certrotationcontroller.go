@@ -84,7 +84,8 @@ func NewCertRotationController(
 }
 
 func (c *CertRotationController) Run(ctx context.Context, workers int) {
+	syncCtx := context.WithValue(ctx, certrotation.RunOnceContextKey, false)
 	for _, certRotator := range c.certRotators {
-		go certRotator.Run(ctx, workers)
+		go certRotator.Run(syncCtx, workers)
 	}
 }

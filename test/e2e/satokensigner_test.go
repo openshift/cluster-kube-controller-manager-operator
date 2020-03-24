@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,18 +24,20 @@ func TestSATokenSignerControllerSyncCerts(t *testing.T) {
 	configClient, err := configclient.NewForConfig(kubeConfig)
 	require.NoError(t, err)
 
-	// wait for the operator readiness
-	test.WaitForKubeControllerManagerClusterOperator(t, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
+	ctx := context.Background()
 
-	err = kubeClient.Secrets(operatorclient.TargetNamespace).Delete("service-account-private-key", &metav1.DeleteOptions{})
+	// wait for the operator readiness
+	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
+
+	err = kubeClient.Secrets(operatorclient.TargetNamespace).Delete(ctx, "service-account-private-key", metav1.DeleteOptions{})
 	require.NoError(t, err)
 
 	// wait for the operator reporting progressing
-	test.WaitForKubeControllerManagerClusterOperator(t, configClient, configv1.ConditionTrue, configv1.ConditionTrue, configv1.ConditionFalse)
+	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionTrue, configv1.ConditionFalse)
 
 	// and check for secret being synced from next-service-private-key
-	_, err = kubeClient.Secrets(operatorclient.TargetNamespace).Get("service-account-private-key", metav1.GetOptions{})
+	_, err = kubeClient.Secrets(operatorclient.TargetNamespace).Get(ctx, "service-account-private-key", metav1.GetOptions{})
 	require.NoError(t, err)
 
-	test.WaitForKubeControllerManagerClusterOperator(t, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
+	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
 }

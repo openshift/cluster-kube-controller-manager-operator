@@ -134,7 +134,7 @@ func (c *CSRController) sync(ctx context.Context) error {
 		return nil
 	}
 
-	_, changed, err := targetconfigcontroller.ManageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), c.eventRecorder)
+	_, changed, err := targetconfigcontroller.ManageCSRIntermediateCABundle(ctx, c.secretLister, c.kubeClient.CoreV1(), c.eventRecorder)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (c *CSRController) sync(ctx context.Context) error {
 		klog.Info("Refreshed CSRCABundle.")
 	}
 
-	_, requeueDelay, changed, err := targetconfigcontroller.ManageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), c.eventRecorder)
+	_, requeueDelay, changed, err := targetconfigcontroller.ManageCSRSigner(ctx, c.secretLister, c.kubeClient.CoreV1(), c.eventRecorder)
 	if err != nil {
 		return err
 	}

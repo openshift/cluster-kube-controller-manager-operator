@@ -2,6 +2,7 @@ package targetconfigcontroller
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -45,6 +46,7 @@ import (
 const workQueueKey = "key"
 
 type TargetConfigController struct {
+	ctx                             context.Context
 	targetImagePullSpec             string
 	operatorImagePullSpec           string
 	clusterPolicyControllerPullSpec string
@@ -61,6 +63,7 @@ type TargetConfigController struct {
 }
 
 func NewTargetConfigController(
+	ctx context.Context,
 	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorClient v1helpers.StaticPodOperatorClient,
@@ -68,6 +71,7 @@ func NewTargetConfigController(
 	eventRecorder events.Recorder,
 ) *TargetConfigController {
 	c := &TargetConfigController{
+		ctx:                             ctx,
 		targetImagePullSpec:             targetImagePullSpec,
 		operatorImagePullSpec:           operatorImagePullSpec,
 		clusterPolicyControllerPullSpec: clusterPolicyControllerPullSpec,
@@ -129,7 +133,7 @@ func (c TargetConfigController) sync() error {
 		return err
 	}
 
-	requeue, err := createTargetConfigController(c, c.eventRecorder, operatorSpec)
+	requeue, err := createTargetConfigController(c.ctx, c, c.eventRecorder, operatorSpec)
 	if err != nil {
 		return err
 	}
@@ -175,7 +179,7 @@ func isRequiredConfigPresent(config []byte) error {
 }
 
 // createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
-func createTargetConfigController(c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
+func createTargetConfigController(ctx context.Context, c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
 
 	directResourceResults := resourceapply.ApplyDirectly(
@@ -212,7 +216,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
 	}
-	_, _, err = ManageCSRIntermediateCABundle(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	_, _, err = ManageCSRIntermediateCABundle(ctx, c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
 	}
@@ -220,7 +224,7 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
-	_, requeueDelay, _, err := ManageCSRSigner(c.secretLister, c.kubeClient.CoreV1(), recorder)
+	_, requeueDelay, _, err := ManageCSRSigner(ctx, c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "secrets/csr-signer", err))
 	}
@@ -231,16 +235,16 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
-	err = ensureLocalhostRecoverySAToken(c.kubeClient.CoreV1(), recorder)
+	err = ensureLocalhostRecoverySAToken(ctx, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "serviceaccount/localhost-recovery-client", err))
 	}
-	_, _, err = managePod(c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec)
+	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
 
-	err = ensureKubeControllerManagerTrustedCA(c.kubeClient.CoreV1(), recorder)
+	err = ensureKubeControllerManagerTrustedCA(ctx, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/trusted-ca-bundle", err))
 	}
@@ -303,12 +307,12 @@ func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, r
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func ensureLocalhostRecoverySAToken(client corev1client.CoreV1Interface, recorder events.Recorder) error {
+func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
 	requiredSA := resourceread.ReadServiceAccountV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml"))
 	requiredToken := resourceread.ReadSecretV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-token.yaml"))
 
 	saClient := client.ServiceAccounts(operatorclient.TargetNamespace)
-	serviceAccount, err := saClient.Get(requiredSA.Name, metav1.GetOptions{})
+	serviceAccount, err := saClient.Get(ctx, requiredSA.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -316,7 +320,7 @@ func ensureLocalhostRecoverySAToken(client corev1client.CoreV1Interface, recorde
 	// The default token secrets get random names so we have created a custom secret
 	// to be populated with SA token so we have a stable name.
 	secretsClient := client.Secrets(operatorclient.TargetNamespace)
-	token, err := secretsClient.Get(requiredToken.Name, metav1.GetOptions{})
+	token, err := secretsClient.Get(ctx, requiredToken.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -352,7 +356,7 @@ func ensureLocalhostRecoverySAToken(client corev1client.CoreV1Interface, recorde
 	return err
 }
 
-func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
@@ -401,7 +405,7 @@ func managePod(configMapsGetter corev1client.ConfigMapsGetter, secretsGetter cor
 		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 2)
 	}
 
-	if _, err := secretsGetter.Secrets(required.Namespace).Get("serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if _, err := secretsGetter.Secrets(required.Namespace).Get(ctx, "serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
 	} else if err == nil {
 		containerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
@@ -461,7 +465,7 @@ func ManageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func ManageCSRSigner(lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
+func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
 	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
@@ -494,7 +498,7 @@ func ManageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 	now := time.Now()
 	if useAfter.Before(now) {
 		// if we have something and it's not expired (yeah that check is missing here), delay
-		if _, err := client.Secrets(operatorclient.TargetNamespace).Get("csr-signer", metav1.GetOptions{}); err == nil {
+		if _, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, "csr-signer", metav1.GetOptions{}); err == nil {
 			return nil, useAfter.Sub(now) + 10*time.Second, false, nil
 		}
 	}
@@ -510,7 +514,7 @@ func ManageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 	return secret, 0, modified, err
 }
 
-func ManageCSRIntermediateCABundle(lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func ManageCSRIntermediateCABundle(ctx context.Context, lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	// get the certkey pair we will sign with. We're going to add the cert to a ca bundle so we can recognize the chain it signs back to the signer
 	csrSigner, err := lister.Secrets(operatorclient.OperatorNamespace).Get("csr-signer")
 	if apierrors.IsNotFound(err) {
@@ -532,7 +536,7 @@ func ManageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 		return nil, false, err
 	}
 
-	csrSignerCA, err := client.ConfigMaps(operatorclient.OperatorNamespace).Get("csr-signer-ca", metav1.GetOptions{})
+	csrSignerCA, err := client.ConfigMaps(operatorclient.OperatorNamespace).Get(ctx, "csr-signer-ca", metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		csrSignerCA = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
@@ -578,14 +582,14 @@ func ManageCSRIntermediateCABundle(lister corev1listers.SecretLister, client cor
 	return resourceapply.ApplyConfigMap(client, recorder, csrSignerCA)
 }
 
-func ensureKubeControllerManagerTrustedCA(client corev1client.CoreV1Interface, recorder events.Recorder) error {
+func ensureKubeControllerManagerTrustedCA(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
 	required := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/trusted-ca-cm.yaml"))
 	cmCLient := client.ConfigMaps(operatorclient.TargetNamespace)
 
-	cm, err := cmCLient.Get("trusted-ca-bundle", metav1.GetOptions{})
+	cm, err := cmCLient.Get(ctx, "trusted-ca-bundle", metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			_, err = cmCLient.Create(required)
+			_, err = cmCLient.Create(ctx, required, metav1.CreateOptions{})
 		}
 		return err
 	}
@@ -593,7 +597,7 @@ func ensureKubeControllerManagerTrustedCA(client corev1client.CoreV1Interface, r
 	// update if modified by the user
 	if val, ok := cm.Labels["config.openshift.io/inject-trusted-cabundle"]; !ok || val != "true" {
 		cm.Labels["config.openshift.io/inject-trusted-cabundle"] = "true"
-		_, err = cmCLient.Update(cm)
+		_, err = cmCLient.Update(ctx, cm, metav1.UpdateOptions{})
 		return err
 	}
 
