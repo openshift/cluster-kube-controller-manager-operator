@@ -476,42 +476,72 @@ func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, cli
 	}
 
 	// the CSR signing controller only accepts a single cert.  make sure we only ever have one (not multiple to construct a larger chain)
-	signingCert := csrSigner.Data["tls.crt"]
-	if len(signingCert) == 0 {
-		return nil, 0, false, nil
-	}
-	signingKey := csrSigner.Data["tls.key"]
-	if len(signingCert) == 0 {
-		return nil, 0, false, nil
-	}
-	signingCertKeyPair, err := crypto.GetCAFromBytes(signingCert, signingKey)
-	if err != nil {
-		return nil, 0, false, err
-	}
-	certBytes, err := crypto.EncodeCertificates(signingCertKeyPair.Config.Certs[0])
-	if err != nil {
+	certBytes, signingKey, useAfter, _, err := extractSigner(csrSigner)
+	if certBytes == nil || signingKey == nil || err != nil {
 		return nil, 0, false, err
 	}
 
 	// make sure we wait five minutes to propagate the change to other components, like kas for trust
-	useAfter := signingCertKeyPair.Config.Certs[0].NotBefore.Add(5 * time.Minute)
+	useAfter = useAfter.Add(5 * time.Minute)
 	now := time.Now()
-	if useAfter.Before(now) {
-		// if we have something and it's not expired (yeah that check is missing here), delay
-		if _, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, "csr-signer", metav1.GetOptions{}); err == nil {
-			return nil, useAfter.Sub(now) + 10*time.Second, false, nil
-		}
+
+	oldSigner, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, "csr-signer", metav1.GetOptions{})
+	_, _, _, oldUseBefore, _ := extractSigner(oldSigner)
+	switch {
+	case apierrors.IsNotFound(err):
+		// apply the secret
+
+	case oldUseBefore.Before(now):
+		// apply the secret
+
+	case now.After(useAfter):
+		// apply the secret
+
+	default:
+		// wait a little while longer until after the useAfter
+		return nil, useAfter.Sub(now) + 10*time.Second, false, nil
 	}
 
 	csrSigner = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "csr-signer"},
 		Data: map[string][]byte{
 			"tls.crt": certBytes,
-			"tls.key": []byte(signingKey),
+			"tls.key": signingKey,
 		},
 	}
 	secret, modified, err := resourceapply.ApplySecret(client, recorder, csrSigner)
 	return secret, 0, modified, err
+}
+
+func extractSigner(csrSigner *corev1.Secret) ([]byte, []byte, time.Time, time.Time, error) {
+	useAfter := time.Unix(0, 0)
+	useBefore := time.Unix(0, 0)
+
+	if csrSigner == nil {
+		return nil, nil, useAfter, useBefore, nil
+	}
+
+	signingCert := csrSigner.Data["tls.crt"]
+	if len(signingCert) == 0 {
+		return nil, nil, useAfter, useBefore, nil
+	}
+	signingKey := csrSigner.Data["tls.key"]
+	if len(signingKey) == 0 {
+		return nil, nil, useAfter, useBefore, nil
+	}
+	signingCertKeyPair, err := crypto.GetCAFromBytes(signingCert, signingKey)
+	if err != nil {
+		return nil, nil, useAfter, useBefore, err
+	}
+	certBytes, err := crypto.EncodeCertificates(signingCertKeyPair.Config.Certs[0])
+	if err != nil {
+		return nil, nil, useAfter, useBefore, err
+	}
+
+	useAfter = signingCertKeyPair.Config.Certs[0].NotBefore
+	useBefore = signingCertKeyPair.Config.Certs[0].NotAfter
+
+	return certBytes, signingKey, useAfter, useBefore, nil
 }
 
 func ManageCSRIntermediateCABundle(ctx context.Context, lister corev1listers.SecretLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
