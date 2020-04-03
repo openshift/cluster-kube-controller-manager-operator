@@ -30,6 +30,45 @@ func NewCertRotationController(
 	eventRecorder events.Recorder,
 	day time.Duration,
 ) (*CertRotationController, error) {
+	return newCertRotationController(
+		secretsGetter,
+		configMapsGetter,
+		operatorClient,
+		kubeInformersForNamespaces,
+		eventRecorder,
+		day,
+		false,
+	)
+}
+
+func NewCertRotationControllerOnlyWhenExpired(
+	secretsGetter corev1client.SecretsGetter,
+	configMapsGetter corev1client.ConfigMapsGetter,
+	operatorClient v1helpers.StaticPodOperatorClient,
+	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
+	eventRecorder events.Recorder,
+	day time.Duration,
+) (*CertRotationController, error) {
+	return newCertRotationController(
+		secretsGetter,
+		configMapsGetter,
+		operatorClient,
+		kubeInformersForNamespaces,
+		eventRecorder,
+		day,
+		true,
+	)
+}
+
+func newCertRotationController(
+	secretsGetter corev1client.SecretsGetter,
+	configMapsGetter corev1client.ConfigMapsGetter,
+	operatorClient v1helpers.StaticPodOperatorClient,
+	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
+	eventRecorder events.Recorder,
+	day time.Duration,
+	refreshOnlyWhenExpired bool,
+) (*CertRotationController, error) {
 	ret := &CertRotationController{}
 
 	rotationDay := defaultRotationDay
@@ -44,13 +83,14 @@ func NewCertRotationController(
 		certrotation.SigningRotation{
 			Namespace: operatorclient.OperatorNamespace,
 			// this is not a typo, this is the signer of the signer
-			Name:          "csr-signer-signer",
-			Validity:      60 * rotationDay,
-			Refresh:       30 * rotationDay,
-			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
-			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:        secretsGetter,
-			EventRecorder: eventRecorder,
+			Name:                   "csr-signer-signer",
+			Validity:               60 * rotationDay,
+			Refresh:                30 * rotationDay,
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:                 secretsGetter,
+			EventRecorder:          eventRecorder,
 		},
 		certrotation.CABundleRotation{
 			Namespace:     operatorclient.OperatorNamespace,
@@ -61,10 +101,11 @@ func NewCertRotationController(
 			EventRecorder: eventRecorder,
 		},
 		certrotation.TargetRotation{
-			Namespace: operatorclient.OperatorNamespace,
-			Name:      "csr-signer",
-			Validity:  30 * rotationDay,
-			Refresh:   15 * rotationDay,
+			Namespace:              operatorclient.OperatorNamespace,
+			Name:                   "csr-signer",
+			Validity:               30 * rotationDay,
+			Refresh:                15 * rotationDay,
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},

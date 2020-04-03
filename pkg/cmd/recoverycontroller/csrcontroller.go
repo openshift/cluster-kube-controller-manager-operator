@@ -125,6 +125,9 @@ func (c *CSRController) processNextItem(ctx context.Context) bool {
 }
 
 func (c *CSRController) sync(ctx context.Context) error {
+	klog.V(4).Infof("Starting CSRController sync")
+	defer klog.V(4).Infof("CSRController sync done")
+
 	// Always start 10 seconds later after a change occurred. Makes us less likely to steal work and logs from the operator.
 	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
