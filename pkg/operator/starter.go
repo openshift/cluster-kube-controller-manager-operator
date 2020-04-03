@@ -14,12 +14,15 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
+	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -69,6 +72,32 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		resourceSyncController,
 		cc.EventRecorder,
 	)
+
+	staticResourceController := staticresourcecontroller.NewStaticResourceController(
+		"KubeControllerManagerStaticResources",
+		v411_00_assets.Asset,
+		[]string{
+			"v4.1.0/kube-controller-manager/ns.yaml",
+			"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
+			"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml",
+			"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml",
+			"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml",
+			"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
+			"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
+			"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
+			"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml",
+			"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml",
+			"v4.1.0/kube-controller-manager/svc.yaml",
+			"v4.1.0/kube-controller-manager/sa.yaml",
+			"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
+			"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml",
+			"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml",
+		},
+		(&resourceapply.ClientHolder{}).WithKubernetes(kubeClient),
+		operatorClient,
+		cc.EventRecorder,
+	).AddKubeInformers(kubeInformersForNamespaces)
+
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		ctx,
 		os.Getenv("IMAGE"),
@@ -158,6 +187,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	dynamicInformers.Start(ctx.Done())
 
 	go staticPodControllers.Start(ctx)
+	go staticResourceController.Run(ctx, 1)
 	go targetConfigController.Run(1, ctx.Done())
 	go configObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)

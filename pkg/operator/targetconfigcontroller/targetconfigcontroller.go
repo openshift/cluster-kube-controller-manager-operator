@@ -89,12 +89,9 @@ func NewTargetConfigController(
 	operatorClient.Informer().AddEventHandler(c.eventHandler())
 
 	// these are for watching our outputs in case someone changes them
-	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Rbac().V1().Roles().Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Rbac().V1().RoleBindings().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
 	// we only watch our output namespace
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
@@ -181,32 +178,6 @@ func isRequiredConfigPresent(config []byte) error {
 // createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
 func createTargetConfigController(ctx context.Context, c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
-
-	directResourceResults := resourceapply.ApplyDirectly(
-		resourceapply.NewKubeClientHolder(c.kubeClient),
-		c.eventRecorder,
-		v411_00_assets.Asset,
-		"v4.1.0/kube-controller-manager/ns.yaml",
-		"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
-		"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml",
-		"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml",
-		"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml",
-		"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
-		"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
-		"v4.1.0/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
-		"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml",
-		"v4.1.0/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml",
-		"v4.1.0/kube-controller-manager/svc.yaml",
-		"v4.1.0/kube-controller-manager/sa.yaml",
-		"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
-		"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml",
-		"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml",
-	)
-	for _, currResult := range directResourceResults {
-		if currResult.Error != nil {
-			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
-		}
-	}
 
 	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
 	if err != nil {
