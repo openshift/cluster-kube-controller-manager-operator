@@ -9,3 +9,4 @@ approvers:
   - mfojtik
   - tnozicka
   - soltysh
+component: "kube-controller-manager"
