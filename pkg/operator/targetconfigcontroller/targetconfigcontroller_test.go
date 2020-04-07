@@ -115,6 +115,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(-10*time.Minute), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: false,
@@ -125,6 +126,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(-10*time.Minute), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "missing-target"},
@@ -138,6 +140,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now(), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  5 * time.Minute,
 			expectedChange: false,
@@ -148,6 +151,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(-3*time.Minute), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  2 * time.Minute,
 			expectedChange: false,
@@ -158,10 +162,12 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(1*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
 				Data:       makeCerts(t, time.Now().Add(-10*time.Minute), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  65 * time.Minute,
 			expectedChange: false,
@@ -172,10 +178,12 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(1*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
 				Data:       makeCerts(t, time.Now().Add(-2*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
@@ -186,9 +194,11 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now(), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "missing-target"},
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
@@ -199,6 +209,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(-2*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: false,
@@ -209,9 +220,11 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now().Add(-2*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
@@ -222,9 +235,11 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now(), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
@@ -235,10 +250,12 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now(), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
 				Data:       makeCerts(t, time.Now().Add(-2*time.Hour), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
@@ -249,6 +266,7 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       map[string][]byte{"tls.crt": {6, 6, 6}, "tls.key": {6, 6, 6}},
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: false,
@@ -259,10 +277,12 @@ func TestManageCSRSigner(t *testing.T) {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.OperatorNamespace},
 				Data:       makeCerts(t, time.Now(), 1*time.Hour),
+				Type:       corev1.SecretTypeOpaque,
 			},
 			target: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "csr-signer", Namespace: operatorclient.TargetNamespace},
 				Data:       map[string][]byte{"tls.crt": {6, 6, 6}, "tls.key": {6, 6, 6}},
+				Type:       corev1.SecretTypeOpaque,
 			},
 			expectedDelay:  0,
 			expectedChange: true,
