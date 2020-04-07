@@ -14,9 +14,11 @@ import (
 	"k8s.io/klog"
 
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	operatorresourcesync "github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 )
 
@@ -36,11 +38,14 @@ type CSRController struct {
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
+
+	resourceSyncController *resourcesynccontroller.ResourceSyncController
 }
 
 func NewCSRController(
 	kubeClient kubernetes.Interface,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
+	operatorClient v1helpers.StaticPodOperatorClient,
 	eventRecorder events.Recorder,
 ) (*CSRController, error) {
 	c := &CSRController{
@@ -72,6 +77,18 @@ func NewCSRController(
 		c.cachesToSync = append(c.cachesToSync, informers.Core().V1().Secrets().Informer().HasSynced)
 	}
 
+	c.resourceSyncController = resourcesynccontroller.NewResourceSyncController(
+		operatorClient,
+		kubeInformersForNamespaces,
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		c.eventRecorder,
+	)
+	err := operatorresourcesync.AddSyncCSRControllerCA(c.resourceSyncController)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -94,6 +111,10 @@ func (c *CSRController) Run(ctx context.Context) {
 
 	go func() {
 		wait.UntilWithContext(ctx, c.runWorker, time.Second)
+	}()
+
+	go func() {
+		c.resourceSyncController.Run(ctx, 1)
 	}()
 
 	<-ctx.Done()

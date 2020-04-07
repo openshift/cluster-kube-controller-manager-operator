@@ -10,6 +10,13 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
+func AddSyncCSRControllerCA(resourceSyncController *resourcesynccontroller.ResourceSyncController) error {
+	return resourceSyncController.SyncConfigMap(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "csr-controller-ca"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
+	)
+}
+
 func NewResourceSyncController(
 	operatorConfigClient v1helpers.OperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
@@ -24,10 +31,7 @@ func NewResourceSyncController(
 		v1helpers.CachedConfigMapGetter(configMapsGetter, kubeInformersForNamespaces),
 		eventRecorder,
 	)
-	if err := resourceSyncController.SyncConfigMap(
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "csr-controller-ca"},
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
-	); err != nil {
+	if err := AddSyncCSRControllerCA(resourceSyncController); err != nil {
 		return nil, err
 	}
 	if err := resourceSyncController.SyncSecret(

@@ -10,12 +10,12 @@ import (
 	"k8s.io/client-go/pkg/version"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
@@ -110,6 +110,7 @@ func (o *Options) Run(ctx context.Context) error {
 	csrController, err := NewCSRController(
 		kubeClient,
 		kubeInformersForNamespaces,
+		operatorClient,
 		o.controllerContext.EventRecorder,
 	)
 	if err != nil {
