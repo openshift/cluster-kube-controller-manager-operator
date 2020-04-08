@@ -503,6 +503,7 @@ func ManageCSRSigner(lister corev1listers.SecretLister, client corev1client.Secr
 			"tls.crt": certBytes,
 			"tls.key": []byte(signingKey),
 		},
+		Type: corev1.SecretTypeOpaque,
 	}
 	secret, modified, err := resourceapply.ApplySecret(client, recorder, csrSigner)
 	return secret, 0, modified, err
