@@ -9,7 +9,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/version"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/certrotation"
+	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
@@ -78,6 +82,31 @@ func (o *Options) Run(ctx context.Context) error {
 		operatorclient.TargetNamespace,
 	)
 
+	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(o.controllerContext.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
+	if err != nil {
+		return err
+	}
+
+	certRotationScale, err := certrotation.GetCertRotationScale(kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
+	if err != nil {
+		return err
+	}
+
+	certRotationController, err := certrotationcontroller.NewCertRotationControllerOnlyWhenExpired(
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		operatorClient,
+		kubeInformersForNamespaces,
+		o.controllerContext.EventRecorder,
+		// this is weird, but when we turn down rotation in CI, we go fast enough that kubelets and kas are racing to observe the new signer before the signer is used.
+		// we need to establish some kind of delay or back pressure to prevent the rollout.  This ensures we don't trigger kas restart
+		// during e2e tests for now.
+		certRotationScale*8,
+	)
+	if err != nil {
+		return err
+	}
+
 	csrController, err := NewCSRController(
 		kubeClient,
 		kubeInformersForNamespaces,
@@ -88,9 +117,13 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	kubeInformersForNamespaces.Start(ctx.Done())
+	dynamicInformers.Start(ctx.Done())
 
 	// FIXME: These are missing a wait group to track goroutines and handle graceful termination
 	// (@deads2k wants time to think it through)
+	go func() {
+		certRotationController.Run(ctx, 1)
+	}()
 
 	go func() {
 		csrController.Run(ctx)
