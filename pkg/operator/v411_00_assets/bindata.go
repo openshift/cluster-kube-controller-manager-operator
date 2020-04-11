@@ -568,6 +568,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
