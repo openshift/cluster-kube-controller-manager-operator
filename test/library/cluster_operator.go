@@ -2,7 +2,6 @@ package library
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -26,11 +25,11 @@ func WaitForKubeControllerManagerClusterOperator(t *testing.T, ctx context.Conte
 	err := wait.Poll(WaitPollInterval, WaitPollTimeout, func() (bool, error) {
 		clusterOperator, err := client.ClusterOperators().Get(ctx, "kube-controller-manager", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
-			fmt.Println("ClusterOperator/kube-controller-manager does not yet exist.")
+			t.Log("ClusterOperator/kube-controller-manager does not yet exist.")
 			return false, nil
 		}
 		if err != nil {
-			fmt.Println("Unable to retrieve ClusterOperator/kube-controller-manager:", err)
+			t.Log("Unable to retrieve ClusterOperator/kube-controller-manager:", err)
 			return false, err
 		}
 		conditions := clusterOperator.Status.Conditions
@@ -38,7 +37,7 @@ func WaitForKubeControllerManagerClusterOperator(t *testing.T, ctx context.Conte
 		progressingOK := clusteroperatorhelpers.IsStatusConditionPresentAndEqual(conditions, configv1.OperatorProgressing, progressing)
 		degradedOK := clusteroperatorhelpers.IsStatusConditionPresentAndEqual(conditions, configv1.OperatorDegraded, degraded)
 		done := availableOK && progressingOK && degradedOK
-		fmt.Printf("ClusterOperator/kube-controller-manager: AvailableOK: %v  ProgressingOK: %v  DegradedOK: %v\n", availableOK, progressingOK, degradedOK)
+		t.Logf("ClusterOperator/kube-controller-manager: AvailableOK: %v  ProgressingOK: %v  DegradedOK: %v", availableOK, progressingOK, degradedOK)
 		return done, nil
 	})
 	if err != nil {
