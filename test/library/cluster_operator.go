@@ -17,7 +17,7 @@ import (
 
 var (
 	WaitPollInterval = time.Second
-	WaitPollTimeout  = 10 * time.Minute
+	WaitPollTimeout  = 15 * time.Minute
 )
 
 // WaitForKubeControllerManagerClusterOperator waits for ClusterOperator/kube-controller-manager to report
