@@ -689,27 +689,15 @@ metadata:
     revision: "REVISION"
 spec:
   initContainers:
-  - name: wait-for-host-port
+  - name: wait-for-host-ports
     terminationMessagePolicy: FallbackToLogsOnError
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
-    command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
+    command: ['/usr/bin/timeout', '65', '/bin/bash', '-ec'] # a bit more than 60s for TIME_WAIT, 5s extra cri-o's graceful termination period
     args:
     - |
-      echo -n "Waiting for port :10257 to be released."
-      while [ -n "$(lsof -ni :10257)" ]; do
-        echo -n "."
-        sleep 1
-      done
-  - name: wait-for-cpc-host-port
-    terminationMessagePolicy: FallbackToLogsOnError
-    image: ${IMAGE}
-    imagePullPolicy: IfNotPresent
-    command: ['/usr/bin/timeout', '30', "/bin/bash", "-c"]
-    args:
-    - |
-      echo -n "Waiting for port :10357 to be released."
-      while [ -n "$(lsof -ni :10357)" ]; do
+      echo -n "Waiting for port :10257 and :10357 to be released."
+      while [ -n "$(lsof -ni :10257)$(lsof -ni :10357)" ]; do
         echo -n "."
         sleep 1
       done
