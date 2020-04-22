@@ -88,6 +88,10 @@ func NewCSRController(
 	if err != nil {
 		return nil, err
 	}
+	err = operatorresourcesync.AddSyncClientCertKeySecret(c.resourceSyncController)
+	if err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }

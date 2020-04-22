@@ -17,6 +17,13 @@ func AddSyncCSRControllerCA(resourceSyncController *resourcesynccontroller.Resou
 	)
 }
 
+func AddSyncClientCertKeySecret(resourceSyncController *resourcesynccontroller.ResourceSyncController) error {
+	return resourceSyncController.SyncSecret(
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "kube-controller-manager-client-cert-key"},
+		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-controller-manager-client-cert-key"},
+	)
+}
+
 func NewResourceSyncController(
 	operatorConfigClient v1helpers.OperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
@@ -34,10 +41,7 @@ func NewResourceSyncController(
 	if err := AddSyncCSRControllerCA(resourceSyncController); err != nil {
 		return nil, err
 	}
-	if err := resourceSyncController.SyncSecret(
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "kube-controller-manager-client-cert-key"},
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-controller-manager-client-cert-key"},
-	); err != nil {
+	if err := AddSyncClientCertKeySecret(resourceSyncController); err != nil {
 		return nil, err
 	}
 	if err := resourceSyncController.SyncConfigMap(
