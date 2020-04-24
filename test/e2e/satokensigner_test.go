@@ -27,17 +27,20 @@ func TestSATokenSignerControllerSyncCerts(t *testing.T) {
 	ctx := context.Background()
 
 	// wait for the operator readiness
+	t.Logf("Waiting for true, false, false")
 	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
 
 	err = kubeClient.Secrets(operatorclient.TargetNamespace).Delete(ctx, "service-account-private-key", metav1.DeleteOptions{})
 	require.NoError(t, err)
 
 	// wait for the operator reporting progressing
+	t.Logf("Waiting for true, true, false")
 	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionTrue, configv1.ConditionFalse)
 
 	// and check for secret being synced from next-service-private-key
 	_, err = kubeClient.Secrets(operatorclient.TargetNamespace).Get(ctx, "service-account-private-key", metav1.GetOptions{})
 	require.NoError(t, err)
 
+	t.Logf("Waiting for true, false, false")
 	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
 }
