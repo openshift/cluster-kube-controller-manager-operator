@@ -116,7 +116,7 @@ func Resources() resourcegraph.Resources {
 		Note("Static").
 		From(installer).
 		Add(ret)
-	routerWildcardCA := resourcegraph.NewConfigMap(operatorclient.GlobalMachineSpecifiedConfigNamespace, "router-ca").
+	routerWildcardCA := resourcegraph.NewConfigMap(operatorclient.GlobalMachineSpecifiedConfigNamespace, "default-ingress-cert").
 		Note("Static").
 		From(ingressOperator).
 		Add(ret)
