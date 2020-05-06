@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/keyutil"
 	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -188,11 +190,20 @@ func (c *SATokenSignerController) syncWorker() error {
 		return err
 	}
 
+	needNewSATokenSigningKey := false
 	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get(c.ctx, "next-service-account-private-key", metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if errors.IsNotFound(err) {
+		needNewSATokenSigningKey = true
+	} else if err != nil {
 		return err
+	} else {
+		err := checkKeyPairValidity(saTokenSigner.Data["service-account.pub"], saTokenSigner.Data["service-account.key"])
+		if err != nil {
+			klog.Errorf("key pair is invalid: %v", err)
+			needNewSATokenSigningKey = true
+		}
 	}
-	needNewSATokenSigningKey := errors.IsNotFound(err) || len(saTokenSigner.Data["service-account.key"]) == 0 || len(saTokenSigner.Data["service-account.pub"]) == 0
+
 	if needNewSATokenSigningKey {
 		rsaKey, err := rsa.GenerateKey(rand.Reader, keySize)
 		if err != nil {
@@ -271,6 +282,31 @@ func (c *SATokenSignerController) syncWorker() error {
 		return err
 	}
 
+	return nil
+}
+
+// checkKeyPairValidity checks if public key and private key matches.
+func checkKeyPairValidity(pubKeyData, privKeyData []byte) error {
+	privKey, err := keyutil.ParsePrivateKeyPEM(privKeyData)
+	if err != nil {
+		return err
+	}
+	rsaPrivateKey, ok := privKey.(*rsa.PrivateKey)
+	if !ok {
+		return fmt.Errorf("private key is not of rsa type")
+	}
+	pubKeys, err := keyutil.ParsePublicKeysPEM(pubKeyData)
+	if err != nil {
+		return err
+	}
+	wantRSAPublicKey, ok := pubKeys[0].(*rsa.PublicKey)
+	if !ok {
+		return fmt.Errorf("public key is not of rsa type")
+	}
+	// private key embeds public key and embedded key must match provided public key
+	if !reflect.DeepEqual(rsaPrivateKey.PublicKey, *wantRSAPublicKey) {
+		return fmt.Errorf("key pair do not match")
+	}
 	return nil
 }
 
