@@ -121,7 +121,7 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 	// Note: prometheus/client_golang Alerts method only works with the deprecated prometheus-k8s route.
 	// Our helper uses the thanos-querier route.  Because of this, have to pass the entire alert as a query.
 	// The thanos behavior is to error on partial response.
-	query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",service=\"kube-state-metrics\",severity=\"warning\"}==1", name, name)
+	query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",severity=\"warning\"}==1", name, name)
 	err = wait.PollImmediate(time.Second*3, testTimeout, func() (bool, error) {
 		response, _, err = prometheusClient.Query(context.Background(), query, time.Now())
 		if err != nil {
