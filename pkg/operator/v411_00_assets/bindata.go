@@ -4,6 +4,8 @@
 // bindata/v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/cm.yaml
 // bindata/v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml
+// bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml
+// bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml
@@ -204,6 +206,72 @@ func v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml() (*asset
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerGceCloudProviderBindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:kube-controller-manager:gce-cloud-provider
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:kube-controller-manager:gce-cloud-provider
+subjects:
+- kind: ServiceAccount
+  name: cloud-provider
+  namespace: kube-system
+`)
+
+func v410KubeControllerManagerGceCloudProviderBindingYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerGceCloudProviderBindingYaml, nil
+}
+
+func v410KubeControllerManagerGceCloudProviderBindingYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerGceCloudProviderBindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerGceCloudProviderRoleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:kube-controller-manager:gce-cloud-provider
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - patch
+  - update
+`)
+
+func v410KubeControllerManagerGceCloudProviderRoleYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerGceCloudProviderRoleYaml, nil
+}
+
+func v410KubeControllerManagerGceCloudProviderRoleYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerGceCloudProviderRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1001,6 +1069,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml":                                    v410KubeControllerManagerClusterPolicyControllerCmYaml,
 	"v4.1.0/kube-controller-manager/cm.yaml":                                                              v410KubeControllerManagerCmYaml,
 	"v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml":                        v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml,
+	"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml":                                      v410KubeControllerManagerGceCloudProviderBindingYaml,
+	"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml":                                         v410KubeControllerManagerGceCloudProviderRoleYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":                                          v410KubeControllerManagerKubeconfigCertSyncerYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml":                                                   v410KubeControllerManagerKubeconfigCmYaml,
 	"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml":                  v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml,
@@ -1069,7 +1139,11 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"kube-controller-manager": {nil, map[string]*bintree{
 			"cluster-policy-controller-cm.yaml": {v410KubeControllerManagerClusterPolicyControllerCmYaml, map[string]*bintree{}},
 			"cm.yaml":                           {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
-			"default-cluster-policy-controller-config.yaml":                        {v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml, map[string]*bintree{}},
+			"default-cluster-policy-controller-config.yaml": {v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml, map[string]*bintree{}},
+			"gce": {nil, map[string]*bintree{
+				"cloud-provider-binding.yaml": {v410KubeControllerManagerGceCloudProviderBindingYaml, map[string]*bintree{}},
+				"cloud-provider-role.yaml":    {v410KubeControllerManagerGceCloudProviderRoleYaml, map[string]*bintree{}},
+			}},
 			"kubeconfig-cert-syncer.yaml":                                          {v410KubeControllerManagerKubeconfigCertSyncerYaml, map[string]*bintree{}},
 			"kubeconfig-cm.yaml":                                                   {v410KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
 			"leader-election-cluster-policy-controller-role.yaml":                  {v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml, map[string]*bintree{}},
