@@ -7,6 +7,7 @@ include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	targets/openshift/bindata.mk \
 	targets/openshift/images.mk \
 	targets/openshift/deps.mk \
+	targets/openshift/operator/telepresence.mk \
 )
 
 # Exclude e2e tests from unit testing
@@ -36,3 +37,8 @@ $(call add-bindata,v4.1.0,./bindata/v4.1.0/...,bindata,v411_00_assets,pkg/operat
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: test-unit
 .PHONY: test-e2e
+
+# Configure the 'telepresence' target
+# See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
+export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
+export TP_CMD_PATH ?=./cmd/cluster-kube-controller-manager-operator
