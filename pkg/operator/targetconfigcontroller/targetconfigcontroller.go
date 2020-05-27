@@ -210,7 +210,26 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "serviceaccount/localhost-recovery-client", err))
 	}
-	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec)
+
+	// Allow the addition of the service ca to token secrets to be enabled by setting an
+	// UnsupportedConfigOverride field named
+	// enableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade
+	// to true.
+	//
+	// This option is provided for backwards-compatibility in 4.5, and should be removed in 4.6.
+	addServingServiceCAToTokenSecrets := false
+	if len(operatorSpec.UnsupportedConfigOverrides.Raw) > 0 {
+		cmConfigOverride := struct {
+			EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade bool
+		}{}
+		if err := json.Unmarshal(operatorSpec.UnsupportedConfigOverrides.Raw, &cmConfigOverride); err != nil {
+			errors = append(errors, fmt.Errorf("failed to load EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade from UnsupportedConfigOverride: %v", err))
+		} else {
+			addServingServiceCAToTokenSecrets = cmConfigOverride.EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade
+		}
+	}
+
+	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, addServingServiceCAToTokenSecrets)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -218,6 +237,29 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	err = ensureKubeControllerManagerTrustedCA(ctx, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/trusted-ca-bundle", err))
+	}
+
+	// The operator is not upgradeable if serving service CA addition to token secrets is enabled
+	// with the UnsupportedConfigOverride field
+	// EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade.
+	//
+	// This should be removed in 4.6.
+	var upgradeableCondition operatorv1.OperatorCondition
+	if addServingServiceCAToTokenSecrets {
+		upgradeableCondition = operatorv1.OperatorCondition{
+			Type:    operatorv1.OperatorStatusTypeUpgradeable,
+			Status:  operatorv1.ConditionFalse,
+			Reason:  "AddServingServiceCAToTokenSecretsEnabled",
+			Message: "Disable the addition of the serving service ca to token secrets by removing EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade from the operator's UnsupportedConfigOverrdies",
+		}
+	} else {
+		upgradeableCondition = operatorv1.OperatorCondition{
+			Type:   operatorv1.OperatorStatusTypeUpgradeable,
+			Status: operatorv1.ConditionTrue,
+		}
+	}
+	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(upgradeableCondition)); err != nil {
+		return true, err
 	}
 
 	if len(errors) > 0 {
@@ -327,7 +369,7 @@ func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.Cor
 	return err
 }
 
-func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string) (*corev1.ConfigMap, bool, error) {
+func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
@@ -396,6 +438,20 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	proxyEnvVars := proxyMapToEnvVars(proxyConfig)
 	for i, container := range required.Spec.Containers {
 		required.Spec.Containers[i].Env = append(container.Env, proxyEnvVars...)
+	}
+
+	if addServingServiceCAToTokenSecrets {
+		// Ensure the addition of serving service ca to token secrets by setting the environment
+		// variable that will enable the behavior in the controller manager.
+		for _, container := range required.Spec.Containers {
+			if container.Name == "kube-controller-manager" {
+				container.Env = append(container.Env, corev1.EnvVar{
+					Name:  "ADD_SERVICE_SERVING_CA_TO_TOKEN_SECRETS",
+					Value: "true",
+				})
+				break
+			}
+		}
 	}
 
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod-cm.yaml"))
