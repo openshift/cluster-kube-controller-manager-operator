@@ -774,7 +774,7 @@ spec:
     args:
     - |
       echo -n "Waiting for port :10257 and :10357 to be released."
-      while [ -n "$(lsof -ni :10257)$(lsof -ni :10357)" ]; do
+      while [ -n "$(ss -Htan '( sport = 10257 or sport = 10357 )')" ]; do
         echo -n "."
         sleep 1
       done
