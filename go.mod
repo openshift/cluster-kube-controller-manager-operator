@@ -9,7 +9,7 @@ require (
 	github.com/openshift/api v0.0.0-20200521101457-60c476765272
 	github.com/openshift/build-machinery-go v0.0.0-20200512074546-3744767c4131
 	github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
-	github.com/openshift/library-go v0.0.0-20200527213645-a9b77f5402e3
+	github.com/openshift/library-go v0.0.0-20200605143902-624654711602
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0
 	github.com/spf13/cobra v0.0.5

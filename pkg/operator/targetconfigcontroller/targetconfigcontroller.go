@@ -34,6 +34,8 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
+	"github.com/openshift/library-go/pkg/controller/factory"
+
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -135,7 +137,7 @@ func (c TargetConfigController) sync() error {
 		return err
 	}
 	if requeue {
-		return fmt.Errorf("synthetic requeue request")
+		return factory.SyntheticRequeueError
 	}
 
 	return nil
