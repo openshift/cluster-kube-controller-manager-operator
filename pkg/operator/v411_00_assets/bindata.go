@@ -790,6 +790,20 @@ spec:
             echo "Copying system trust bundle"
             cp -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           fi
+
+          echo -n "Waiting kube-apiserver to respond."
+          tries=0
+          until curl --output /dev/null --silent -k https://localhost:6443/version; do
+            echo -n "."
+            sleep 1
+            (( tries += 1 ))
+            if [[ "${tries}" -gt 180 ]]; then
+              echo "timed out waiting for kube-apiserver to respond."
+              exit 1
+            fi
+          done
+          echo
+
           exec hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/static-pod-resources/configmaps/config/config.yaml \
             --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig \
             --authentication-kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig \
@@ -825,9 +839,23 @@ spec:
     image: ${CLUSTER_POLICY_CONTROLLER_IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
-    command: ["cluster-policy-controller", "start"]
+    command: ["/bin/bash", "-ec"]
     args:
-      - --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
+      - |
+        echo -n "Waiting kube-apiserver to respond."
+        tries=0
+        until curl --output /dev/null --silent -k https://localhost:6443/version; do
+          echo -n "."
+          sleep 1
+          (( tries += 1 ))
+          if [[ "${tries}" -gt 180 ]]; then
+            echo "timed out waiting for kube-apiserver to respond."
+            exit 1
+          fi
+        done
+        echo
+
+        exec cluster-policy-controller start --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
     resources:
       requests:
         memory: 200Mi
