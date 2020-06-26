@@ -765,27 +765,16 @@ metadata:
     kube-controller-manager: "true"
     revision: "REVISION"
 spec:
-  initContainers:
-  - name: wait-for-host-ports
-    terminationMessagePolicy: FallbackToLogsOnError
-    image: ${IMAGE}
-    imagePullPolicy: IfNotPresent
-    command: ['/usr/bin/timeout', '65', '/bin/bash', '-ec'] # a bit more than 60s for TIME_WAIT, 5s extra cri-o's graceful termination period
-    args:
-    - |
-      echo -n "Waiting for port :10257 and :10357 to be released."
-      while [ -n "$(lsof -ni :10257)$(lsof -ni :10357)" ]; do
-        echo -n "."
-        sleep 1
-      done
   containers:
   - name: kube-controller-manager
     image: ${IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
-    command: ["/bin/bash", "-ec"]
+    command: ["/bin/bash", "-euxo", "pipefail", "-c"]
     args:
         - |
+          timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10257 \))" ]; do sleep 1; done'
+
           if [ -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt ]; then
             echo "Copying system trust bundle"
             cp -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
@@ -807,6 +796,13 @@ spec:
       name: resource-dir
     - mountPath: /etc/kubernetes/static-pod-certs
       name: cert-dir
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 0
+      timeoutSeconds: 3
     livenessProbe:
       httpGet:
         scheme: HTTPS
@@ -825,9 +821,12 @@ spec:
     image: ${CLUSTER_POLICY_CONTROLLER_IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
-    command: ["cluster-policy-controller", "start"]
+    command: ["/bin/bash", "-euxo", "pipefail", "-c"]
     args:
-      - --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
+      - |
+        timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10357 \))" ]; do sleep 1; done'
+
+        exec cluster-policy-controller start --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
     resources:
       requests:
         memory: 200Mi
@@ -839,6 +838,13 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 0
+      timeoutSeconds: 3
     livenessProbe:
       httpGet:
         scheme: HTTPS
@@ -889,12 +895,12 @@ spec:
     image: ${OPERATOR_IMAGE}
     imagePullPolicy: IfNotPresent
     terminationMessagePolicy: FallbackToLogsOnError
-    command: ["cluster-kube-controller-manager-operator", "cert-recovery-controller"]
+    command: ["/bin/bash", "-euxo", "pipefail", "-c"]
     args:
-      - --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig
-      - --namespace=$(POD_NAMESPACE)
-      - --listen=0.0.0.0:9443
-      - -v=2
+      - |
+        timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 9443 \))" ]; do sleep 1; done'
+
+        exec cluster-kube-controller-manager-operator cert-recovery-controller --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig --namespace=${POD_NAMESPACE} --listen=0.0.0.0:9443 -v=2
     resources:
       requests:
         memory: 50Mi
