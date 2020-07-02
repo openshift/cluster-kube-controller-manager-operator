@@ -250,8 +250,6 @@ github.com/openshift/library-go/test/library/metrics
 github.com/pkg/errors
 # github.com/pkg/profile v1.3.0
 github.com/pkg/profile
-# github.com/pmezard/go-difflib v1.0.0
-github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v1.1.0
 github.com/prometheus/client_golang/api
 github.com/prometheus/client_golang/api/prometheus/v1
@@ -274,9 +272,6 @@ github.com/sirupsen/logrus
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.4.0 => github.com/stretchr/testify v1.2.2-0.20180319223459-c679ae2cc0cb
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/require
 # go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 go.etcd.io/etcd/auth/authpb
 go.etcd.io/etcd/clientv3
@@ -830,6 +825,7 @@ k8s.io/client-go/tools/pager
 k8s.io/client-go/tools/record
 k8s.io/client-go/tools/record/util
 k8s.io/client-go/tools/reference
+k8s.io/client-go/tools/watch
 k8s.io/client-go/transport
 k8s.io/client-go/util/cert
 k8s.io/client-go/util/connrotation
