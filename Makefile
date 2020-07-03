@@ -35,6 +35,7 @@ $(call build-image,ocp-cluster-kube-controller-manager-operator,$(IMAGE_REGISTRY
 $(call add-bindata,v4.1.0,./bindata/v4.1.0/...,bindata,v411_00_assets,pkg/operator/v411_00_assets/bindata.go)
 
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
+test-e2e: GO_TEST_FLAGS :=-race -timeout=30m
 test-e2e: test-unit
 .PHONY: test-e2e
 
