@@ -924,9 +924,9 @@ spec:
     command: ["/bin/bash", "-euxo", "pipefail", "-c"]
     args:
       - |
-        timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 9443 \))" ]; do sleep 1; done'
+        timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 9445 \))" ]; do sleep 1; done'
 
-        exec cluster-kube-controller-manager-operator cert-recovery-controller --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig --namespace=${POD_NAMESPACE} --listen=0.0.0.0:9443 -v=2
+        exec cluster-kube-controller-manager-operator cert-recovery-controller --kubeconfig=/etc/kubernetes/static-pod-resources/configmaps/kube-controller-cert-syncer-kubeconfig/kubeconfig --namespace=${POD_NAMESPACE} --listen=0.0.0.0:9445 -v=2
     resources:
       requests:
         memory: 50Mi
