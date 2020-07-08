@@ -195,6 +195,8 @@ func createTargetConfigController(c TargetConfigController, recorder events.Reco
 		"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
 		"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml",
 		"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml",
+		"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml",
+		"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml",
 	)
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
