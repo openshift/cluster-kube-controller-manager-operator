@@ -64,8 +64,8 @@ func NewConfigObserver(
 				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
 				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
 
-				ResourceSync:    resourceSyncer,
-				ConfigMapLister: kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
+				ResourceSync:     resourceSyncer,
+				ConfigMapLister_: kubeInformersForNamespaces.ConfigMapLister(),
 				PreRunCachesSynced: append(configMapPreRunCacheSynced,
 					operatorClient.Informer().HasSynced,
 

@@ -37,7 +37,7 @@ func ObserveServiceCA(genericListers configobserver.Listers, recorder events.Rec
 	observedConfig := map[string]interface{}{}
 
 	// add service-ca configmap mount path to ServiceServingCert if configmap exists
-	ca, err := listers.ConfigMapLister.ConfigMaps(operatorclient.TargetNamespace).Get(serviceCAConfigMapName)
+	ca, err := listers.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace).Get(serviceCAConfigMapName)
 	if errors.IsNotFound(err) {
 		// do nothing because we aren't going to add a path to a missing configmap
 		return observedConfig, errs
