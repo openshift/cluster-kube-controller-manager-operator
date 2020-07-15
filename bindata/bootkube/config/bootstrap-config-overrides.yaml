@@ -21,3 +21,7 @@ extendedArguments:
   service-cluster-ip-range: {{range .ServiceClusterIPRange}}
   - {{.}}{{end}}
   {{end}}
+  pv-recycler-pod-template-filepath-nfs: # bootstrap KCM doesn't need recycler templates
+  - ""
+  pv-recycler-pod-template-filepath-hostpath:
+  - ""
