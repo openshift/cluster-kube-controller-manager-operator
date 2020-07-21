@@ -1,6 +1,7 @@
 package configobservercontroller
 
 import (
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/masterurl"
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
@@ -93,6 +94,7 @@ func NewConfigObserver(
 			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
+			masterurl.ObserveMasterURL,
 		),
 	}
 
