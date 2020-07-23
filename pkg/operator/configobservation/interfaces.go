@@ -16,7 +16,7 @@ type Listers struct {
 	InfrastructureLister_ configlistersv1.InfrastructureLister
 	NetworkLister         configlistersv1.NetworkLister
 	ProxyLister_          configlistersv1.ProxyLister
-	ConfigMapLister       corev1listers.ConfigMapLister
+	ConfigMapLister_      corev1listers.ConfigMapLister
 
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
@@ -40,4 +40,8 @@ func (l Listers) ResourceSyncer() resourcesynccontroller.ResourceSyncer {
 
 func (l Listers) PreRunHasSynced() []cache.InformerSynced {
 	return l.PreRunCachesSynced
+}
+
+func (l Listers) ConfigMapLister() corev1listers.ConfigMapLister {
+	return l.ConfigMapLister_
 }
