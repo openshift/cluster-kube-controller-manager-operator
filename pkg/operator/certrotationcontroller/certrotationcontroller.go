@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
