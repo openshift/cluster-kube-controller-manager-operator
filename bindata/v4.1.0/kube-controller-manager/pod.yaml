@@ -37,6 +37,8 @@ spec:
     ports:
       - containerPort: 10257
     volumeMounts:
+    - mountPath: /etc/kubernetes/manifests
+      name: manifests-dir # Used in the KubeControllerManagerConfig to pass in recycler pod templates
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
     - mountPath: /etc/kubernetes/static-pod-certs
@@ -160,6 +162,9 @@ spec:
   tolerations:
   - operator: "Exists"
   volumes:
+  - hostPath:
+      path: /etc/kubernetes/manifests
+    name: manifests-dir
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION
     name: resource-dir
