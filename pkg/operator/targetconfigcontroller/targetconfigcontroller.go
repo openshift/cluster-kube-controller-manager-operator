@@ -31,9 +31,12 @@ import (
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	configv1informers "github.com/openshift/client-go/config/informers/externalversions/config/v1"
+	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
+
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -53,10 +56,11 @@ type TargetConfigController struct {
 
 	operatorClient v1helpers.StaticPodOperatorClient
 
-	kubeClient      kubernetes.Interface
-	configMapLister corev1listers.ConfigMapLister
-	secretLister    corev1listers.SecretLister
-	eventRecorder   events.Recorder
+	kubeClient          kubernetes.Interface
+	configMapLister     corev1listers.ConfigMapLister
+	secretLister        corev1listers.SecretLister
+	infrastuctureLister configv1listers.InfrastructureLister
+	eventRecorder       events.Recorder
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -68,6 +72,7 @@ func NewTargetConfigController(
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
+	infrastuctureInformer configv1informers.InfrastructureInformer,
 	eventRecorder events.Recorder,
 ) *TargetConfigController {
 	c := &TargetConfigController{
@@ -76,17 +81,21 @@ func NewTargetConfigController(
 		operatorImagePullSpec:           operatorImagePullSpec,
 		clusterPolicyControllerPullSpec: clusterPolicyControllerPullSpec,
 
-		configMapLister: kubeInformersForNamespaces.ConfigMapLister(),
-		secretLister:    kubeInformersForNamespaces.SecretLister(),
-		operatorClient:  operatorClient,
-		kubeClient:      kubeClient,
-		eventRecorder:   eventRecorder.WithComponentSuffix("target-config-controller"),
+		configMapLister:     kubeInformersForNamespaces.ConfigMapLister(),
+		secretLister:        kubeInformersForNamespaces.SecretLister(),
+		infrastuctureLister: infrastuctureInformer.Lister(),
+		operatorClient:      operatorClient,
+		kubeClient:          kubeClient,
+		eventRecorder:       eventRecorder.WithComponentSuffix("target-config-controller"),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigController"),
 	}
 
 	// this is for our general configuration input and our status output in case another actor changes it
 	operatorClient.Informer().AddEventHandler(c.eventHandler())
+
+	// We use infrastuctureInformer for observing load balancer URL
+	infrastuctureInformer.Informer().AddEventHandler(c.eventHandler())
 
 	// these are for watching our outputs in case someone changes them
 	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
@@ -209,6 +218,10 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	err = ensureLocalhostRecoverySAToken(ctx, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "serviceaccount/localhost-recovery-client", err))
+	}
+	_, _, err = manageControllerManagerKubeconfig(ctx, c.kubeClient.CoreV1(), c.infrastuctureLister, recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/controller-manager-kubeconfig", err))
 	}
 
 	// Allow the addition of the service ca to token secrets to be enabled by setting an
@@ -367,6 +380,28 @@ func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.Cor
 	}
 
 	return err
+}
+
+func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.CoreV1Interface, infrastructureLister configv1listers.InfrastructureLister, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	cmString := string(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/kubeconfig-cm.yaml"))
+
+	infrastructure, err := infrastructureLister.Get("cluster")
+	if err != nil {
+		return nil, false, err
+	}
+	apiServerInternalURL := infrastructure.Status.APIServerInternalURL
+	if len(apiServerInternalURL) == 0 {
+		return nil, false, fmt.Errorf("infrastucture/cluster: missing APIServerInternalURL")
+	}
+
+	for pattern, value := range map[string]string{
+		"$LB_INT_URL": apiServerInternalURL,
+	} {
+		cmString = strings.ReplaceAll(cmString, pattern, value)
+	}
+
+	requiredCM := resourceread.ReadConfigMapV1OrDie([]byte(cmString))
+	return resourceapply.ApplyConfigMap(client, recorder, requiredCM)
 }
 
 func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
