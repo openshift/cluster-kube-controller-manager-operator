@@ -28,9 +28,10 @@ type renderOpts struct {
 	manifest genericrenderoptions.ManifestOptions
 	generic  genericrenderoptions.GenericOptions
 
-	clusterConfigFile string
-	disablePhase2     bool
-	errOut            io.Writer
+	clusterConfigFile            string
+	clusterPolicyControllerImage string
+	disablePhase2                bool
+	errOut                       io.Writer
 }
 
 // NewRenderCommand creates a render command.
@@ -69,6 +70,7 @@ func (r *renderOpts) AddFlags(fs *pflag.FlagSet) {
 	r.generic.AddFlags(fs, kubecontrolplanev1.GroupVersion.WithKind("KubeControllerManagerConfig"))
 
 	fs.StringVar(&r.clusterConfigFile, "cluster-config-file", r.clusterConfigFile, "Openshift Cluster API Config file.")
+	fs.StringVar(&r.clusterPolicyControllerImage, "cluster-policy-controller-image", r.clusterPolicyControllerImage, "Image to use for the cluster-policy-controller.")
 
 	// TODO: remove when the installer has stopped using it
 	fs.BoolVar(&r.disablePhase2, "disable-phase-2", r.disablePhase2, "Disable rendering of the phase 2 daemonset and dependencies.")
@@ -102,8 +104,9 @@ func (r *renderOpts) Complete() error {
 type TemplateData struct {
 	genericrenderoptions.TemplateData
 
-	ClusterCIDR           []string
-	ServiceClusterIPRange []string
+	ClusterPolicyControllerImage string
+	ClusterCIDR                  []string
+	ServiceClusterIPRange        []string
 }
 
 func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
@@ -203,6 +206,8 @@ func (r *renderOpts) Run() error {
 	if err := r.manifest.ApplyTo(&renderConfig.ManifestConfig); err != nil {
 		return err
 	}
+	renderConfig.ClusterPolicyControllerImage = r.clusterPolicyControllerImage
+
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
 		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "defaultconfig.yaml"))},
