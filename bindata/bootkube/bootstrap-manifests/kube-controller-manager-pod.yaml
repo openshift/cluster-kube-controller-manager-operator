@@ -40,12 +40,74 @@ spec:
       readOnly: true
     - mountPath: /var/log/bootstrap-control-plane
       name: logs
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 0
+      timeoutSeconds: 3
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
     livenessProbe:
       httpGet:
         scheme: HTTPS
         port: 10257
         path: healthz
       initialDelaySeconds: 45
+      timeoutSeconds: 10
+  - name: cluster-policy-controller
+    image: {{ .ClusterPolicyControllerImage }}
+    imagePullPolicy: {{ .ImagePullPolicy }}
+    command: ["cluster-policy-controller", "start"]
+    args:
+    - --config=/etc/kubernetes/config/{{ .ClusterPolicyControllerConfigFileName }}
+    - --logtostderr=false
+    - --alsologtostderr
+    - --v=2
+    - --log-file=/var/log/bootstrap-control-plane/cluster-policy-controller.log
+    ports:
+      - containerPort: 10357
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+      readOnly: true
+    - mountPath: /etc/kubernetes/secrets
+      name: secrets
+      readOnly: true
+    - mountPath: /etc/kubernetes/cloud
+      name: etc-kubernetes-cloud
+      readOnly: true
+    - mountPath: /etc/kubernetes/config
+      name: config
+      readOnly: true
+    - mountPath: /var/log/bootstrap-control-plane
+      name: logs
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 0
+      timeoutSeconds: 3
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10357
+        path: healthz
+      initialDelaySeconds: 10
       timeoutSeconds: 10
   volumes:
   - hostPath:
