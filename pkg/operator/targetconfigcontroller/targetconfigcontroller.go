@@ -318,7 +318,7 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 
 func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml"))
-	defaultConfig := v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml")
+	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/default-cluster-policy-controller-config.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&openshiftcontrolplanev1.OpenShiftControllerManagerConfig{},
 		configMap,

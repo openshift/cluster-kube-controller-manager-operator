@@ -1,9 +1,9 @@
 // Code generated for package v411_00_assets by go-bindata DO NOT EDIT. (@generated)
 // sources:
+// bindata/v4.1.0/config/default-cluster-policy-controller-config.yaml
 // bindata/v4.1.0/config/defaultconfig.yaml
 // bindata/v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/cm.yaml
-// bindata/v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
@@ -75,6 +75,34 @@ func (fi bindataFileInfo) IsDir() bool {
 // Sys return file is sys mode
 func (fi bindataFileInfo) Sys() interface{} {
 	return nil
+}
+
+var _v410ConfigDefaultClusterPolicyControllerConfigYaml = []byte(`apiVersion: openshiftcontrolplane.config.openshift.io/v1
+kind: OpenShiftControllerManagerConfig
+kubeClientConfig:
+  kubeConfig: /etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
+servingInfo:
+  bindAddress: 0.0.0.0:10357
+  bindNetwork: tcp
+  clientCA: /etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
+  certFile: /etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt
+  keyFile: /etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key
+
+`)
+
+func v410ConfigDefaultClusterPolicyControllerConfigYamlBytes() ([]byte, error) {
+	return _v410ConfigDefaultClusterPolicyControllerConfigYaml, nil
+}
+
+func v410ConfigDefaultClusterPolicyControllerConfigYaml() (*asset, error) {
+	bytes, err := v410ConfigDefaultClusterPolicyControllerConfigYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/config/default-cluster-policy-controller-config.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
 }
 
 var _v410ConfigDefaultconfigYaml = []byte(`apiVersion: kubecontrolplane.config.openshift.io/v1
@@ -190,34 +218,6 @@ func v410KubeControllerManagerCmYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml = []byte(`apiVersion: openshiftcontrolplane.config.openshift.io/v1
-kind: OpenShiftControllerManagerConfig
-kubeClientConfig:
-  kubeConfig: /etc/kubernetes/static-pod-resources/configmaps/controller-manager-kubeconfig/kubeconfig
-servingInfo:
-  bindAddress: 0.0.0.0:10357
-  bindNetwork: tcp
-  clientCA: /etc/kubernetes/static-pod-certs/configmaps/client-ca/ca-bundle.crt
-  certFile: /etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt
-  keyFile: /etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key
-
-`)
-
-func v410KubeControllerManagerDefaultClusterPolicyControllerConfigYamlBytes() ([]byte, error) {
-	return _v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml, nil
-}
-
-func v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml() (*asset, error) {
-	bytes, err := v410KubeControllerManagerDefaultClusterPolicyControllerConfigYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1078,10 +1078,10 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
+	"v4.1.0/config/default-cluster-policy-controller-config.yaml":                                         v410ConfigDefaultClusterPolicyControllerConfigYaml,
 	"v4.1.0/config/defaultconfig.yaml":                                                                    v410ConfigDefaultconfigYaml,
 	"v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml":                                    v410KubeControllerManagerClusterPolicyControllerCmYaml,
 	"v4.1.0/kube-controller-manager/cm.yaml":                                                              v410KubeControllerManagerCmYaml,
-	"v4.1.0/kube-controller-manager/default-cluster-policy-controller-config.yaml":                        v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml":                                      v410KubeControllerManagerGceCloudProviderBindingYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml":                                         v410KubeControllerManagerGceCloudProviderRoleYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":                                          v410KubeControllerManagerKubeconfigCertSyncerYaml,
@@ -1147,12 +1147,12 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v4.1.0": {nil, map[string]*bintree{
 		"config": {nil, map[string]*bintree{
-			"defaultconfig.yaml": {v410ConfigDefaultconfigYaml, map[string]*bintree{}},
+			"default-cluster-policy-controller-config.yaml": {v410ConfigDefaultClusterPolicyControllerConfigYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":                            {v410ConfigDefaultconfigYaml, map[string]*bintree{}},
 		}},
 		"kube-controller-manager": {nil, map[string]*bintree{
 			"cluster-policy-controller-cm.yaml": {v410KubeControllerManagerClusterPolicyControllerCmYaml, map[string]*bintree{}},
 			"cm.yaml":                           {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
-			"default-cluster-policy-controller-config.yaml": {v410KubeControllerManagerDefaultClusterPolicyControllerConfigYaml, map[string]*bintree{}},
 			"gce": {nil, map[string]*bintree{
 				"cloud-provider-binding.yaml": {v410KubeControllerManagerGceCloudProviderBindingYaml, map[string]*bintree{}},
 				"cloud-provider-role.yaml":    {v410KubeControllerManagerGceCloudProviderRoleYaml, map[string]*bintree{}},

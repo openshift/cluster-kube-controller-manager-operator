@@ -28,18 +28,20 @@ type renderOpts struct {
 	manifest genericrenderoptions.ManifestOptions
 	generic  genericrenderoptions.GenericOptions
 
-	clusterConfigFile            string
-	clusterPolicyControllerImage string
-	disablePhase2                bool
-	errOut                       io.Writer
+	clusterConfigFile                     string
+	clusterPolicyControllerImage          string
+	clusterPolicyControllerConfigFileName string
+	disablePhase2                         bool
+	errOut                                io.Writer
 }
 
 // NewRenderCommand creates a render command.
 func NewRenderCommand(errOut io.Writer) *cobra.Command {
 	renderOpts := &renderOpts{
-		manifest: *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
-		generic:  *genericrenderoptions.NewGenericOptions(),
-		errOut:   errOut,
+		manifest:                              *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
+		generic:                               *genericrenderoptions.NewGenericOptions(),
+		errOut:                                errOut,
+		clusterPolicyControllerConfigFileName: "cluster-policy-config.yaml",
 	}
 	cmd := &cobra.Command{
 		Use:   "render",
@@ -71,6 +73,7 @@ func (r *renderOpts) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&r.clusterConfigFile, "cluster-config-file", r.clusterConfigFile, "Openshift Cluster API Config file.")
 	fs.StringVar(&r.clusterPolicyControllerImage, "cluster-policy-controller-image", r.clusterPolicyControllerImage, "Image to use for the cluster-policy-controller.")
+	fs.StringVar(&r.clusterPolicyControllerConfigFileName, "cluster-policy-config-file-name", r.clusterPolicyControllerConfigFileName, "The cluster policy config file name inside the manifest-config-host-path.")
 
 	// TODO: remove when the installer has stopped using it
 	fs.BoolVar(&r.disablePhase2, "disable-phase-2", r.disablePhase2, "Disable rendering of the phase 2 daemonset and dependencies.")
@@ -104,9 +107,11 @@ func (r *renderOpts) Complete() error {
 type TemplateData struct {
 	genericrenderoptions.TemplateData
 
-	ClusterPolicyControllerImage string
-	ClusterCIDR                  []string
-	ServiceClusterIPRange        []string
+	ClusterPolicyControllerImage          string
+	ClusterPolicyControllerConfigFileName string
+	ClusterPolicyControllerFileConfig     genericrenderoptions.FileConfig
+	ClusterCIDR                           []string
+	ServiceClusterIPRange                 []string
 }
 
 func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
@@ -207,11 +212,25 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 	renderConfig.ClusterPolicyControllerImage = r.clusterPolicyControllerImage
+	renderConfig.ClusterPolicyControllerConfigFileName = r.clusterPolicyControllerConfigFileName
 
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
 		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "defaultconfig.yaml"))},
 		mustReadTemplateFile(filepath.Join(r.generic.TemplatesDir, "config", "bootstrap-config-overrides.yaml")),
+		&renderConfig,
+		nil,
+	); err != nil {
+		return err
+	}
+
+	if err := r.generic.ApplyTo(
+		&renderConfig.ClusterPolicyControllerFileConfig,
+		genericrenderoptions.Template{
+			FileName: "default-cluster-policy-controller-config.yaml",
+			Content:  v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "default-cluster-policy-controller-config.yaml")),
+		},
+		mustReadTemplateFile(filepath.Join(r.generic.TemplatesDir, "config", "bootstrap-cluster-policy-controller-config-overrides.yaml")),
 		&renderConfig,
 		nil,
 	); err != nil {
@@ -225,7 +244,21 @@ func (r *renderOpts) Run() error {
 		renderConfig.Assets["kubeconfig"] = kubeConfig
 	}
 
-	return genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig)
+	err := genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(
+		renderConfig.ClusterPolicyControllerConfigFileName,
+		renderConfig.ClusterPolicyControllerFileConfig.BootstrapConfig,
+		0644,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to write merged config to %q: %v", r.clusterPolicyControllerConfigFileName, err)
+	}
+
+	return nil
 }
 
 func (r *renderOpts) readBootstrapSecretsKubeconfig() ([]byte, error) {
