@@ -149,11 +149,11 @@ func TestRenderCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, outputDir, err := setupAssetOutputDir(test.name)
+		teardown, outputDir, err := setupAssetOutputDir(test.name)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", test.name, err)
 		}
-		// defer teardown()
+		defer teardown()
 
 		test.args = setOutputFlags(test.args, outputDir)
 
