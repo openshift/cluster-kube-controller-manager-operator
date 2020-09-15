@@ -7,16 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/klog/v2"
-
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -28,20 +27,19 @@ type renderOpts struct {
 	manifest genericrenderoptions.ManifestOptions
 	generic  genericrenderoptions.GenericOptions
 
-	clusterConfigFile                     string
-	clusterPolicyControllerImage          string
-	clusterPolicyControllerConfigFileName string
-	disablePhase2                         bool
-	errOut                                io.Writer
+	clusterConfigFile                       string
+	clusterPolicyControllerConfigOutputFile string
+	clusterPolicyControllerImage            string
+	disablePhase2                           bool
+	errOut                                  io.Writer
 }
 
 // NewRenderCommand creates a render command.
 func NewRenderCommand(errOut io.Writer) *cobra.Command {
 	renderOpts := &renderOpts{
-		manifest:                              *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
-		generic:                               *genericrenderoptions.NewGenericOptions(),
-		errOut:                                errOut,
-		clusterPolicyControllerConfigFileName: "cluster-policy-config.yaml",
+		manifest: *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
+		generic:  *genericrenderoptions.NewGenericOptions(),
+		errOut:   errOut,
 	}
 	cmd := &cobra.Command{
 		Use:   "render",
@@ -73,7 +71,7 @@ func (r *renderOpts) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&r.clusterConfigFile, "cluster-config-file", r.clusterConfigFile, "Openshift Cluster API Config file.")
 	fs.StringVar(&r.clusterPolicyControllerImage, "cluster-policy-controller-image", r.clusterPolicyControllerImage, "Image to use for the cluster-policy-controller.")
-	fs.StringVar(&r.clusterPolicyControllerConfigFileName, "cluster-policy-config-file-name", r.clusterPolicyControllerConfigFileName, "The cluster policy config file name inside the manifest-config-host-path.")
+	fs.StringVar(&r.clusterPolicyControllerConfigOutputFile, "cpc-config-output-file", r.clusterPolicyControllerConfigOutputFile, "Output path for the Openshift Cluster API Config yaml file.")
 
 	// TODO: remove when the installer has stopped using it
 	fs.BoolVar(&r.disablePhase2, "disable-phase-2", r.disablePhase2, "Disable rendering of the phase 2 daemonset and dependencies.")
@@ -88,6 +86,13 @@ func (r *renderOpts) Validate() error {
 	}
 	if err := r.generic.Validate(); err != nil {
 		return err
+	}
+
+	if len(r.clusterPolicyControllerConfigOutputFile) == 0 {
+		// FIXME: Remove when https://github.com/openshift/installer/pull/4178 merges
+		// FIXME: Temporarily pick the same dir as regular config until installer knows the flag and uses the file.
+		r.clusterPolicyControllerConfigOutputFile = filepath.Join(filepath.Dir(r.generic.ConfigOutputFile), "cpc-config.yaml")
+		// return errors.New("missing required flag: --cpc-config-output-file")
 	}
 
 	return nil
@@ -212,7 +217,7 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 	renderConfig.ClusterPolicyControllerImage = r.clusterPolicyControllerImage
-	renderConfig.ClusterPolicyControllerConfigFileName = r.clusterPolicyControllerConfigFileName
+	renderConfig.ClusterPolicyControllerConfigFileName = r.clusterPolicyControllerConfigOutputFile
 
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
@@ -250,12 +255,12 @@ func (r *renderOpts) Run() error {
 	}
 
 	err = ioutil.WriteFile(
-		renderConfig.ClusterPolicyControllerConfigFileName,
+		r.clusterPolicyControllerConfigOutputFile,
 		renderConfig.ClusterPolicyControllerFileConfig.BootstrapConfig,
 		0644,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to write merged config to %q: %v", r.clusterPolicyControllerConfigFileName, err)
+		return fmt.Errorf("failed to write merged config to %q: %v", r.clusterPolicyControllerConfigOutputFile, err)
 	}
 
 	return nil

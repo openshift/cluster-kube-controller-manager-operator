@@ -2,14 +2,17 @@ package render
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 )
 
@@ -97,6 +100,10 @@ func setOutputFlags(args []string, dir string) []string {
 			newArgs = append(newArgs, "--config-output-file="+filepath.Join(dir, "configs", "config.yaml"))
 			continue
 		}
+		if strings.HasPrefix(arg, "--cpc-config-output-file=") {
+			newArgs = append(newArgs, "--cpc-config-output-file="+filepath.Join(dir, "configs", "cpc-config.yaml"))
+			continue
+		}
 		newArgs = append(newArgs, arg)
 	}
 	return newArgs
@@ -107,20 +114,17 @@ func TestRenderCommand(t *testing.T) {
 	templateDir := filepath.Join("..", "..", "..", "bindata", "bootkube")
 
 	tests := []struct {
-		name    string
-		args    []string
-		errFunc func(error)
+		name          string
+		args          []string
+		expectedErr   error
+		expectedFiles []string
 	}{
 		{
 			name: "no-flags",
 			args: []string{
 				"--templates-input-dir=" + templateDir,
 			},
-			errFunc: func(err error) {
-				if err == nil {
-					t.Fatalf("expected required flags error")
-				}
-			},
+			expectedErr: errors.New("missing required flag: --asset-input-dirfailed loading assets from \"\": lstat : no such file or directory"),
 		},
 		{
 			name: "happy-path",
@@ -129,27 +133,65 @@ func TestRenderCommand(t *testing.T) {
 				"--templates-input-dir=" + templateDir,
 				"--asset-output-dir=",
 				"--config-output-file=",
+				"--cpc-config-output-file=",
+			},
+			expectedErr: nil,
+			expectedFiles: []string{
+				"configs/config.yaml",
+				"configs/cpc-config.yaml",
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
+				"manifests/manifests/secret-csr-signer-signer.yaml",
+				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
 			},
 		},
 	}
 
 	for _, test := range tests {
-		teardown, outputDir, err := setupAssetOutputDir(test.name)
+		_, outputDir, err := setupAssetOutputDir(test.name)
 		if err != nil {
 			t.Errorf("%s: unexpected error: %v", test.name, err)
 		}
-		defer teardown()
+		// defer teardown()
 
 		test.args = setOutputFlags(test.args, outputDir)
 
 		_, err = runRender(test.args...)
-		if err != nil && test.errFunc == nil {
-			t.Errorf("%s: got unexpected error %v", test.name, err)
-			continue
+		if !reflect.DeepEqual(err, test.expectedErr) {
+			t.Fatalf("expected error %#v, got %#v", test.expectedErr, err)
 		}
+
+		var files []string
+		err = filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
+			r, err := filepath.Rel(outputDir, path)
+			if err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				files = append(files, r)
+			}
+
+			return nil
+		})
 		if err != nil {
-			test.errFunc(err)
-			continue
+			t.Error(err)
+		}
+
+		sort.Strings(files)
+		sort.Strings(test.expectedFiles)
+
+		if !reflect.DeepEqual(files, test.expectedFiles) {
+			t.Errorf("expected and rendered files differ: %s", cmp.Diff(test.expectedFiles, files))
+		}
+
+		for _, f := range test.expectedFiles {
+			p := path.Join(outputDir, f)
+			_, err := os.Stat(p)
+			if err != nil {
+				t.Errorf("file %q: %v", f, err)
+			}
 		}
 	}
 }
