@@ -6,11 +6,11 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
+	github.com/google/go-cmp v0.4.0
 	github.com/openshift/api v0.0.0-20200901182017-7ac89ba6b971
 	github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
 	github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
 	github.com/openshift/library-go v0.0.0-20200910214143-887092e305c1
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
