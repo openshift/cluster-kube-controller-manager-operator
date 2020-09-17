@@ -1,6 +1,7 @@
 package render
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -89,10 +90,7 @@ func (r *renderOpts) Validate() error {
 	}
 
 	if len(r.clusterPolicyControllerConfigOutputFile) == 0 {
-		// FIXME: Remove when https://github.com/openshift/installer/pull/4178 merges
-		// FIXME: Temporarily pick the same dir as regular config until installer knows the flag and uses the file.
-		r.clusterPolicyControllerConfigOutputFile = filepath.Join(filepath.Dir(r.generic.ConfigOutputFile), "cpc-config.yaml")
-		// return errors.New("missing required flag: --cpc-config-output-file")
+		return errors.New("missing required flag: --cpc-config-output-file")
 	}
 
 	return nil
