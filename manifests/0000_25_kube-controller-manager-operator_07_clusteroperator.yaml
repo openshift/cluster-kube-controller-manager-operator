@@ -29,3 +29,7 @@ status:
     - group: ""
       name: openshift-kube-controller-manager-operator
       resource: namespaces
+    - group: ""
+      resource: nodes
+    - group: "certificates.k8s.io"
+      resource: "certificatesigningrequests"

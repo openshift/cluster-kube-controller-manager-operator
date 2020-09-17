@@ -142,6 +142,10 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			{Resource: "namespaces", Name: "openshift-config-managed"},
 			{Resource: "namespaces", Name: operatorclient.TargetNamespace},
 			{Resource: "namespaces", Name: "openshift-kube-controller-manager-operator"},
+			// TODO move to a more appropriate operator. One that creates and approves these.
+			{Group: "certificates.k8s.io", Resource: "certificatesigningrequests"},
+			// TODO move to a more appropriate operator. One that creates and manages these.
+			{Resource: "nodes"},
 		},
 		configClient.ConfigV1(),
 		configInformers.Config().V1().ClusterOperators(),
