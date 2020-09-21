@@ -215,7 +215,7 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 	renderConfig.ClusterPolicyControllerImage = r.clusterPolicyControllerImage
-	renderConfig.ClusterPolicyControllerConfigFileName = r.clusterPolicyControllerConfigOutputFile
+	renderConfig.ClusterPolicyControllerConfigFileName = "cluster-policy-controller-config.yaml"
 
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
