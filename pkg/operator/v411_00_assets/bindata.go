@@ -340,11 +340,11 @@ data:
     clusters:
       - cluster:
           certificate-authority: /etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt
-          server: https://localhost:6443
-        name: loopback
+          server: $LB_INT_URL
+        name: lb-int
     contexts:
       - context:
-          cluster: loopback
+          cluster: lb-int
           user: kube-controller-manager
         name: kube-controller-manager
     current-context: kube-controller-manager
