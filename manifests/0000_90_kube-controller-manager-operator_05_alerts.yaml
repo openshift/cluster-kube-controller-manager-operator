@@ -9,6 +9,14 @@ spec:
   groups:
     - name: cluster-version
       rules:
+        - alert: KubeControllerManagerDown
+          annotations:
+            message: KubeControllerManager has disappeared from Prometheus target discovery.
+          expr: |
+            absent(up{job="kube-controller-manager"} == 1)
+          for: 15m
+          labels:
+            severity: critical
         - alert: PodDisruptionBudgetAtLimit
           annotations:
             message: The pod disruption budget is preventing further disruption to pods because it is at the minimum allowed level.
