@@ -140,6 +140,8 @@ func TestRenderCommand(t *testing.T) {
 				"configs/config.yaml",
 				"configs/cpc-config.yaml",
 				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrole.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrolebinding.yaml",
 				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
 				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
 				"manifests/manifests/secret-csr-signer-signer.yaml",
