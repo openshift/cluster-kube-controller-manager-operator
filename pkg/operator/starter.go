@@ -79,7 +79,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		[]string{
 			"v4.1.0/kube-controller-manager/ns.yaml",
 			"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml",
-			"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml",
 			"v4.1.0/kube-controller-manager/leader-election-rolebinding.yaml",
 			"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml",
 			"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
@@ -108,6 +107,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		kubeInformersForNamespaces,
 		operatorClient,
 		kubeClient,
+		configInformers.Config().V1().Infrastructures(),
 		cc.EventRecorder,
 	)
 
