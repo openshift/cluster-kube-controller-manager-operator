@@ -633,6 +633,7 @@ metadata:
 rules:
 - apiGroups:
   - security.openshift.io
+  - security.internal.openshift.io
   resources:
   - rangeallocations
   verbs:
@@ -656,7 +657,8 @@ rules:
   verbs:
   - create
   - patch
-  - update`)
+  - update
+`)
 
 func v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYamlBytes() ([]byte, error) {
 	return _v410KubeControllerManagerNamespaceSecurityAllocationControllerClusterroleYaml, nil
