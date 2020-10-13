@@ -196,7 +196,7 @@ github.com/openshift/client-go/config/listers/config/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20200910214143-887092e305c1
+# github.com/openshift/library-go v0.0.0-20201013192036-5bd7c282e3e7
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/certs
 github.com/openshift/library-go/pkg/config/client
