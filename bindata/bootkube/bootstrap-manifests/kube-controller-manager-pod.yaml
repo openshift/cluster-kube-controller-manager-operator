@@ -11,6 +11,7 @@ metadata:
 spec:
   restartPolicy: Always
   hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
   containers:
   - name: kube-controller-manager
     image: {{ .Image }}
