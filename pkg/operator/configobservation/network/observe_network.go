@@ -1,6 +1,8 @@
 package network
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/openshift/library-go/pkg/operator/configobserver"
@@ -56,13 +58,14 @@ func ObserveServiceClusterIPRanges(genericListers configobserver.Listers, record
 	}
 
 	observedConfig := map[string]interface{}{}
-	serviceCIDR, err := network.GetServiceCIDR(listers.NetworkLister, recorder)
+	serviceCIDRs, err := network.GetServiceCIDRs(listers.NetworkLister, recorder)
 	if err != nil {
 		errs = append(errs, err)
 		return previouslyObservedConfig, errs
 	}
+	serviceClusterIPRange := strings.Join(serviceCIDRs, ",")
 
-	if err := unstructured.SetNestedStringSlice(observedConfig, []string{serviceCIDR}, serviceClusterIPRangePath...); err != nil {
+	if err := unstructured.SetNestedStringSlice(observedConfig, []string{serviceClusterIPRange}, serviceClusterIPRangePath...); err != nil {
 		errs = append(errs, err)
 	}
 
