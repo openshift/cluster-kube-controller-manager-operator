@@ -95,7 +95,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 
 func TestObserveServiceClusterIPRanges(t *testing.T) {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	if err := indexer.Add(&configv1.Network{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: configv1.NetworkStatus{ServiceNetwork: []string{"serviceCIDR"}}}); err != nil {
+	if err := indexer.Add(&configv1.Network{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: configv1.NetworkStatus{ServiceNetwork: []string{"serviceCIDRv4", "serviceCIDRv6"}}}); err != nil {
 		t.Fatal(err.Error())
 	}
 	listers := configobservation.Listers{
@@ -108,7 +108,7 @@ func TestObserveServiceClusterIPRanges(t *testing.T) {
 	expected := map[string]interface{}{
 		"extendedArguments": map[string]interface{}{
 			"service-cluster-ip-range": []interface{}{
-				"serviceCIDR",
+				"serviceCIDRv4,serviceCIDRv6",
 			},
 		},
 	}
