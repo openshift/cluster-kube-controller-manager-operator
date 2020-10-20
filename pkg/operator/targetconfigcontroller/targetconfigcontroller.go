@@ -459,6 +459,18 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		containerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
 		containerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key"
 	}
+
+	kubeControllerManagerConfigMap, err := configMapsGetter.ConfigMaps(required.Namespace).Get(ctx, "config", metav1.GetOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, false, err
+	}
+	if kubeControllerManagerConfigMap != nil {
+		var kubeControllerManagerConfig map[string]interface{}
+		if err := yaml.Unmarshal([]byte(kubeControllerManagerConfigMap.Data["config.yaml"]), &kubeControllerManagerConfig); err != nil {
+			return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
+		}
+		containerArgsWithLoglevel[0] += " " + readKubeControllerManagerArgs(kubeControllerManagerConfig)
+	}
 	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
 
 	var observedConfig map[string]interface{}
@@ -494,6 +506,23 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
 	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, configMap)
+}
+
+func readKubeControllerManagerArgs(config map[string]interface{}) string {
+	extendedArguments, ok := config["extendedArguments"]
+	if !ok || extendedArguments == nil {
+		return ""
+	}
+	args := []string{}
+	for key, value := range extendedArguments.(map[string]interface{}) {
+		for _, arrayValue := range value.([]interface{}) {
+			args = append(args, fmt.Sprintf("--%s=%s", key, arrayValue.(string)))
+		}
+	}
+	// make sure to sort the arguments, otherwise we might get mismatch
+	// when comparing revisions leading to new ones being created, unnecessarily
+	sort.Strings(args)
+	return strings.Join(args, " ")
 }
 
 func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {

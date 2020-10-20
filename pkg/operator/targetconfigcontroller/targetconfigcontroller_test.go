@@ -374,3 +374,56 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 	}
 	return map[string][]byte{"tls.crt": cert, "tls.key": key}
 }
+
+func TestReadKubeControllerManagerArgs(t *testing.T) {
+	testCases := []struct {
+		input    map[string]interface{}
+		expected string
+	}{
+		{
+			input: map[string]interface{}{
+				"otherArguments": map[string]interface{}{
+					"enable-dynamic-provisioning": []interface{}{"true"},
+					"allocate-node-cidrs":         []interface{}{"true"},
+				},
+			},
+			expected: "",
+		},
+		{
+			input: map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"enable-dynamic-provisioning": []interface{}{"true"},
+					"allocate-node-cidrs":         []interface{}{"true"},
+				},
+			},
+			expected: "--allocate-node-cidrs=true --enable-dynamic-provisioning=true",
+		},
+		{
+			input: map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"controllers": []interface{}{"*", "-ttl", "-bootstrapsigner", "-tokencleaner"},
+				},
+			},
+			expected: "--controllers=* --controllers=-bootstrapsigner --controllers=-tokencleaner --controllers=-ttl",
+		},
+		{
+			input: map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"cluster-signing-cert-file": []interface{}{"/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt"},
+					"cluster-signing-key-file":  []interface{}{"/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"},
+					"kube-api-qps":              []interface{}{"150"},
+					"kube-api-burst":            []interface{}{"300"},
+				},
+			},
+			expected: "--cluster-signing-cert-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt --cluster-signing-key-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key --kube-api-burst=300 --kube-api-qps=150",
+		},
+	}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			output := readKubeControllerManagerArgs(tc.input)
+			if output != tc.expected {
+				t.Errorf("Unexpected difference between %s and %s", tc.expected, output)
+			}
+		})
+	}
+}
