@@ -56,13 +56,13 @@ func ObserveServiceClusterIPRanges(genericListers configobserver.Listers, record
 	}
 
 	observedConfig := map[string]interface{}{}
-	serviceCIDR, err := network.GetServiceCIDR(listers.NetworkLister, recorder)
+	serviceCIDRs, err := network.GetServiceCIDRs(listers.NetworkLister, recorder)
 	if err != nil {
 		errs = append(errs, err)
 		return previouslyObservedConfig, errs
 	}
 
-	if err := unstructured.SetNestedStringSlice(observedConfig, []string{serviceCIDR}, serviceClusterIPRangePath...); err != nil {
+	if err := unstructured.SetNestedStringSlice(observedConfig, serviceCIDRs, serviceClusterIPRangePath...); err != nil {
 		errs = append(errs, err)
 	}
 
