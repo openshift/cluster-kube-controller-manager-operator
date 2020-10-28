@@ -14,9 +14,9 @@ require (
 	github.com/gonum/lapack v0.0.0-20170731225844-5ed4b826becd // indirect
 	github.com/gonum/matrix v0.0.0-20170731230223-dd6034299e42 // indirect
 	github.com/jteeuwen/go-bindata v0.0.0-00010101000000-000000000000
-	github.com/openshift/api v0.0.0-20191219222812-2987a591a72c
-	github.com/openshift/client-go v0.0.0-20191001081553-3b0e988f8cb0
-	github.com/openshift/library-go v0.0.0-20200109171033-0b752bcac885
+	github.com/openshift/api v0.0.0-20200527184302-a843dc3262a0
+	github.com/openshift/client-go v0.0.0-20191125132246-f6563a70e19a
+	github.com/openshift/library-go v0.0.0-20200917064228-204460295f3c
 	github.com/pkg/errors v0.8.0
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.5
