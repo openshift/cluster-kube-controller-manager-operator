@@ -123,9 +123,9 @@ extendedArguments:
   flex-volume-plugin-dir:
   - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
   pv-recycler-pod-template-filepath-nfs:
-  - "/etc/kubernetes/manifests/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
   pv-recycler-pod-template-filepath-hostpath:
-  - "/etc/kubernetes/manifests/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
   leader-elect:
   - "true"
   leader-elect-retry-period:
