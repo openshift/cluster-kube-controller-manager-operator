@@ -7,25 +7,22 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.3.0 // indirect
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
-	github.com/google/go-cmp v0.4.0
+	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/openshift/api v0.0.0-20201117184740-859beeffd973
+	github.com/openshift/api v0.0.0-20201119144013-9f0856e7c657
 	github.com/openshift/build-machinery-go v0.0.0-20200917070002-f171684f77ab
-	github.com/openshift/client-go v0.0.0-20201020074620-f8fd44879f7c
-	github.com/openshift/library-go v0.0.0-20201102091359-c4fa0f5b3a08
+	github.com/openshift/client-go v0.0.0-20201119144744-148025d790a9
+	github.com/openshift/library-go v0.0.0-20201119162840-a8387fdfa05b
 	github.com/prometheus/common v0.10.0
-	github.com/spf13/cobra v1.0.0
+	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.4.0
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/text v0.3.4 // indirect
-	k8s.io/api v0.19.4
-	k8s.io/apimachinery v0.19.4
-	k8s.io/apiserver v0.19.2
-	k8s.io/client-go v0.19.2
-	k8s.io/component-base v0.19.2
+	github.com/stretchr/testify v1.6.1
+	k8s.io/api v0.20.0-beta.2
+	k8s.io/apimachinery v0.20.0-beta.2
+	k8s.io/apiserver v0.20.0-beta.2
+	k8s.io/client-go v0.20.0-beta.2
+	k8s.io/component-base v0.20.0-beta.2
 	k8s.io/klog/v2 v2.4.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.0.2 // indirect
 )
 
 replace (
