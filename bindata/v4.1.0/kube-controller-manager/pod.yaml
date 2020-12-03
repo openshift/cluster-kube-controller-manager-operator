@@ -74,7 +74,7 @@ spec:
       - |
         timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10357 \))" ]; do sleep 1; done'
 
-        exec cluster-policy-controller start --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml
+        exec cluster-policy-controller start --config=/etc/kubernetes/static-pod-resources/configmaps/cluster-policy-controller-config/config.yaml -v=2
     resources:
       requests:
         memory: 200Mi
