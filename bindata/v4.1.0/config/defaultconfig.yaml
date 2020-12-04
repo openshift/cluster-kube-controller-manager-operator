@@ -4,13 +4,9 @@ extendedArguments:
   enable-dynamic-provisioning:
   - "true"
   allocate-node-cidrs:
-  - "true"
+  - "false"
   configure-cloud-routes:
   - "false"
-  cluster-cidr:
-  - "10.2.0.0/16"
-  service-cluster-ip-range:
-  - "10.3.0.0/16"
   use-service-account-credentials:
   - "true"
   flex-volume-plugin-dir:
