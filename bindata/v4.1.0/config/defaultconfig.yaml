@@ -11,6 +11,10 @@ extendedArguments:
   - "true"
   flex-volume-plugin-dir:
   - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
+  pv-recycler-pod-template-filepath-nfs: # owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"
+  pv-recycler-pod-template-filepath-hostpath: # owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"
   leader-elect:
   - "true"
   leader-elect-retry-period:
@@ -42,4 +46,3 @@ extendedArguments:
   - "150" # this is a historical values
   kube-api-burst:
   - "300" # this is a historical values
-
