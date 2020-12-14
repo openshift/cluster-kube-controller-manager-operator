@@ -21,6 +21,7 @@
 // bindata/v4.1.0/kube-controller-manager/ns.yaml
 // bindata/v4.1.0/kube-controller-manager/pod-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/pod.yaml
+// bindata/v4.1.0/kube-controller-manager/recycler-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/sa.yaml
 // bindata/v4.1.0/kube-controller-manager/svc.yaml
 // bindata/v4.1.0/kube-controller-manager/trusted-ca-cm.yaml
@@ -118,6 +119,10 @@ extendedArguments:
   - "true"
   flex-volume-plugin-dir:
   - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
+  pv-recycler-pod-template-filepath-nfs: # owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"
+  pv-recycler-pod-template-filepath-hostpath: # owned by storage team/fbertina@redhat.com
+  - "/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"
   leader-elect:
   - "true"
   leader-elect-retry-period:
@@ -149,7 +154,6 @@ extendedArguments:
   - "150" # this is a historical values
   kube-api-burst:
   - "300" # this is a historical values
-
 `)
 
 func v410ConfigDefaultconfigYamlBytes() ([]byte, error) {
@@ -937,6 +941,54 @@ func v410KubeControllerManagerPodYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v410KubeControllerManagerRecyclerCmYaml = []byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: recycler-config
+data:
+  recycler-pod.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: recycler-pod
+      namespace: openshift-infra
+    spec:
+      activeDeadlineSeconds: 60
+      restartPolicy: Never
+      serviceAccountName: pv-recycler-controller
+      containers:
+        - name: recycler-container
+          image: "${TOOLS_IMAGE}"
+          command:
+          - "/bin/bash"
+          args:
+          - "-c"
+          - "test -e /scrub && rm -rf /scrub/..?* /scrub/.[!.]* /scrub/*  && test -z \"$(ls -A /scrub)\" || exit 1"
+          volumeMounts:
+            - mountPath: /scrub
+              name: vol
+          securityContext:
+            runAsUser: 0
+      volumes:
+        - name: vol
+`)
+
+func v410KubeControllerManagerRecyclerCmYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerRecyclerCmYaml, nil
+}
+
+func v410KubeControllerManagerRecyclerCmYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerRecyclerCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/recycler-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v410KubeControllerManagerSaYaml = []byte(`apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -1089,6 +1141,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/ns.yaml":                                                              v410KubeControllerManagerNsYaml,
 	"v4.1.0/kube-controller-manager/pod-cm.yaml":                                                          v410KubeControllerManagerPodCmYaml,
 	"v4.1.0/kube-controller-manager/pod.yaml":                                                             v410KubeControllerManagerPodYaml,
+	"v4.1.0/kube-controller-manager/recycler-cm.yaml":                                                     v410KubeControllerManagerRecyclerCmYaml,
 	"v4.1.0/kube-controller-manager/sa.yaml":                                                              v410KubeControllerManagerSaYaml,
 	"v4.1.0/kube-controller-manager/svc.yaml":                                                             v410KubeControllerManagerSvcYaml,
 	"v4.1.0/kube-controller-manager/trusted-ca-cm.yaml":                                                   v410KubeControllerManagerTrustedCaCmYaml,
@@ -1162,6 +1215,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"ns.yaml":            {v410KubeControllerManagerNsYaml, map[string]*bintree{}},
 			"pod-cm.yaml":        {v410KubeControllerManagerPodCmYaml, map[string]*bintree{}},
 			"pod.yaml":           {v410KubeControllerManagerPodYaml, map[string]*bintree{}},
+			"recycler-cm.yaml":   {v410KubeControllerManagerRecyclerCmYaml, map[string]*bintree{}},
 			"sa.yaml":            {v410KubeControllerManagerSaYaml, map[string]*bintree{}},
 			"svc.yaml":           {v410KubeControllerManagerSvcYaml, map[string]*bintree{}},
 			"trusted-ca-cm.yaml": {v410KubeControllerManagerTrustedCaCmYaml, map[string]*bintree{}},

@@ -53,6 +53,7 @@ type TargetConfigController struct {
 	targetImagePullSpec             string
 	operatorImagePullSpec           string
 	clusterPolicyControllerPullSpec string
+	toolsImagePullSpec              string
 
 	operatorClient v1helpers.StaticPodOperatorClient
 
@@ -68,7 +69,7 @@ type TargetConfigController struct {
 
 func NewTargetConfigController(
 	ctx context.Context,
-	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string,
+	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, toolsImagePullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeClient kubernetes.Interface,
@@ -80,6 +81,7 @@ func NewTargetConfigController(
 		targetImagePullSpec:             targetImagePullSpec,
 		operatorImagePullSpec:           operatorImagePullSpec,
 		clusterPolicyControllerPullSpec: clusterPolicyControllerPullSpec,
+		toolsImagePullSpec:              toolsImagePullSpec,
 
 		configMapLister:     kubeInformersForNamespaces.ConfigMapLister(),
 		secretLister:        kubeInformersForNamespaces.SecretLister(),
@@ -195,6 +197,10 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	_, _, err = manageClusterPolicyControllerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
+	}
+	_, _, err = manageRecycler(ctx, c.kubeClient.CoreV1(), recorder, c.toolsImagePullSpec)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap/recycler-config", err))
 	}
 	_, _, err = ManageCSRIntermediateCABundle(ctx, c.secretLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
@@ -402,6 +408,19 @@ func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.
 
 	requiredCM := resourceread.ReadConfigMapV1OrDie([]byte(cmString))
 	return resourceapply.ApplyConfigMap(client, recorder, requiredCM)
+}
+
+// manageRecycler applies a ConfigMap containing the recycler config.
+// Owned by storage team/fbertina@redhat.com.
+func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, recorder events.Recorder, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
+	cmString := string(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/recycler-cm.yaml"))
+	for pattern, value := range map[string]string{
+		"${TOOLS_IMAGE}": imagePullSpec,
+	} {
+		cmString = strings.ReplaceAll(cmString, pattern, value)
+	}
+	requiredCM := resourceread.ReadConfigMapV1OrDie([]byte(cmString))
+	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, requiredCM)
 }
 
 func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
