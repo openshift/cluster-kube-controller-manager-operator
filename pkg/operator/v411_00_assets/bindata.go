@@ -118,10 +118,6 @@ extendedArguments:
   - "true"
   flex-volume-plugin-dir:
   - "/etc/kubernetes/kubelet-plugins/volume/exec" # created by machine-config-operator, owned by storage team/hekumar@redhat.com
-  pv-recycler-pod-template-filepath-nfs:
-  - "/etc/kubernetes/manifests/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
-  pv-recycler-pod-template-filepath-hostpath:
-  - "/etc/kubernetes/manifests/recycler-pod.yaml" # created by machine-config-operator, owned by storage team/fbertina@redhat.com
   leader-elect:
   - "true"
   leader-elect-retry-period:
@@ -153,6 +149,7 @@ extendedArguments:
   - "150" # this is a historical values
   kube-api-burst:
   - "300" # this is a historical values
+
 `)
 
 func v410ConfigDefaultconfigYamlBytes() ([]byte, error) {
@@ -794,8 +791,6 @@ spec:
     ports:
       - containerPort: 10257
     volumeMounts:
-    - mountPath: /etc/kubernetes/manifests
-      name: manifests-dir # Used in the KubeControllerManagerConfig to pass in recycler pod templates
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
     - mountPath: /etc/kubernetes/static-pod-certs
@@ -919,9 +914,6 @@ spec:
   tolerations:
   - operator: "Exists"
   volumes:
-  - hostPath:
-      path: /etc/kubernetes/manifests
-    name: manifests-dir
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION
     name: resource-dir
