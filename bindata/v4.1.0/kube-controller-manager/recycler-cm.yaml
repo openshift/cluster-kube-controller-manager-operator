@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-kube-controller-manager
+  name: recycler-config
+data:
+  recycler-pod.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: recycler-pod
+      namespace: openshift-infra
+    spec:
+      activeDeadlineSeconds: 60
+      restartPolicy: Never
+      serviceAccountName: pv-recycler-controller
+      containers:
+        - name: recycler-container
+          image: "${TOOLS_IMAGE}"
+          command:
+          - "/bin/bash"
+          args:
+          - "-c"
+          - "test -e /scrub && rm -rf /scrub/..?* /scrub/.[!.]* /scrub/*  && test -z \"$(ls -A /scrub)\" || exit 1"
+          volumeMounts:
+            - mountPath: /scrub
+              name: vol
+          securityContext:
+            runAsUser: 0
+      volumes:
+        - name: vol

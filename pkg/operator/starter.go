@@ -104,6 +104,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
 		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
+		os.Getenv("TOOLS_IMAGE"),
 		kubeInformersForNamespaces,
 		operatorClient,
 		kubeClient,
@@ -218,6 +219,7 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "kube-controller-cert-syncer-kubeconfig"},
 	{Name: "serviceaccount-ca"},
 	{Name: "service-ca"},
+	{Name: "recycler-config"},
 }
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
