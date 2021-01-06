@@ -9,19 +9,19 @@ require (
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/openshift/api v0.0.0-20201119144013-9f0856e7c657
+	github.com/openshift/api v0.0.0-20201216151826-78a19e96f9eb
 	github.com/openshift/build-machinery-go v0.0.0-20200917070002-f171684f77ab
-	github.com/openshift/client-go v0.0.0-20201119144744-148025d790a9
-	github.com/openshift/library-go v0.0.0-20201119162840-a8387fdfa05b
+	github.com/openshift/client-go v0.0.0-20201214125552-e615e336eb49
+	github.com/openshift/library-go v0.0.0-20201223214116-830765adf874
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	k8s.io/api v0.20.0-beta.2
-	k8s.io/apimachinery v0.20.0-beta.2
-	k8s.io/apiserver v0.20.0-beta.2
-	k8s.io/client-go v0.20.0-beta.2
-	k8s.io/component-base v0.20.0-beta.2
+	k8s.io/api v0.20.0
+	k8s.io/apimachinery v0.20.0
+	k8s.io/apiserver v0.20.0
+	k8s.io/client-go v0.20.0
+	k8s.io/component-base v0.20.0
 	k8s.io/klog/v2 v2.4.0
 )
 
