@@ -25,6 +25,7 @@ spec:
     - --alsologtostderr
     - --v=2
     - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log
+{{ .ExtendedArguments }}
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
