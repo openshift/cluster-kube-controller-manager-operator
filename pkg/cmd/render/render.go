@@ -9,6 +9,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
@@ -110,6 +111,7 @@ func (r *renderOpts) Complete() error {
 type TemplateData struct {
 	genericrenderoptions.TemplateData
 
+	ExtendedArguments                     string
 	ClusterPolicyControllerImage          string
 	ClusterPolicyControllerConfigFileName string
 	ClusterPolicyControllerFileConfig     genericrenderoptions.FileConfig
@@ -240,6 +242,17 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 
+	// extendedArguments are no longer being parsed by kube-controller-mananger,
+	// we need to parse and pass them explicitly
+	var kubeControllerManagerConfig map[string]interface{}
+	if err := yaml.Unmarshal(renderConfig.FileConfig.BootstrapConfig, &kubeControllerManagerConfig); err != nil {
+		return fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
+	}
+	extendedArguments := targetconfigcontroller.GetKubeControllerManagerArgs(kubeControllerManagerConfig)
+	for _, arg := range extendedArguments {
+		renderConfig.ExtendedArguments += fmt.Sprintf("    - %s\n", arg)
+	}
+
 	// add additional kubeconfig asset
 	if kubeConfig, err := r.readBootstrapSecretsKubeconfig(); err != nil {
 		return fmt.Errorf("failed to read %s/kubeconfig: %v", r.manifest.SecretsHostPath, err)
@@ -247,17 +260,15 @@ func (r *renderOpts) Run() error {
 		renderConfig.Assets["kubeconfig"] = kubeConfig
 	}
 
-	err := genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig)
-	if err != nil {
+	if err := genericrender.WriteFiles(&r.generic, &renderConfig.FileConfig, renderConfig); err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(
+	if err := ioutil.WriteFile(
 		r.clusterPolicyControllerConfigOutputFile,
 		renderConfig.ClusterPolicyControllerFileConfig.BootstrapConfig,
 		0644,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf("failed to write merged config to %q: %v", r.clusterPolicyControllerConfigOutputFile, err)
 	}
 

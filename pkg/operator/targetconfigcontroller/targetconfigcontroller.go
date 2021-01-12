@@ -488,7 +488,9 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		if err := yaml.Unmarshal([]byte(kubeControllerManagerConfigMap.Data["config.yaml"]), &kubeControllerManagerConfig); err != nil {
 			return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
 		}
-		containerArgsWithLoglevel[0] += " " + readKubeControllerManagerArgs(kubeControllerManagerConfig)
+		if extendedArguments := GetKubeControllerManagerArgs(kubeControllerManagerConfig); len(extendedArguments) > 0 {
+			containerArgsWithLoglevel[0] += " " + strings.Join(extendedArguments, " ")
+		}
 	}
 	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
 
@@ -527,10 +529,10 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, configMap)
 }
 
-func readKubeControllerManagerArgs(config map[string]interface{}) string {
+func GetKubeControllerManagerArgs(config map[string]interface{}) []string {
 	extendedArguments, ok := config["extendedArguments"]
 	if !ok || extendedArguments == nil {
-		return ""
+		return nil
 	}
 	args := []string{}
 	for key, value := range extendedArguments.(map[string]interface{}) {
@@ -541,7 +543,7 @@ func readKubeControllerManagerArgs(config map[string]interface{}) string {
 	// make sure to sort the arguments, otherwise we might get mismatch
 	// when comparing revisions leading to new ones being created, unnecessarily
 	sort.Strings(args)
-	return strings.Join(args, " ")
+	return args
 }
 
 func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {

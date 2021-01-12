@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -378,7 +379,7 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 func TestReadKubeControllerManagerArgs(t *testing.T) {
 	testCases := []struct {
 		input    map[string]interface{}
-		expected string
+		expected []string
 	}{
 		{
 			input: map[string]interface{}{
@@ -387,7 +388,7 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 					"allocate-node-cidrs":         []interface{}{"true"},
 				},
 			},
-			expected: "",
+			expected: nil,
 		},
 		{
 			input: map[string]interface{}{
@@ -396,7 +397,7 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 					"allocate-node-cidrs":         []interface{}{"true"},
 				},
 			},
-			expected: "--allocate-node-cidrs=true --enable-dynamic-provisioning=true",
+			expected: []string{"--allocate-node-cidrs=true", "--enable-dynamic-provisioning=true"},
 		},
 		{
 			input: map[string]interface{}{
@@ -404,7 +405,7 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 					"controllers": []interface{}{"*", "-ttl", "-bootstrapsigner", "-tokencleaner"},
 				},
 			},
-			expected: "--controllers=* --controllers=-bootstrapsigner --controllers=-tokencleaner --controllers=-ttl",
+			expected: []string{"--controllers=*", "--controllers=-bootstrapsigner", "--controllers=-tokencleaner", "--controllers=-ttl"},
 		},
 		{
 			input: map[string]interface{}{
@@ -415,13 +416,13 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 					"kube-api-burst":            []interface{}{"300"},
 				},
 			},
-			expected: "--cluster-signing-cert-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt --cluster-signing-key-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key --kube-api-burst=300 --kube-api-qps=150",
+			expected: []string{"--cluster-signing-cert-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt", "--cluster-signing-key-file=/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key", "--kube-api-burst=300", "--kube-api-qps=150"},
 		},
 	}
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			output := readKubeControllerManagerArgs(tc.input)
-			if output != tc.expected {
+			output := GetKubeControllerManagerArgs(tc.input)
+			if !reflect.DeepEqual(output, tc.expected) {
 				t.Errorf("Unexpected difference between %s and %s", tc.expected, output)
 			}
 		})
