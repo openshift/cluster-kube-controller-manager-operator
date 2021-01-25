@@ -9,4 +9,6 @@ approvers:
   - mfojtik
   - tnozicka
   - soltysh
+  - ingvagabund
+  - damemi
 component: "kube-controller-manager"
