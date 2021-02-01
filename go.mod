@@ -9,10 +9,10 @@ require (
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/openshift/api v0.0.0-20201216151826-78a19e96f9eb
 	github.com/openshift/build-machinery-go v0.0.0-20210209125900-0da259a2c359
+	github.com/openshift/api v0.0.0
 	github.com/openshift/client-go v0.0.0-20201214125552-e615e336eb49
-	github.com/openshift/library-go v0.0.0-20210106214821-c4d0b9c8d55f
+	github.com/openshift/library-go v0.0.0-20210127081712-a4f002827e42
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
@@ -31,3 +31,5 @@ replace (
 )
 
 replace vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
+
+replace github.com/openshift/api => ../api
