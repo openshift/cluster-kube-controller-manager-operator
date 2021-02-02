@@ -796,7 +796,7 @@ spec:
     resources:
       requests:
         memory: 200Mi
-        cpu: 80m
+        cpu: 60m
     ports:
       - containerPort: 10257
     volumeMounts:
