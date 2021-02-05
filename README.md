@@ -90,7 +90,7 @@ IMPORTANT: This apprach disables cluster-version-operator completly, whereas pre
 After doing this you can now change the image of the operator to the desired one:
 
 ```
-oc patch pod/kube-controller-manager-operator-<rand_digits> -n openshift-kube-controller-manager-operator -p '{"spec":{"containers":[{"name":"kube-controller-manager-operator","image":"<user>/cluster-kube-controller-manager-operator"}]}}'
+oc patch deployment/kube-controller-manager-operator -n openshift-kube-controller-manager-operator -p '{"spec":{"template":{"spec":{"containers":[{"name":"kube-controller-manager-operator","image":"<user>/cluster-kube-controller-manager-operator","env":[{"name":"OPERATOR_IMAGE","value":"<user>/cluster-kube-controller-manager-operator"}]}]}}}}'
 ```
 
 
