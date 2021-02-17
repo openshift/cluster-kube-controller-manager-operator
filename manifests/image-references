@@ -14,3 +14,7 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-cluster-policy-controller:v4.3
+  - name: tools # owned by storage team/fbertina@redhat.com
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-tools:latest
