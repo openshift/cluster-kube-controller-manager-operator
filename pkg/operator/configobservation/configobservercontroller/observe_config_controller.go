@@ -6,6 +6,7 @@ import (
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
+	libgoapiserver "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/configobserver/proxy"
@@ -63,6 +64,7 @@ func NewConfigObserver(
 				InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
 				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
 				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
+				APIServerLister_:      configinformers.Config().V1().APIServers().Lister(),
 
 				ResourceSync:     resourceSyncer,
 				ConfigMapLister_: kubeInformersForNamespaces.ConfigMapLister(),
@@ -93,6 +95,7 @@ func NewConfigObserver(
 			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
+			libgoapiserver.ObserveTLSSecurityProfile,
 		),
 	}
 
