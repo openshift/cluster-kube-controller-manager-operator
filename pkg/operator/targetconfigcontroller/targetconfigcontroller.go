@@ -492,12 +492,32 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 			containerArgsWithLoglevel[0] += " " + strings.Join(extendedArguments, " ")
 		}
 	}
-	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
 
 	var observedConfig map[string]interface{}
 	if err := yaml.Unmarshal(operatorSpec.ObservedConfig.Raw, &observedConfig); err != nil {
 		return nil, false, fmt.Errorf("failed to unmarshal the observedConfig: %v", err)
 	}
+
+	cipherSuites, cipherSuitesFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "cipherSuites")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the servingInfo.cipherSuites config from observedConfig: %v", err)
+	}
+
+	minTLSVersion, minTLSVersionFound, err := unstructured.NestedString(observedConfig, "servingInfo", "minTLSVersion")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the servingInfo.minTLSVersion config from observedConfig: %v", err)
+	}
+
+	if cipherSuitesFound && len(cipherSuites) > 0 {
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-cipher-suites=%s", strings.Join(cipherSuites, ","))
+	}
+
+	if minTLSVersionFound && len(minTLSVersion) > 0 {
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-min-version=%s", minTLSVersion)
+	}
+
+	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
+
 	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
 	if err != nil {
 		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %v", err)
