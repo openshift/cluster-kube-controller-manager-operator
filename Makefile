@@ -39,6 +39,11 @@ test-e2e: GO_TEST_FLAGS :=-race -timeout=30m
 test-e2e: test-unit
 .PHONY: test-e2e
 
+test-e2e-preferred-host: GO_TEST_PACKAGES :=./test/e2e-preferred-host/...
+test-e2e-preferred-host: GO_TEST_FLAGS += -timeout 1h
+test-e2e-preferred-host: test-unit
+.PHONY: test-e2e-preferred-host
+
 # Configure the 'telepresence' target
 # See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
 export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
