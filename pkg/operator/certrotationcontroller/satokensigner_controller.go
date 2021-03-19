@@ -2,12 +2,7 @@ package certrotationcontroller
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -22,11 +17,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/keyutil"
 	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/library-go/pkg/operator/encryption/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -197,7 +192,7 @@ func (c *SATokenSignerController) syncWorker() error {
 	} else if err != nil {
 		return err
 	} else {
-		err := checkKeyPairValidity(saTokenSigner.Data["service-account.pub"], saTokenSigner.Data["service-account.key"])
+		err := crypto.CheckRSAKeyPair(saTokenSigner.Data["service-account.pub"], saTokenSigner.Data["service-account.key"])
 		if err != nil {
 			klog.Errorf("key pair is invalid: %v", err)
 			needNewSATokenSigningKey = true
@@ -205,11 +200,7 @@ func (c *SATokenSignerController) syncWorker() error {
 	}
 
 	if needNewSATokenSigningKey {
-		rsaKey, err := rsa.GenerateKey(rand.Reader, keySize)
-		if err != nil {
-			return err
-		}
-		publicBytes, err := publicKeyToPem(&rsaKey.PublicKey)
+		pubKeyPEM, privKeyPEM, err := crypto.GenerateRSAKeyPair()
 		if err != nil {
 			return err
 		}
@@ -220,8 +211,8 @@ func (c *SATokenSignerController) syncWorker() error {
 				Annotations: map[string]string{saTokenReadyTimeAnnotation: time.Now().Add(5 * time.Minute).Format(time.RFC3339)},
 			},
 			Data: map[string][]byte{
-				"service-account.key": privateKeyToPem(rsaKey),
-				"service-account.pub": publicBytes,
+				"service-account.key": privKeyPEM,
+				"service-account.pub": pubKeyPEM,
 			},
 		}
 
@@ -283,58 +274,6 @@ func (c *SATokenSignerController) syncWorker() error {
 	}
 
 	return nil
-}
-
-// checkKeyPairValidity checks if public key and private key matches.
-func checkKeyPairValidity(pubKeyData, privKeyData []byte) error {
-	privKey, err := keyutil.ParsePrivateKeyPEM(privKeyData)
-	if err != nil {
-		return err
-	}
-	rsaPrivateKey, ok := privKey.(*rsa.PrivateKey)
-	if !ok {
-		return fmt.Errorf("private key is not of rsa type")
-	}
-	pubKeys, err := keyutil.ParsePublicKeysPEM(pubKeyData)
-	if err != nil {
-		return err
-	}
-	wantRSAPublicKey, ok := pubKeys[0].(*rsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("public key is not of rsa type")
-	}
-	// private key embeds public key and embedded key must match provided public key
-	if !reflect.DeepEqual(rsaPrivateKey.PublicKey, *wantRSAPublicKey) {
-		return fmt.Errorf("key pair do not match")
-	}
-	return nil
-}
-
-const keySize = 2048
-
-func privateKeyToPem(key *rsa.PrivateKey) []byte {
-	keyInBytes := x509.MarshalPKCS1PrivateKey(key)
-	keyinPem := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: keyInBytes,
-		},
-	)
-	return keyinPem
-}
-
-func publicKeyToPem(key *rsa.PublicKey) ([]byte, error) {
-	keyInBytes, err := x509.MarshalPKIXPublicKey(key)
-	if err != nil {
-		return nil, err
-	}
-	keyinPem := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PUBLIC KEY",
-			Bytes: keyInBytes,
-		},
-	)
-	return keyinPem, nil
 }
 
 func (c *SATokenSignerController) Run(workers int, stopCh <-chan struct{}) {
