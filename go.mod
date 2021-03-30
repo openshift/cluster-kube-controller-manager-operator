@@ -10,10 +10,10 @@ require (
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/openshift/api v0.0.0-20201216151826-78a19e96f9eb
+	github.com/openshift/api v0.0.0-20210325044225-ef3741adfc31
 	github.com/openshift/build-machinery-go v0.0.0-20210209125900-0da259a2c359
 	github.com/openshift/client-go v0.0.0-20201214125552-e615e336eb49
-	github.com/openshift/library-go v0.0.0-20210323190122-79e54d55dfd2
+	github.com/openshift/library-go v0.0.0-20210329142940-8978d5763590
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5

@@ -129,7 +129,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
 		WithResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
-		WithVersioning(operatorclient.OperatorNamespace, "kube-controller-manager", versionRecorder).
+		WithVersioning("kube-controller-manager", versionRecorder).
 		ToControllers()
 	if err != nil {
 		return err
