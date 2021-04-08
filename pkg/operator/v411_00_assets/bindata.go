@@ -708,6 +708,7 @@ kind: Namespace
 metadata:
   annotations:
     openshift.io/node-selector: ""
+    workload.openshift.io/allowed: "management"
   name: openshift-kube-controller-manager
   labels:
     openshift.io/run-level: "0"
@@ -762,6 +763,7 @@ metadata:
   namespace: openshift-kube-controller-manager
   annotations:
     kubectl.kubernetes.io/default-logs-container: kube-controller-manager
+    workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
   labels:
     app: kube-controller-manager
     kube-controller-manager: "true"
@@ -958,6 +960,8 @@ data:
     metadata:
       name: recycler-pod
       namespace: openshift-infra
+      annotations:
+        workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
     spec:
       activeDeadlineSeconds: 60
       restartPolicy: Never
