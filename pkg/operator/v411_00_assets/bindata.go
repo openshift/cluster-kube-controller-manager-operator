@@ -135,7 +135,7 @@ extendedArguments:
   - "-bootstrapsigner"
   - "-tokencleaner"
   experimental-cluster-signing-duration:
-  - "720h"
+  - "15m"
   secure-port:
   - "10257"
   port:
