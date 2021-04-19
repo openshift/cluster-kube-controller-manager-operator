@@ -11,7 +11,7 @@ data:
       name: recycler-pod
       namespace: openshift-infra
       annotations:
-        workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
     spec:
       activeDeadlineSeconds: 60
       restartPolicy: Never

@@ -763,7 +763,7 @@ metadata:
   namespace: openshift-kube-controller-manager
   annotations:
     kubectl.kubernetes.io/default-logs-container: kube-controller-manager
-    workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+    target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
   labels:
     app: kube-controller-manager
     kube-controller-manager: "true"
@@ -961,7 +961,7 @@ data:
       name: recycler-pod
       namespace: openshift-infra
       annotations:
-        workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
     spec:
       activeDeadlineSeconds: 60
       restartPolicy: Never
