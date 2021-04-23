@@ -1,6 +1,6 @@
 module github.com/openshift/cluster-kube-controller-manager-operator
 
-go 1.15
+go 1.16
 
 require (
 	github.com/ghodss/yaml v1.0.0
