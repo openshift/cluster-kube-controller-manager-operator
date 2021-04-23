@@ -34,6 +34,8 @@ $(call build-image,ocp-cluster-kube-controller-manager-operator,$(IMAGE_REGISTRY
 # and also hooked into {update,verify}-generated for broader integration.
 $(call add-bindata,v4.1.0,./bindata/v4.1.0/...,bindata,v411_00_assets,pkg/operator/v411_00_assets/bindata.go)
 
+$(call verify-golang-versions,Dockerfile.rhel7)
+
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS :=-race -timeout=30m
 test-e2e: test-unit
