@@ -1,6 +1,6 @@
 module github.com/openshift/cluster-kube-controller-manager-operator
 
-go 1.15
+go 1.16
 
 require (
 	github.com/ghodss/yaml v1.0.0
@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/openshift/api v0.0.0-20210409143810-a99ffa1cac67
-	github.com/openshift/build-machinery-go v0.0.0-20210209125900-0da259a2c359
+	github.com/openshift/build-machinery-go v0.0.0-20210423112049-9415d7ebd33e
 	github.com/openshift/client-go v0.0.0-20210331195552-cf6c2669e01f
 	github.com/openshift/library-go v0.0.0-20210414082648-6e767630a0dc
 	github.com/prometheus/common v0.10.0
