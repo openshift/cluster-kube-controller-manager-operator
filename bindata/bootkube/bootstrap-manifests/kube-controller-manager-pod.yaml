@@ -8,7 +8,7 @@ metadata:
     openshift.io/component: "controller-manager"
   annotations:
     openshift.io/run-level: "0"
-    workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+    target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
 spec:
   restartPolicy: Always
   hostNetwork: true
