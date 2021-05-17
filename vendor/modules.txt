@@ -205,7 +205,7 @@ github.com/openshift/client-go/config/listers/config/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20210414082648-6e767630a0dc
+# github.com/openshift/library-go v0.0.0-20210513103829-aa02c23cb230
 ## explicit
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
