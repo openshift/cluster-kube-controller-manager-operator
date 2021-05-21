@@ -4,16 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/watch"
 	clientset "k8s.io/client-go/kubernetes"
-	k8se2eframework "k8s.io/kubernetes/test/e2e/framework"
+	"k8s.io/client-go/tools/cache"
+	watchtools "k8s.io/client-go/tools/watch"
 
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
@@ -32,6 +42,13 @@ var (
 	// KCMs are considered to not converged
 	waitForKCMRevisionPollInterval = 30 * time.Second
 	waitForKCMRevisionTimeout      = 7 * time.Minute
+
+	// serviceAccountProvisionTimeout is how long to wait for a service account to be provisioned.
+	// service accounts are provisioned after namespace creation
+	// a service account is required to support pod creation in a namespace as part of admission control
+	serviceAccountProvisionTimeout = 2 * time.Minute
+
+	nsCreationPollInterval = 2 * time.Second
 )
 
 // TestKCMTalksOverPreferredHostToKAS points the KCM to a non available host
@@ -71,9 +88,9 @@ func TestKCMTalksOverPreferredHostToKAS(t *testing.T) {
 
 	// act
 	t.Log("creating a namespace and waiting for a default sa to be populated")
-	testNs, err := k8se2eframework.CreateTestingNS("kcm-preferred-host", kubeClient, nil)
+	testNs, err := createTestingNS(t, "kcm-preferred-host", kubeClient)
 	require.NoError(t, err)
-	err = k8se2eframework.WaitForDefaultServiceAccountInNamespace(kubeClient, testNs.Name)
+	err = waitForServiceAccountInNamespace(kubeClient, testNs.Name, "default")
 	require.NoError(t, err)
 }
 
@@ -98,4 +115,77 @@ func readCurrentKubeAPIHostAndScheme(t *testing.T, openShiftClientSet configv1cl
 	}
 
 	return kubeAPIURL.Scheme, host
+}
+
+// createTestingNS should be used by every test, note that we append a common prefix to the provided test name.
+// Please see NewFramework instead of using this directly.
+// note this method has been copied from k/k repo
+func createTestingNS(t *testing.T, baseName string, c clientset.Interface) (*v1.Namespace, error) {
+	// We don't use ObjectMeta.GenerateName feature, as in case of API call
+	// failure we don't know whether the namespace was created and what is its
+	// name.
+	name := fmt.Sprintf("%v-%v", baseName, strconv.Itoa(rand.Intn(10000)))
+
+	namespaceObj := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "",
+		},
+		Status: v1.NamespaceStatus{},
+	}
+	// Be robust about making the namespace creation call.
+	var got *v1.Namespace
+	if err := wait.PollImmediate(nsCreationPollInterval, 30*time.Second, func() (bool, error) {
+		var err error
+		got, err = c.CoreV1().Namespaces().Create(context.TODO(), namespaceObj, metav1.CreateOptions{})
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				// regenerate on conflict
+				t.Logf("Namespace name %q was already taken, generate a new name and retry", namespaceObj.Name)
+				namespaceObj.Name = fmt.Sprintf("%v-%v", baseName, strconv.Itoa(rand.Intn(10000)))
+			} else {
+				t.Logf("Unexpected error while creating namespace: %v", err)
+			}
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return got, nil
+}
+
+// note this method has been copied from k/k repo
+func waitForServiceAccountInNamespace(c clientset.Interface, ns, serviceAccountName string) error {
+	fieldSelector := fields.OneTermEqualSelector("metadata.name", serviceAccountName).String()
+	lw := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (object runtime.Object, e error) {
+			options.FieldSelector = fieldSelector
+			return c.CoreV1().ServiceAccounts(ns).List(context.TODO(), options)
+		},
+		WatchFunc: func(options metav1.ListOptions) (i watch.Interface, e error) {
+			options.FieldSelector = fieldSelector
+			return c.CoreV1().ServiceAccounts(ns).Watch(context.TODO(), options)
+		},
+	}
+	ctx, cancel := watchtools.ContextWithOptionalTimeout(context.Background(), serviceAccountProvisionTimeout)
+	defer cancel()
+	_, err := watchtools.UntilWithSync(ctx, lw, &v1.ServiceAccount{}, nil, serviceAccountHasSecrets)
+	return err
+}
+
+// serviceAccountHasSecrets returns true if the service account has at least one secret,
+// false if it does not, or an error.
+// note this method has been copied from k/k repo
+func serviceAccountHasSecrets(event watch.Event) (bool, error) {
+	switch event.Type {
+	case watch.Deleted:
+		return false, apierrors.NewNotFound(schema.GroupResource{Resource: "serviceaccounts"}, "")
+	}
+	switch t := event.Object.(type) {
+	case *v1.ServiceAccount:
+		return len(t.Secrets) > 0, nil
+	}
+	return false, nil
 }
