@@ -929,7 +929,7 @@ spec:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION
     name: resource-dir
   - hostPath:
-      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-certs
+      path: /etc/kubernetes/static-pod-resources/kube-controller-manager-pod-REVISION/dynamic
     name: cert-dir
 `)
 
