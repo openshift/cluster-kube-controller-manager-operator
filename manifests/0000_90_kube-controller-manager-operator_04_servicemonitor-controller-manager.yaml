@@ -61,6 +61,10 @@ spec:
       regex: rest_client_request_latency_seconds_(bucket|count|sum)
       sourceLabels:
       - __name__
+    - action: drop
+      regex: root_ca_cert_publisher_sync_duration_seconds_(bucket|count|sum)
+      sourceLabels:
+      - __name__
     port: https
     scheme: https
     tlsConfig:
