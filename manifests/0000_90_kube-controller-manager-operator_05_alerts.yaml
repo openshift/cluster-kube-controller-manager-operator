@@ -24,7 +24,7 @@ spec:
             message: The pod disruption budget is preventing further disruption to pods because it is at the minimum allowed level.
           expr: |
             max by(namespace, poddisruptionbudget) (kube_poddisruptionbudget_status_current_healthy == kube_poddisruptionbudget_status_desired_healthy)
-          for: 15m
+          for: 60m
           labels:
             severity: warning
         - alert: PodDisruptionBudgetLimit
