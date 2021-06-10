@@ -450,33 +450,50 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		}
 	}
 
-	containerArgsWithLoglevel := required.Spec.Containers[0].Args
-	if argsCount := len(containerArgsWithLoglevel); argsCount > 1 {
-		return nil, false, fmt.Errorf("expected only one container argument, got %d", argsCount)
-	}
-	if !strings.Contains(containerArgsWithLoglevel[0], "exec hyperkube kube-controller-manager") {
-		return nil, false, fmt.Errorf("exec hyperkube kube-controller-manager not found in first argument %q", containerArgsWithLoglevel[0])
-	}
-
-	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
+	// This section sets the log levels for all containers that take a "1-line" argument
+	logLevel := 2
 	switch operatorSpec.LogLevel {
 	case operatorv1.Normal:
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 2)
+		logLevel = 2
 	case operatorv1.Debug:
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 4)
+		logLevel = 4
 	case operatorv1.Trace:
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 6)
+		logLevel = 6
 	case operatorv1.TraceAll:
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 8)
+		logLevel = 8
 	default:
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", 2)
+		logLevel = 2
 	}
+	// containers[0] = kube-controller-manager
+	// containers[1] = cluster-policy-controller
+	// containers[2] = kube-controller-manager-cert-syncer
+	// containers[3] = kube-controller-manager-recovery-controller
+	containerNames := sets.NewString("kube-controller-manager", "cluster-policy-controller", "kube-controller-manager-recovery-controller")
+	for i := 0; i < len(required.Spec.Containers); i++ {
+		if !containerNames.Has(required.Spec.Containers[i].Name) {
+			continue
+		}
+		containerArgsWithLoglevel := required.Spec.Containers[i].Args
+		if argsCount := len(containerArgsWithLoglevel); argsCount > 1 {
+			return nil, false, fmt.Errorf("expected only one container argument, got %d", argsCount)
+		}
+		containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
+		containerArgsWithLoglevel[0] += fmt.Sprintf(" -v=%d", logLevel)
+	}
+
+	// now we are only handling args for the main KCM container
+	kcmContainerArgsWithLoglevel := required.Spec.Containers[0].Args
+	if !strings.Contains(kcmContainerArgsWithLoglevel[0], "exec hyperkube kube-controller-manager") {
+		return nil, false, fmt.Errorf("exec hyperkube kube-controller-manager not found in first argument %q", kcmContainerArgsWithLoglevel[0])
+	}
+
+	kcmContainerArgsWithLoglevel[0] = strings.TrimSpace(kcmContainerArgsWithLoglevel[0])
 
 	if _, err := secretsGetter.Secrets(required.Namespace).Get(ctx, "serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
 	} else if err == nil {
-		containerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
-		containerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key"
+		kcmContainerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
+		kcmContainerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key"
 	}
 
 	kubeControllerManagerConfigMap, err := configMapsGetter.ConfigMaps(required.Namespace).Get(ctx, "config", metav1.GetOptions{})
@@ -489,7 +506,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 			return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
 		}
 		if extendedArguments := GetKubeControllerManagerArgs(kubeControllerManagerConfig); len(extendedArguments) > 0 {
-			containerArgsWithLoglevel[0] += " " + strings.Join(extendedArguments, " ")
+			kcmContainerArgsWithLoglevel[0] += " " + strings.Join(extendedArguments, " ")
 		}
 	}
 
@@ -509,14 +526,14 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	}
 
 	if cipherSuitesFound && len(cipherSuites) > 0 {
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-cipher-suites=%s", strings.Join(cipherSuites, ","))
+		kcmContainerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-cipher-suites=%s", strings.Join(cipherSuites, ","))
 	}
 
 	if minTLSVersionFound && len(minTLSVersion) > 0 {
-		containerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-min-version=%s", minTLSVersion)
+		kcmContainerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-min-version=%s", minTLSVersion)
 	}
 
-	containerArgsWithLoglevel[0] = strings.TrimSpace(containerArgsWithLoglevel[0])
+	kcmContainerArgsWithLoglevel[0] = strings.TrimSpace(kcmContainerArgsWithLoglevel[0])
 
 	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
 	if err != nil {

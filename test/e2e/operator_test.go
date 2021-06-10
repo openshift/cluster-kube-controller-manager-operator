@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,11 +17,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	policyclientv1beta1 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	test "github.com/openshift/cluster-kube-controller-manager-operator/test/library"
 	"github.com/openshift/library-go/test/library/metrics"
 	"github.com/prometheus/common/model"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOperatorNamespace(t *testing.T) {
@@ -321,4 +324,41 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 	}
 	_, err := client.CoreV1().Pods(name).Create(context.Background(), pod, metav1.CreateOptions{})
 	return err
+}
+
+func TestLogLevel(t *testing.T) {
+	kubeConfig, err := test.NewClientConfigForTest()
+	require.NoError(t, err)
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	operatorClientSet, err := operatorv1client.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	kcmOperator := operatorClientSet.KubeControllerManagers()
+	kcmOperatorConfig, err := kcmOperator.Get(context.TODO(), "cluster", metav1.GetOptions{})
+	require.NoError(t, err)
+
+	kcmOperatorConfig.Spec.LogLevel = "Debug"
+	kcmOperator.Update(context.TODO(), kcmOperatorConfig, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	// wait for KCM pods to be successfully running
+	// then check that "v=4" was added to the appropriate containers
+	err = wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) {
+		pods, err := kubeClient.CoreV1().Pods(operatorclient.TargetNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=kube-controller-manager"})
+		require.NoError(t, err)
+		for _, pod := range pods.Items {
+			if pod.Status.Phase != corev1.PodRunning {
+				return false, nil
+			}
+			for _, container := range pod.Spec.Containers {
+				if container.Name == "kube-controller-manager-cert-syncer" {
+					continue
+				}
+				if !strings.Contains(container.Args[0], "v=4") {
+					return false, nil
+				}
+			}
+		}
+		return true, nil
+	})
 }
