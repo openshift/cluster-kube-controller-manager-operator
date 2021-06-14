@@ -93,7 +93,7 @@ func (c *cloudProviderObserver) ObserveCloudProviderNames(genericListers configo
 	}
 
 	// we set cloudprovider configmap values only for some cloud providers.
-	validCloudProviders := sets.NewString("aws", "azure", "gce", "openstack", "vsphere")
+	validCloudProviders := sets.NewString("gce", "vsphere")
 	if !validCloudProviders.Has(cloudProvider) {
 		sourceCloudConfigMap = ""
 	}
@@ -141,9 +141,9 @@ func getPlatformName(platformType configv1.PlatformType, recorder events.Recorde
 	case "":
 		recorder.Warningf("ObserveCloudProvidersFailed", "Required status.platform field is not set in infrastructures.%s/cluster", configv1.GroupName)
 	case configv1.AWSPlatformType:
-		cloudProvider = "aws"
+		cloudProvider = "external"
 	case configv1.AzurePlatformType:
-		cloudProvider = "azure"
+		cloudProvider = "external"
 	case configv1.VSpherePlatformType:
 		cloudProvider = "vsphere"
 	case configv1.BareMetalPlatformType:
@@ -151,7 +151,7 @@ func getPlatformName(platformType configv1.PlatformType, recorder events.Recorde
 		cloudProvider = "gce"
 	case configv1.LibvirtPlatformType:
 	case configv1.OpenStackPlatformType:
-		cloudProvider = "openstack"
+		cloudProvider = "external"
 	case configv1.NonePlatformType:
 	case configv1.OvirtPlatformType:
 	case configv1.KubevirtPlatformType:
