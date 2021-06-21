@@ -92,6 +92,8 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"v4.1.0/kube-controller-manager/localhost-recovery-client-crb.yaml",
 			"v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml",
 			"v4.1.0/kube-controller-manager/localhost-recovery-token.yaml",
+			"v4.1.0/kube-controller-manager/csr_approver_clusterrole.yaml",
+			"v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml",
 			"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml",
 			"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml",
 		},
