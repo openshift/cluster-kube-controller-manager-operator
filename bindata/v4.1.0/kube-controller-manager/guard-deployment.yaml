@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kcm-guard
+  namespace: openshift-kube-controller-manager
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      k8s-app: kcm-guard
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: kcm-guard
+        k8s-app: kcm-guard
+    spec:
+      serviceAccount: guard-sa
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: k8s-app
+                    operator: In
+                    values:
+                      - "kcm-guard"
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      priorityClassName: "system-cluster-critical"
+      terminationGracePeriodSeconds: 3
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+          operator: Exists
+        - key: node.kubernetes.io/not-ready
+          effect: NoExecute
+          operator: Exists
+        - key: node.kubernetes.io/unreachable
+          effect: NoExecute
+          operator: Exists
+        - key: node-role.kubernetes.io/etcd
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: guard
+          image: quay.io/openshift/origin-cli:latest
+          imagePullPolicy: IfNotPresent
+          terminationMessagePolicy: FallbackToLogsOnError
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - /bin/bash
+          args:
+            - -c
+            - |
+              # properly handle TERM and exit as soon as it is signaled
+              set -euo pipefail
+              trap 'jobs -p | xargs -r kill; exit 0' TERM
+              sleep infinity & wait
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  oc get pods -o wide | grep -i kube-controller-manager | grep -i $NODE_NAME | grep -i 'Running'
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 5Mi

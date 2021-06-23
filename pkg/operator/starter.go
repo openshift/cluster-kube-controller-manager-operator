@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
@@ -29,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/listers/apps/v1"
 )
 
 func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
@@ -74,6 +77,14 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
+	// Add Deployment, PDB Informer for the `openshift-etcd` namespace
+	// TODO: Make this a slice to be passed for the controller to react to.
+	deploymentInformer := kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Apps().V1().Deployments().Informer()
+	pdbInformer := kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Policy().V1().PodDisruptionBudgets().Informer()
+
+	// infraLister and deploymentLister
+	infraLister := configInformers.Config().V1().Infrastructures().Lister()
+	deploymentLister := kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Apps().V1().Deployments().Lister()
 	staticResourceController := staticresourcecontroller.NewStaticResourceController(
 		"KubeControllerManagerStaticResources",
 		v411_00_assets.Asset,
@@ -100,7 +111,10 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		(&resourceapply.ClientHolder{}).WithKubernetes(kubeClient),
 		operatorClient,
 		cc.EventRecorder,
-	).AddKubeInformers(kubeInformersForNamespaces)
+	).WithConditionalResource(withDeploymentChecker(deploymentLister), "v4.1.0/kube-controller-manager/guard-pdb.yaml",
+		withSNOCheck(infraLister)).
+		AddKubeInformers(kubeInformersForNamespaces).
+		AddInformer(deploymentInformer).AddInformer(pdbInformer)
 
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
 		os.Getenv("IMAGE"),
@@ -132,6 +146,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		WithRevisionedResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithUnrevisionedCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
 		WithVersioning("kube-controller-manager", versionRecorder).
+		WithGuardDeployment(v411_00_assets.MustAsset, "v4.1.0/kube-controller-manager/guard-deployment.yaml").
 		ToControllers()
 	if err != nil {
 		return err
@@ -204,6 +219,41 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	<-ctx.Done()
 	return nil
+}
+
+// withDeploymentChecker checks if the deployment exists or not.
+func withDeploymentChecker(deploymentLister v1.DeploymentLister) resourceapply.ConditionalFunction {
+	return func() bool {
+		_, err := deploymentLister.Deployments(operatorclient.TargetNamespace).Get("kcm-guard")
+		if err != nil {
+			return false
+		}
+		return true
+	}
+}
+
+// withSNOCheck checks if cluster is SNO mode, if yes, no need to create PDB associated with guard d	eployment.
+func withSNOCheck(infraLister configv1listers.InfrastructureLister) resourceapply.ConditionalFunction {
+	return func() bool {
+		isGuardNeeded, err := isSingleNodeTopology(infraLister)
+		if err != nil {
+			return false
+		}
+		return isGuardNeeded
+	}
+}
+
+// isSingleNodeTopology tells if the cluster is in running SingleNodeMode or not
+func isSingleNodeTopology(infraLister configv1listers.InfrastructureLister) (bool, error) {
+	infraData, err := infraLister.Get("cluster")
+	if err != nil {
+		return false, err
+	}
+	if infraData.Status.ControlPlaneTopology == "" {
+		return false, fmt.Errorf("ControlPlaneTopology was not set")
+	}
+
+	return infraData.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
 }
 
 // deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.

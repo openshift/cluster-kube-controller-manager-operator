@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kcm-guard
+  namespace: openshift-kube-controller-manager
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kcm-guard
+
