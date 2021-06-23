@@ -4,6 +4,8 @@
 // bindata/v4.1.0/config/defaultconfig.yaml
 // bindata/v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/cm.yaml
+// bindata/v4.1.0/kube-controller-manager/csr_approver_clusterrole.yaml
+// bindata/v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
@@ -215,6 +217,78 @@ func v410KubeControllerManagerCmYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerCsr_approver_clusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  name: system:openshift:controller:cluster-csr-approver-controller
+rules:
+  - apiGroups:
+      - certificates.k8s.io
+    resources:
+      - certificatesigningrequests
+      - certificatesigningrequests/approval
+      - certificatesigningrequests/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+`)
+
+func v410KubeControllerManagerCsr_approver_clusterroleYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerCsr_approver_clusterroleYaml, nil
+}
+
+func v410KubeControllerManagerCsr_approver_clusterroleYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerCsr_approver_clusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/csr_approver_clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerCsr_approver_clusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  name: system:openshift:controller:cluster-csr-approver-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:controller:cluster-csr-approver-controller
+subjects:
+  - kind: ServiceAccount
+    name: cluster-csr-approver-controller
+    namespace: openshift-infra`)
+
+func v410KubeControllerManagerCsr_approver_clusterrolebindingYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerCsr_approver_clusterrolebindingYaml, nil
+}
+
+func v410KubeControllerManagerCsr_approver_clusterrolebindingYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerCsr_approver_clusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1133,6 +1207,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/config/defaultconfig.yaml":                                                                    v410ConfigDefaultconfigYaml,
 	"v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml":                                    v410KubeControllerManagerClusterPolicyControllerCmYaml,
 	"v4.1.0/kube-controller-manager/cm.yaml":                                                              v410KubeControllerManagerCmYaml,
+	"v4.1.0/kube-controller-manager/csr_approver_clusterrole.yaml":                                        v410KubeControllerManagerCsr_approver_clusterroleYaml,
+	"v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml":                                 v410KubeControllerManagerCsr_approver_clusterrolebindingYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml":                                      v410KubeControllerManagerGceCloudProviderBindingYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml":                                         v410KubeControllerManagerGceCloudProviderRoleYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":                                          v410KubeControllerManagerKubeconfigCertSyncerYaml,
@@ -1203,8 +1279,10 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"defaultconfig.yaml":                            {v410ConfigDefaultconfigYaml, map[string]*bintree{}},
 		}},
 		"kube-controller-manager": {nil, map[string]*bintree{
-			"cluster-policy-controller-cm.yaml": {v410KubeControllerManagerClusterPolicyControllerCmYaml, map[string]*bintree{}},
-			"cm.yaml":                           {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
+			"cluster-policy-controller-cm.yaml":    {v410KubeControllerManagerClusterPolicyControllerCmYaml, map[string]*bintree{}},
+			"cm.yaml":                              {v410KubeControllerManagerCmYaml, map[string]*bintree{}},
+			"csr_approver_clusterrole.yaml":        {v410KubeControllerManagerCsr_approver_clusterroleYaml, map[string]*bintree{}},
+			"csr_approver_clusterrolebinding.yaml": {v410KubeControllerManagerCsr_approver_clusterrolebindingYaml, map[string]*bintree{}},
 			"gce": {nil, map[string]*bintree{
 				"cloud-provider-binding.yaml": {v410KubeControllerManagerGceCloudProviderBindingYaml, map[string]*bintree{}},
 				"cloud-provider-role.yaml":    {v410KubeControllerManagerGceCloudProviderRoleYaml, map[string]*bintree{}},
