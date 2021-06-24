@@ -190,11 +190,11 @@ func isRequiredConfigPresent(config []byte) error {
 func createTargetConfigController(ctx context.Context, c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
 	errors := []error{}
 
-	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
+	_, _, err := manageKubeControllerManagerConfig(ctx, c.kubeClient.CoreV1(), recorder, operatorSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
-	_, _, err = manageClusterPolicyControllerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
+	_, _, err = manageClusterPolicyControllerConfig(ctx, c.kubeClient.CoreV1(), recorder, operatorSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
 	}
@@ -206,7 +206,7 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
 	}
-	_, _, err = ManageCSRCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
+	_, _, err = ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
@@ -217,7 +217,7 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	if requeueDelay > 0 {
 		c.queue.AddAfter(workQueueKey, requeueDelay)
 	}
-	_, _, err = manageServiceAccountCABundle(c.configMapLister, c.kubeClient.CoreV1(), recorder)
+	_, _, err = manageServiceAccountCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
 	}
@@ -305,7 +305,7 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 	return false, nil
 }
 
-func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
 	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
@@ -319,10 +319,10 @@ func manageKubeControllerManagerConfig(client corev1client.ConfigMapsGetter, rec
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
-func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml"))
 	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/default-cluster-policy-controller-config.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
@@ -336,7 +336,7 @@ func manageClusterPolicyControllerConfig(client corev1client.ConfigMapsGetter, r
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
 func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
@@ -407,7 +407,7 @@ func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.
 	}
 
 	requiredCM := resourceread.ReadConfigMapV1OrDie([]byte(cmString))
-	return resourceapply.ApplyConfigMap(client, recorder, requiredCM)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredCM)
 }
 
 // manageRecycler applies a ConfigMap containing the recycler config.
@@ -420,7 +420,7 @@ func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMap
 		cmString = strings.ReplaceAll(cmString, pattern, value)
 	}
 	requiredCM := resourceread.ReadConfigMapV1OrDie([]byte(cmString))
-	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, requiredCM)
+	return resourceapply.ApplyConfigMap(ctx, configMapsGetter, recorder, requiredCM)
 }
 
 func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
@@ -563,7 +563,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
 	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
-	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, configMap)
+	return resourceapply.ApplyConfigMap(ctx, configMapsGetter, recorder, configMap)
 }
 
 func GetKubeControllerManagerArgs(config map[string]interface{}) []string {
@@ -583,7 +583,7 @@ func GetKubeControllerManagerArgs(config map[string]interface{}) []string {
 	return args
 }
 
-func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
 		lister,
@@ -596,10 +596,10 @@ func manageServiceAccountCABundle(lister corev1listers.ConfigMapLister, client c
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
-func ManageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 		lister,
@@ -611,7 +611,7 @@ func ManageCSRCABundle(lister corev1listers.ConfigMapLister, client corev1client
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
 func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
@@ -659,7 +659,7 @@ func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, cli
 		},
 		Type: corev1.SecretTypeTLS,
 	}
-	secret, modified, err := resourceapply.ApplySecret(client, recorder, csrSigner)
+	secret, modified, err := resourceapply.ApplySecret(ctx, client, recorder, csrSigner)
 	return secret, 0, modified, err
 }
 
@@ -759,7 +759,7 @@ func ManageCSRIntermediateCABundle(ctx context.Context, lister corev1listers.Sec
 	}
 	csrSignerCA.Data["ca-bundle.crt"] = string(caBytes)
 
-	return resourceapply.ApplyConfigMap(client, recorder, csrSignerCA)
+	return resourceapply.ApplyConfigMap(ctx, client, recorder, csrSignerCA)
 }
 
 func ensureKubeControllerManagerTrustedCA(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
