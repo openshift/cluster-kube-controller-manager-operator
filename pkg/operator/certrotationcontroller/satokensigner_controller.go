@@ -87,9 +87,9 @@ func NewSATokenSignerController(
 	return ret, nil
 }
 
-func (c *SATokenSignerController) sync() error {
+func (c *SATokenSignerController) sync(ctx context.Context) error {
 
-	syncErr := c.syncWorker()
+	syncErr := c.syncWorker(ctx)
 
 	condition := operatorv1.OperatorCondition{
 		Type:   "SATokenSignerDegraded",
@@ -166,7 +166,7 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 	return nil
 }
 
-func (c *SATokenSignerController) syncWorker() error {
+func (c *SATokenSignerController) syncWorker(ctx context.Context) error {
 	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
@@ -179,7 +179,7 @@ func (c *SATokenSignerController) syncWorker() error {
 			return err
 		}
 		// at this point we have not-found condition, sync the original
-		_, _, err = resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
+		_, _, err = resourceapply.SyncSecret(ctx, c.secretClient, c.eventRecorder,
 			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
@@ -216,7 +216,7 @@ func (c *SATokenSignerController) syncWorker() error {
 			},
 		}
 
-		saTokenSigner, _, err = resourceapply.ApplySecret(c.secretClient, c.eventRecorder, saTokenSigner)
+		saTokenSigner, _, err = resourceapply.ApplySecret(ctx, c.secretClient, c.eventRecorder, saTokenSigner)
 		if err != nil {
 			return err
 		}
@@ -243,7 +243,7 @@ func (c *SATokenSignerController) syncWorker() error {
 	}
 	if !hasThisPublicKey {
 		saTokenSigningCerts.Data[fmt.Sprintf("service-account-%03d.pub", len(saTokenSigningCerts.Data)+1)] = currPublicKey
-		saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(c.configMapClient, c.eventRecorder, saTokenSigningCerts)
+		saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(ctx, c.configMapClient, c.eventRecorder, saTokenSigningCerts)
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (c *SATokenSignerController) syncWorker() error {
 
 	// if we're past our promotion time, go ahead and synchronize over
 	if readyToPromote {
-		_, _, err := resourceapply.SyncSecret(c.secretClient, c.eventRecorder,
+		_, _, err := resourceapply.SyncSecret(ctx, c.secretClient, c.eventRecorder,
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
@@ -288,8 +288,17 @@ func (c *SATokenSignerController) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
+	// TODO: Fix this by refactoring this controller to factory
+	workerCtx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-stopCh
+		cancel()
+	}()
+
 	// doesn't matter what workers say, only start one.
-	go wait.Until(c.runWorker, time.Second, stopCh)
+	go wait.Until(func() {
+		c.runWorker(workerCtx)
+	}, time.Second, stopCh)
 
 	// start a time based thread to ensure we stay up to date
 	go wait.Until(func() {
@@ -310,19 +319,19 @@ func (c *SATokenSignerController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *SATokenSignerController) runWorker() {
-	for c.processNextWorkItem() {
+func (c *SATokenSignerController) runWorker(ctx context.Context) {
+	for c.processNextWorkItem(ctx) {
 	}
 }
 
-func (c *SATokenSignerController) processNextWorkItem() bool {
+func (c *SATokenSignerController) processNextWorkItem(ctx context.Context) bool {
 	dsKey, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	defer c.queue.Done(dsKey)
 
-	err := c.sync()
+	err := c.sync(ctx)
 	if err == nil {
 		c.queue.Forget(dsKey)
 		return true
