@@ -1053,6 +1053,11 @@ data:
               name: vol
           securityContext:
             runAsUser: 0
+          priorityClassName: openshift-user-critical
+          resources:
+            requests:
+              memory: 50Mi
+              cpu: 10m
       volumes:
         - name: vol
 `)
