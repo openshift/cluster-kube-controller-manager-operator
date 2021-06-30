@@ -11,16 +11,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/encryption/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -28,69 +25,44 @@ import (
 )
 
 const (
-	workQueueKey = "key"
-
 	saTokenReadyTimeAnnotation = "kube-controller-manager.openshift.io/ready-to-use"
 )
 
 type SATokenSignerController struct {
-	ctx             context.Context
 	operatorClient  v1helpers.StaticPodOperatorClient
 	secretClient    corev1client.SecretsGetter
 	configMapClient corev1client.ConfigMapsGetter
 	endpointClient  corev1client.EndpointsGetter
 	podClient       corev1client.PodsGetter
-	eventRecorder   events.Recorder
 
 	confirmedBootstrapNodeGone bool
-	cachesSynced               []cache.InformerSynced
-
-	// queue only ever has one item, but it has nice error handling backoff/retry semantics
-	queue workqueue.RateLimitingInterface
 }
 
 func NewSATokenSignerController(
-	ctx context.Context,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
-
-) (*SATokenSignerController, error) {
-
-	ret := &SATokenSignerController{
-		ctx:             ctx,
+) factory.Controller {
+	c := &SATokenSignerController{
 		operatorClient:  operatorClient,
 		secretClient:    v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		endpointClient:  kubeClient.CoreV1(),
 		podClient:       kubeClient.CoreV1(),
-		eventRecorder:   eventRecorder.WithComponentSuffix("sa-token-signer-controller"),
-
-		cachesSynced: []cache.InformerSynced{
-			kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().HasSynced,
-			kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
-			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer().HasSynced,
-			kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().HasSynced,
-			operatorClient.Informer().HasSynced,
-		},
-
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SATokenSignerController"),
 	}
 
-	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
-	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(ret.eventHandler())
-	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
-	kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer().AddEventHandler(ret.eventHandler())
-	operatorClient.Informer().AddEventHandler(ret.eventHandler())
-
-	return ret, nil
+	return factory.New().WithInformers(
+		kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().Secrets().Informer(),
+		kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer(),
+		kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Informer(),
+		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Informer(),
+		operatorClient.Informer(),
+	).ResyncEvery(time.Minute).WithSync(c.sync).ToController("SATokenSignerController", eventRecorder)
 }
 
-func (c *SATokenSignerController) sync(ctx context.Context) error {
-
-	syncErr := c.syncWorker(ctx)
-
+func (c *SATokenSignerController) sync(ctx context.Context, syncCtx factory.SyncContext) error {
+	syncErr := c.syncWorker(ctx, syncCtx)
 	condition := operatorv1.OperatorCondition{
 		Type:   "SATokenSignerDegraded",
 		Status: operatorv1.ConditionFalse,
@@ -123,13 +95,13 @@ func isUnexpectedAddressesError(err error) bool {
 // we cannot rotate before the bootstrap server goes away because doing so would mean the bootstrap server would reject
 // tokens that should be valid.  To test this, we go through kubernetes.default.svc endpoints and see if any of them
 // are not in the list of known pod hosts.  We only have to do this once because the bootstrap node never comes back
-func (c *SATokenSignerController) isPastBootstrapNode() error {
+func (c *SATokenSignerController) isPastBootstrapNode(ctx context.Context, syncCtx factory.SyncContext) error {
 	if c.confirmedBootstrapNodeGone {
 		return nil
 	}
 
 	nodeIPs := sets.String{}
-	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(c.ctx, metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
+	apiServerPods, err := c.podClient.Pods("openshift-kube-apiserver").List(ctx, metav1.ListOptions{LabelSelector: "app=openshift-kube-apiserver"})
 	if err != nil {
 		return err
 	}
@@ -137,13 +109,13 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 		nodeIPs.Insert(pod.Status.HostIP)
 	}
 
-	kubeEndpoints, err := c.endpointClient.Endpoints("default").Get(c.ctx, "kubernetes", metav1.GetOptions{})
+	kubeEndpoints, err := c.endpointClient.Endpoints("default").Get(ctx, "kubernetes", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 	if len(kubeEndpoints.Subsets) == 0 {
 		err := fmt.Errorf("missing kubernetes endpoints subsets")
-		c.eventRecorder.Warning("SATokenSignerControllerStuck", err.Error())
+		syncCtx.Recorder().Warning("SATokenSignerControllerStuck", err.Error())
 		return err
 	}
 	unexpectedEndpoints := sets.String{}
@@ -156,37 +128,37 @@ func (c *SATokenSignerController) isPastBootstrapNode() error {
 	}
 	if len(unexpectedEndpoints) != 0 {
 		err := &unexpectedAddressesError{message: fmt.Sprintf("unexpected addresses: %v", strings.Join(unexpectedEndpoints.List(), ","))}
-		c.eventRecorder.Event("SATokenSignerControllerStuck", err.Error())
+		syncCtx.Recorder().Event("SATokenSignerControllerStuck", err.Error())
 		return err
 	}
 
 	// we have confirmed that the bootstrap node is gone
-	c.eventRecorder.Event("SATokenSignerControllerOK", "found expected kube-apiserver endpoints")
+	syncCtx.Recorder().Event("SATokenSignerControllerOK", "found expected kube-apiserver endpoints")
 	c.confirmedBootstrapNodeGone = true
 	return nil
 }
 
-func (c *SATokenSignerController) syncWorker(ctx context.Context) error {
-	if pastBootstrapErr := c.isPastBootstrapNode(); pastBootstrapErr != nil {
+func (c *SATokenSignerController) syncWorker(ctx context.Context, syncCtx factory.SyncContext) error {
+	if pastBootstrapErr := c.isPastBootstrapNode(ctx, syncCtx); pastBootstrapErr != nil {
 		// if we are not past bootstrapping, then if we're missing the service-account-private-key we need to prime it from the
 		// initial provided by the installer.
-		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get(c.ctx, "service-account-private-key", metav1.GetOptions{})
+		_, err := c.secretClient.Secrets(operatorclient.TargetNamespace).Get(ctx, "service-account-private-key", metav1.GetOptions{})
 		if err == nil {
 			// return this error to be reported and requeue
 			return pastBootstrapErr
 		}
-		if err != nil && !errors.IsNotFound(err) {
+		if !errors.IsNotFound(err) {
 			return err
 		}
 		// at this point we have not-found condition, sync the original
-		_, _, err = resourceapply.SyncSecret(ctx, c.secretClient, c.eventRecorder,
+		_, _, err = resourceapply.SyncSecret(ctx, c.secretClient, syncCtx.Recorder(),
 			operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
 	}
 
 	needNewSATokenSigningKey := false
-	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get(c.ctx, "next-service-account-private-key", metav1.GetOptions{})
+	saTokenSigner, err := c.secretClient.Secrets(operatorclient.OperatorNamespace).Get(ctx, "next-service-account-private-key", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		needNewSATokenSigningKey = true
 	} else if err != nil {
@@ -216,15 +188,15 @@ func (c *SATokenSignerController) syncWorker(ctx context.Context) error {
 			},
 		}
 
-		saTokenSigner, _, err = resourceapply.ApplySecret(ctx, c.secretClient, c.eventRecorder, saTokenSigner)
+		saTokenSigner, _, err = resourceapply.ApplySecret(ctx, c.secretClient, syncCtx.Recorder(), saTokenSigner)
 		if err != nil {
 			return err
 		}
 		// requeue for after we should have recovered
-		c.queue.AddAfter(workQueueKey, 5*time.Minute+10*time.Second)
+		syncCtx.Queue().AddAfter(syncCtx.QueueKey(), 5*time.Minute+10*time.Second)
 	}
 
-	saTokenSigningCerts, err := c.configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get(c.ctx, "sa-token-signing-certs", metav1.GetOptions{})
+	saTokenSigningCerts, err := c.configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get(ctx, "sa-token-signing-certs", metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -243,7 +215,7 @@ func (c *SATokenSignerController) syncWorker(ctx context.Context) error {
 	}
 	if !hasThisPublicKey {
 		saTokenSigningCerts.Data[fmt.Sprintf("service-account-%03d.pub", len(saTokenSigningCerts.Data)+1)] = currPublicKey
-		saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(ctx, c.configMapClient, c.eventRecorder, saTokenSigningCerts)
+		saTokenSigningCerts, _, err = resourceapply.ApplyConfigMap(ctx, c.configMapClient, syncCtx.Recorder(), saTokenSigningCerts)
 		if err != nil {
 			return err
 		}
@@ -267,87 +239,11 @@ func (c *SATokenSignerController) syncWorker(ctx context.Context) error {
 
 	// if we're past our promotion time, go ahead and synchronize over
 	if readyToPromote {
-		_, _, err := resourceapply.SyncSecret(ctx, c.secretClient, c.eventRecorder,
+		_, _, err := resourceapply.SyncSecret(ctx, c.secretClient, syncCtx.Recorder(),
 			operatorclient.OperatorNamespace, "next-service-account-private-key",
 			operatorclient.TargetNamespace, "service-account-private-key", []metav1.OwnerReference{})
 		return err
 	}
 
 	return nil
-}
-
-func (c *SATokenSignerController) Run(workers int, stopCh <-chan struct{}) {
-	defer utilruntime.HandleCrash()
-	defer c.queue.ShutDown()
-
-	klog.Infof("Starting SATokenSignerController")
-	defer klog.Infof("Shutting down SATokenSignerController")
-
-	if !cache.WaitForCacheSync(stopCh, c.cachesSynced...) {
-		utilruntime.HandleError(fmt.Errorf("caches did not sync"))
-		return
-	}
-
-	// TODO: Fix this by refactoring this controller to factory
-	workerCtx, cancel := context.WithCancel(context.Background())
-	go func() {
-		<-stopCh
-		cancel()
-	}()
-
-	// doesn't matter what workers say, only start one.
-	go wait.Until(func() {
-		c.runWorker(workerCtx)
-	}, time.Second, stopCh)
-
-	// start a time based thread to ensure we stay up to date
-	go wait.Until(func() {
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
-
-		for {
-			c.queue.Add(workQueueKey)
-			select {
-			case <-ticker.C:
-			case <-stopCh:
-				return
-			}
-		}
-
-	}, time.Minute, stopCh)
-
-	<-stopCh
-}
-
-func (c *SATokenSignerController) runWorker(ctx context.Context) {
-	for c.processNextWorkItem(ctx) {
-	}
-}
-
-func (c *SATokenSignerController) processNextWorkItem(ctx context.Context) bool {
-	dsKey, quit := c.queue.Get()
-	if quit {
-		return false
-	}
-	defer c.queue.Done(dsKey)
-
-	err := c.sync(ctx)
-	if err == nil {
-		c.queue.Forget(dsKey)
-		return true
-	}
-
-	utilruntime.HandleError(fmt.Errorf("%v failed with : %v", dsKey, err))
-	c.queue.AddRateLimited(dsKey)
-
-	return true
-}
-
-// eventHandler queues the operator to check spec and status
-func (c *SATokenSignerController) eventHandler() cache.ResourceEventHandler {
-	return cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { c.queue.Add(workQueueKey) },
-		UpdateFunc: func(old, new interface{}) { c.queue.Add(workQueueKey) },
-		DeleteFunc: func(obj interface{}) { c.queue.Add(workQueueKey) },
-	}
 }

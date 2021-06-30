@@ -103,7 +103,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	).AddKubeInformers(kubeInformersForNamespaces)
 
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
-		ctx,
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
 		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
@@ -177,10 +176,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-	saTokenController, err := certrotationcontroller.NewSATokenSignerController(ctx, operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
-	if err != nil {
-		return err
-	}
+	saTokenController := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
 
 	staleConditions := staleconditions.NewRemoveStaleConditionsController(
 		[]string{
@@ -198,12 +194,12 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	go staticPodControllers.Start(ctx)
 	go staticResourceController.Run(ctx, 1)
-	go targetConfigController.Run(1, ctx.Done())
+	go targetConfigController.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
 	go resourceSyncController.Run(ctx, 1)
 	go certRotationController.Run(ctx, 1)
-	go saTokenController.Run(1, ctx.Done())
+	go saTokenController.Run(ctx, 1)
 	go staleConditions.Run(ctx, 1)
 
 	<-ctx.Done()
