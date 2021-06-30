@@ -103,7 +103,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	).AddKubeInformers(kubeInformersForNamespaces)
 
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
-		ctx,
 		os.Getenv("IMAGE"),
 		os.Getenv("OPERATOR_IMAGE"),
 		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
@@ -198,7 +197,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	go staticPodControllers.Start(ctx)
 	go staticResourceController.Run(ctx, 1)
-	go targetConfigController.Run(1, ctx.Done())
+	go targetConfigController.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
 	go resourceSyncController.Run(ctx, 1)
