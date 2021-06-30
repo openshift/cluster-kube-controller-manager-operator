@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openshift/library-go/pkg/operator/management"
-
 	"github.com/ghodss/yaml"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,17 +28,19 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1informers "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 )
 
 type TargetConfigController struct {

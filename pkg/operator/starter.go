@@ -176,10 +176,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-	saTokenController, err := certrotationcontroller.NewSATokenSignerController(ctx, operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
-	if err != nil {
-		return err
-	}
+	saTokenController := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
 
 	staleConditions := staleconditions.NewRemoveStaleConditionsController(
 		[]string{
@@ -202,7 +199,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go clusterOperatorStatus.Run(ctx, 1)
 	go resourceSyncController.Run(ctx, 1)
 	go certRotationController.Run(ctx, 1)
-	go saTokenController.Run(1, ctx.Done())
+	go saTokenController.Run(ctx, 1)
 	go staleConditions.Run(ctx, 1)
 
 	<-ctx.Done()
