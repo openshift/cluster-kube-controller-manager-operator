@@ -177,6 +177,10 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 	}
 	_, _, err = manageClusterPolicyControllerConfig(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec)
 	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+	}
+	_, _, err = manageClusterPolicyControllerConfig(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec)
+	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
 	}
 	_, _, err = manageRecycler(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), c.toolsImagePullSpec)
