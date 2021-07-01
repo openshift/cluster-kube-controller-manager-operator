@@ -24,5 +24,8 @@ require (
 	k8s.io/klog/v2 v2.8.0
 )
 
-// points to temporary-watch-reduction-patch-1.21 to pick up k/k/pull/101102 - please remove it once the pr merges and a new Z release is cut
-replace k8s.io/apiserver => github.com/openshift/kubernetes-apiserver v0.0.0-20210419140141-620426e63a99
+replace (
+	github.com/openshift/library-go => github.com/ravisantoshgudimetla/library-go v0.0.0-20210625134031-4196d0fea318
+	// points to temporary-watch-reduction-patch-1.21 to pick up k/k/pull/101102 - please remove it once the pr merges and a new Z release is cut
+	k8s.io/apiserver => github.com/openshift/kubernetes-apiserver v0.0.0-20210419140141-620426e63a99
+)

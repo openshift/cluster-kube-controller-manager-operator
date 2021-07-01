@@ -836,7 +836,6 @@ func (c *InstallerController) ensureInstallerPod(ctx context.Context, nodeName s
 			return err
 		}
 	}
-
 	_, _, err = resourceapply.ApplyPod(ctx, c.podsGetter, c.eventRecorder, pod)
 	return err
 }

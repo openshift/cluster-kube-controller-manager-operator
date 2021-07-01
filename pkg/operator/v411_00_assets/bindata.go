@@ -8,6 +8,8 @@
 // bindata/v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml
 // bindata/v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml
+// bindata/v4.1.0/kube-controller-manager/guard-deployment.yaml
+// bindata/v4.1.0/kube-controller-manager/guard-pdb.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml
 // bindata/v4.1.0/kube-controller-manager/kubeconfig-cm.yaml
 // bindata/v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml
@@ -355,6 +357,133 @@ func v410KubeControllerManagerGceCloudProviderRoleYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerGuardDeploymentYaml = []byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kcm-guard
+  namespace: openshift-kube-controller-manager
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      k8s-app: kcm-guard
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: kcm-guard
+        k8s-app: kcm-guard
+    spec:
+      serviceAccount: guard-sa
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: k8s-app
+                    operator: In
+                    values:
+                      - "kcm-guard"
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      priorityClassName: "system-cluster-critical"
+      terminationGracePeriodSeconds: 3
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+          operator: Exists
+        - key: node.kubernetes.io/not-ready
+          effect: NoExecute
+          operator: Exists
+        - key: node.kubernetes.io/unreachable
+          effect: NoExecute
+          operator: Exists
+        - key: node-role.kubernetes.io/etcd
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: guard
+          image: quay.io/openshift/origin-cli:latest
+          imagePullPolicy: IfNotPresent
+          terminationMessagePolicy: FallbackToLogsOnError
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - /bin/bash
+          args:
+            - -c
+            - |
+              # properly handle TERM and exit as soon as it is signaled
+              set -euo pipefail
+              trap 'jobs -p | xargs -r kill; exit 0' TERM
+              sleep infinity & wait
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  oc get pods -o wide | grep -i kube-controller-manager | grep -i $NODE_NAME | grep -i 'Running'
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 5Mi`)
+
+func v410KubeControllerManagerGuardDeploymentYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerGuardDeploymentYaml, nil
+}
+
+func v410KubeControllerManagerGuardDeploymentYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerGuardDeploymentYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/guard-deployment.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v410KubeControllerManagerGuardPdbYaml = []byte(`apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kcm-guard
+  namespace: openshift-kube-controller-manager
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kcm-guard
+
+`)
+
+func v410KubeControllerManagerGuardPdbYamlBytes() ([]byte, error) {
+	return _v410KubeControllerManagerGuardPdbYaml, nil
+}
+
+func v410KubeControllerManagerGuardPdbYaml() (*asset, error) {
+	bytes, err := v410KubeControllerManagerGuardPdbYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v4.1.0/kube-controller-manager/guard-pdb.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1216,6 +1345,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v4.1.0/kube-controller-manager/csr_approver_clusterrolebinding.yaml":                                 v410KubeControllerManagerCsr_approver_clusterrolebindingYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-binding.yaml":                                      v410KubeControllerManagerGceCloudProviderBindingYaml,
 	"v4.1.0/kube-controller-manager/gce/cloud-provider-role.yaml":                                         v410KubeControllerManagerGceCloudProviderRoleYaml,
+	"v4.1.0/kube-controller-manager/guard-deployment.yaml":                                                v410KubeControllerManagerGuardDeploymentYaml,
+	"v4.1.0/kube-controller-manager/guard-pdb.yaml":                                                       v410KubeControllerManagerGuardPdbYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cert-syncer.yaml":                                          v410KubeControllerManagerKubeconfigCertSyncerYaml,
 	"v4.1.0/kube-controller-manager/kubeconfig-cm.yaml":                                                   v410KubeControllerManagerKubeconfigCmYaml,
 	"v4.1.0/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml":                  v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml,
@@ -1292,6 +1423,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 				"cloud-provider-binding.yaml": {v410KubeControllerManagerGceCloudProviderBindingYaml, map[string]*bintree{}},
 				"cloud-provider-role.yaml":    {v410KubeControllerManagerGceCloudProviderRoleYaml, map[string]*bintree{}},
 			}},
+			"guard-deployment.yaml":                                                {v410KubeControllerManagerGuardDeploymentYaml, map[string]*bintree{}},
+			"guard-pdb.yaml":                                                       {v410KubeControllerManagerGuardPdbYaml, map[string]*bintree{}},
 			"kubeconfig-cert-syncer.yaml":                                          {v410KubeControllerManagerKubeconfigCertSyncerYaml, map[string]*bintree{}},
 			"kubeconfig-cm.yaml":                                                   {v410KubeControllerManagerKubeconfigCmYaml, map[string]*bintree{}},
 			"leader-election-cluster-policy-controller-role.yaml":                  {v410KubeControllerManagerLeaderElectionClusterPolicyControllerRoleYaml, map[string]*bintree{}},

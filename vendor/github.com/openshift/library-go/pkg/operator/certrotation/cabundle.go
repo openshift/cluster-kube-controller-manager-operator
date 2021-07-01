@@ -54,6 +54,7 @@ func (c CABundleRotation) ensureConfigMapCABundle(ctx context.Context, signingCe
 		LabelAsManagedConfigMap(caBundleConfigMap, CertificateTypeCABundle)
 
 		actualCABundleConfigMap, modified, err := resourceapply.ApplyConfigMap(ctx, c.Client, c.EventRecorder, caBundleConfigMap)
+
 		if err != nil {
 			return nil, err
 		}

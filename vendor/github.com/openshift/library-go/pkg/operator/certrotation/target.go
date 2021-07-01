@@ -77,6 +77,7 @@ func (c TargetRotation) ensureTargetCertKeyPair(ctx context.Context, signingCert
 		LabelAsManagedSecret(targetCertKeyPairSecret, CertificateTypeTarget)
 
 		actualTargetCertKeyPairSecret, _, err := resourceapply.ApplySecret(ctx, c.Client, c.EventRecorder, targetCertKeyPairSecret)
+
 		if err != nil {
 			return err
 		}

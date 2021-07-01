@@ -18,18 +18,36 @@ import (
 )
 
 // ApplyStorageClass merges objectmeta, tries to write everything else
-func ApplyStorageClass(ctx context.Context, client storageclientv1.StorageClassesGetter, recorder events.Recorder, required *storagev1.StorageClass) (*storagev1.StorageClass, bool,
+func ApplyStorageClass(ctx context.Context, client storageclientv1.StorageClassesGetter, recorder events.Recorder, required *storagev1.StorageClass, deleteConditionals ...ConditionalFunction) (*storagev1.StorageClass, bool,
 	error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.StorageClasses().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.StorageClasses().Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.StorageClasses().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	// First, let's compare ObjectMeta from both objects
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
@@ -58,17 +76,35 @@ func ApplyStorageClass(ctx context.Context, client storageclientv1.StorageClasse
 }
 
 // ApplyCSIDriverV1Beta1 merges objectmeta, does not worry about anything else
-func ApplyCSIDriverV1Beta1(ctx context.Context, client storageclientv1beta1.CSIDriversGetter, recorder events.Recorder, required *storagev1beta1.CSIDriver) (*storagev1beta1.CSIDriver, bool, error) {
+func ApplyCSIDriverV1Beta1(ctx context.Context, client storageclientv1beta1.CSIDriversGetter, recorder events.Recorder, required *storagev1beta1.CSIDriver, deleteConditionals ...ConditionalFunction) (*storagev1beta1.CSIDriver, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.CSIDrivers().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.CSIDrivers().Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.CSIDrivers().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -87,17 +123,35 @@ func ApplyCSIDriverV1Beta1(ctx context.Context, client storageclientv1beta1.CSID
 }
 
 // ApplyCSIDriver merges objectmeta, does not worry about anything else
-func ApplyCSIDriver(ctx context.Context, client storageclientv1.CSIDriversGetter, recorder events.Recorder, required *storagev1.CSIDriver) (*storagev1.CSIDriver, bool, error) {
+func ApplyCSIDriver(ctx context.Context, client storageclientv1.CSIDriversGetter, recorder events.Recorder, required *storagev1.CSIDriver, deleteConditionals ...ConditionalFunction) (*storagev1.CSIDriver, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.CSIDrivers().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.CSIDrivers().Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.CSIDrivers().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
