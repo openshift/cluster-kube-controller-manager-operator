@@ -13,15 +13,34 @@ import (
 )
 
 // ApplyCustomResourceDefinitionV1 applies the required CustomResourceDefinition to the cluster.
-func ApplyCustomResourceDefinitionV1(ctx context.Context, client apiextclientv1.CustomResourceDefinitionsGetter, recorder events.Recorder, required *apiextensionsv1.CustomResourceDefinition) (*apiextensionsv1.CustomResourceDefinition, bool, error) {
-	existing, err := client.CustomResourceDefinitions().Get(ctx, required.Name, metav1.GetOptions{})
+func ApplyCustomResourceDefinitionV1(ctx context.Context, client apiextclientv1.CustomResourceDefinitionsGetter, recorder events.Recorder, required *apiextensionsv1.CustomResourceDefinition, deleteConditionals ...ConditionalFunction) (*apiextensionsv1.CustomResourceDefinition, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
+	existing, err := client.CustomResourceDefinitions().Get(context.TODO(), required.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		actual, err := client.CustomResourceDefinitions().Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
+	}
+
+	if shouldDelete {
+		err := client.CustomResourceDefinitions().Delete(context.TODO(), existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
 	}
 
 	modified := resourcemerge.BoolPtr(false)

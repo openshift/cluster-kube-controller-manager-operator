@@ -15,17 +15,35 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 )
 
-func ApplyPodDisruptionBudget(ctx context.Context, client policyclientv1.PodDisruptionBudgetsGetter, recorder events.Recorder, required *policyv1.PodDisruptionBudget) (*policyv1.PodDisruptionBudget, bool, error) {
-	existing, err := client.PodDisruptionBudgets(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		actual, err := client.PodDisruptionBudgets(required.Namespace).Create(ctx, required, metav1.CreateOptions{})
+func ApplyPodDisruptionBudget(ctx context.Context, client policyclientv1.PodDisruptionBudgetsGetter, recorder events.Recorder, required *policyv1.PodDisruptionBudget, deleteConditionals ...ConditionalFunction) (*policyv1.PodDisruptionBudget, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
+	existing, err := client.PodDisruptionBudgets(required.Namespace).Get(context.TODO(), required.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) && !shouldDelete {
+		actual, err := client.PodDisruptionBudgets(required.Namespace).Create(context.TODO(), required, metav1.CreateOptions{})
+
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
-
+	if shouldDelete {
+		err := client.PodDisruptionBudgets(required.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 

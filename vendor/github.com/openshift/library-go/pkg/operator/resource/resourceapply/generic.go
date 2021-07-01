@@ -52,6 +52,18 @@ type ApplyResult struct {
 	Error   error
 }
 
+// ConditionalFunction provides needed dependency for a resource on another condition instead of blindly creating
+// a resource. This conditional function can also be used to delete the resource when not needed
+type ConditionalFunction func() bool
+
+// ResourceConditionalMap maps a file to conditional functions that can be used to create or delete a resource in the
+// given file.
+type ResourceConditionalMap struct {
+	File                  string
+	DeleteConditionalFunc ConditionalFunction
+	CreateConditionalFunc ConditionalFunction
+}
+
 type ClientHolder struct {
 	kubeClient          kubernetes.Interface
 	apiExtensionsClient apiextensionsclient.Interface
@@ -93,125 +105,152 @@ func (c *ClientHolder) WithMigrationClient(client migrationclient.Interface) *Cl
 	return c
 }
 
-// ApplyDirectly applies the given manifest files to API server.
-func ApplyDirectly(ctx context.Context, clients *ClientHolder, recorder events.Recorder, manifests AssetFunc, files ...string) []ApplyResult {
+func (rcm *ResourceConditionalMap) shouldDelete() bool {
+	var shouldDelete bool
+	if rcm.CreateConditionalFunc == nil && rcm.DeleteConditionalFunc == nil {
+		shouldDelete = false
+	} else {
+		if rcm.CreateConditionalFunc != nil && rcm.CreateConditionalFunc() {
+			shouldDelete = false
+		}
+		if rcm.CreateConditionalFunc != nil && !rcm.CreateConditionalFunc() {
+			shouldDelete = true
+		}
+		if rcm.DeleteConditionalFunc != nil && rcm.DeleteConditionalFunc() {
+			shouldDelete = true
+		}
+		if rcm.DeleteConditionalFunc == nil && rcm.CreateConditionalFunc() {
+			shouldDelete = false
+		} else if rcm.DeleteConditionalFunc == nil &&
+			!rcm.CreateConditionalFunc() {
+			shouldDelete = true
+		}
+	}
+	return shouldDelete
+}
+
+// ApplyDirectly applies the given manifest files to API server conditionally.
+func ApplyDirectly(ctx context.Context, clients *ClientHolder, recorder events.Recorder, manifests AssetFunc,
+	resourceConditionalMaps []ResourceConditionalMap) []ApplyResult {
 	ret := []ApplyResult{}
 
-	for _, file := range files {
-		result := ApplyResult{File: file}
-		objBytes, err := manifests(file)
+	for _, resourceConditionalMap := range resourceConditionalMaps {
+		result := ApplyResult{File: resourceConditionalMap.File}
+		objBytes, err := manifests(resourceConditionalMap.File)
 		if err != nil {
-			result.Error = fmt.Errorf("missing %q: %v", file, err)
+			result.Error = fmt.Errorf("missing %q: %v", resourceConditionalMap.File, err)
 			ret = append(ret, result)
 			continue
 		}
 		requiredObj, err := decode(objBytes)
 		if err != nil {
-			result.Error = fmt.Errorf("cannot decode %q: %v", file, err)
+			result.Error = fmt.Errorf("cannot decode %q: %v", resourceConditionalMap.File, err)
 			ret = append(ret, result)
 			continue
 		}
-		result.Type = fmt.Sprintf("%T", requiredObj)
+		// Conditional resource creation or deletion.
 
+		result.Type = fmt.Sprintf("%T", requiredObj)
 		// NOTE: Do not add CR resources into this switch otherwise the protobuf client can cause problems.
 		switch t := requiredObj.(type) {
 		case *corev1.Namespace:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyNamespace(ctx, clients.kubeClient.CoreV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyNamespace(ctx, clients.kubeClient.CoreV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *corev1.Service:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyService(ctx, clients.kubeClient.CoreV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyService(ctx, clients.kubeClient.CoreV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *corev1.Pod:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyPod(ctx, clients.kubeClient.CoreV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyPod(ctx, clients.kubeClient.CoreV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *corev1.ServiceAccount:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyServiceAccount(ctx, clients.kubeClient.CoreV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyServiceAccount(ctx, clients.kubeClient.CoreV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *corev1.ConfigMap:
 			client := clients.configMapsGetter()
 			if client == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyConfigMap(ctx, client, recorder, t)
+				result.Result, result.Changed, result.Error = ApplyConfigMap(ctx, client, recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *corev1.Secret:
 			client := clients.secretsGetter()
 			if client == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplySecret(ctx, client, recorder, t)
+				result.Result, result.Changed, result.Error = ApplySecret(ctx, client, recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *rbacv1.ClusterRole:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyClusterRole(ctx, clients.kubeClient.RbacV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyClusterRole(ctx, clients.kubeClient.RbacV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *rbacv1.ClusterRoleBinding:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyClusterRoleBinding(ctx, clients.kubeClient.RbacV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyClusterRoleBinding(ctx, clients.kubeClient.RbacV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *rbacv1.Role:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyRole(ctx, clients.kubeClient.RbacV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyRole(ctx, clients.kubeClient.RbacV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *rbacv1.RoleBinding:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyRoleBinding(ctx, clients.kubeClient.RbacV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyRoleBinding(ctx, clients.kubeClient.RbacV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *policyv1.PodDisruptionBudget:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyPodDisruptionBudget(ctx, clients.kubeClient.PolicyV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyPodDisruptionBudget(ctx, clients.kubeClient.PolicyV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *apiextensionsv1.CustomResourceDefinition:
 			if clients.apiExtensionsClient == nil {
 				result.Error = fmt.Errorf("missing apiExtensionsClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyCustomResourceDefinitionV1(ctx, clients.apiExtensionsClient.ApiextensionsV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyCustomResourceDefinitionV1(ctx, clients.apiExtensionsClient.ApiextensionsV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *storagev1.StorageClass:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyStorageClass(ctx, clients.kubeClient.StorageV1(), recorder, t)
+
+				result.Result, result.Changed, result.Error = ApplyStorageClass(ctx, clients.kubeClient.StorageV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *storagev1.CSIDriver:
 			if clients.kubeClient == nil {
 				result.Error = fmt.Errorf("missing kubeClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyCSIDriver(ctx, clients.kubeClient.StorageV1(), recorder, t)
+				result.Result, result.Changed, result.Error = ApplyCSIDriver(ctx, clients.kubeClient.StorageV1(), recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *migrationv1alpha1.StorageVersionMigration:
 			if clients.migrationClient == nil {
 				result.Error = fmt.Errorf("missing migrationClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyStorageVersionMigration(ctx, clients.migrationClient, recorder, t)
+				result.Result, result.Changed, result.Error = ApplyStorageVersionMigration(ctx, clients.migrationClient, recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		case *unstructured.Unstructured:
 			if clients.dynamicClient == nil {
 				result.Error = fmt.Errorf("missing dynamicClient")
 			} else {
-				result.Result, result.Changed, result.Error = ApplyKnownUnstructured(ctx, clients.dynamicClient, recorder, t)
+				result.Result, result.Changed, result.Error = ApplyKnownUnstructured(ctx, clients.dynamicClient, recorder, t, resourceConditionalMap.shouldDelete)
 			}
 		default:
 			result.Error = fmt.Errorf("unhandled type %T", requiredObj)

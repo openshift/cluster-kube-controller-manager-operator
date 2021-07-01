@@ -238,6 +238,7 @@ func (c *PruneController) ensurePrunePod(ctx context.Context, recorder events.Re
 	pod.OwnerReferences = ownerRefs
 
 	_, _, err = resourceapply.ApplyPod(ctx, c.podGetter, recorder, pod)
+
 	return err
 }
 

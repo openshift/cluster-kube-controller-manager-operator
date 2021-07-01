@@ -17,21 +17,39 @@ import (
 )
 
 // ApplyClusterRole merges objectmeta, requires rules, aggregation rules are not allowed for now.
-func ApplyClusterRole(ctx context.Context, client rbacclientv1.ClusterRolesGetter, recorder events.Recorder, required *rbacv1.ClusterRole) (*rbacv1.ClusterRole, bool, error) {
+func ApplyClusterRole(ctx context.Context, client rbacclientv1.ClusterRolesGetter, recorder events.Recorder, required *rbacv1.ClusterRole, deleteConditionals ...ConditionalFunction) (*rbacv1.ClusterRole, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	if required.AggregationRule != nil && len(required.AggregationRule.ClusterRoleSelectors) != 0 {
 		return nil, false, fmt.Errorf("cannot create an aggregated cluster role")
 	}
 
 	existing, err := client.ClusterRoles().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		actual, err := client.ClusterRoles().Create(ctx, required, metav1.CreateOptions{})
+	if apierrors.IsNotFound(err) && !shouldDelete {
+		actual, err := client.ClusterRoles().Create(context.TODO(), required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.ClusterRoles().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -55,17 +73,35 @@ func ApplyClusterRole(ctx context.Context, client rbacclientv1.ClusterRolesGette
 
 // ApplyClusterRoleBinding merges objectmeta, requires subjects and role refs
 // TODO on non-matching roleref, delete and recreate
-func ApplyClusterRoleBinding(ctx context.Context, client rbacclientv1.ClusterRoleBindingsGetter, recorder events.Recorder, required *rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, bool, error) {
+func ApplyClusterRoleBinding(ctx context.Context, client rbacclientv1.ClusterRoleBindingsGetter, recorder events.Recorder, required *rbacv1.ClusterRoleBinding, deleteConditionals ...ConditionalFunction) (*rbacv1.ClusterRoleBinding, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.ClusterRoleBindings().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.ClusterRoleBindings().Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.ClusterRoleBindings().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 	requiredCopy := required.DeepCopy()
@@ -107,17 +143,35 @@ func ApplyClusterRoleBinding(ctx context.Context, client rbacclientv1.ClusterRol
 }
 
 // ApplyRole merges objectmeta, requires rules
-func ApplyRole(ctx context.Context, client rbacclientv1.RolesGetter, recorder events.Recorder, required *rbacv1.Role) (*rbacv1.Role, bool, error) {
+func ApplyRole(ctx context.Context, client rbacclientv1.RolesGetter, recorder events.Recorder, required *rbacv1.Role, deleteConditionals ...ConditionalFunction) (*rbacv1.Role, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.Roles(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.Roles(required.Namespace).Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.Roles(existing.Name).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -139,17 +193,35 @@ func ApplyRole(ctx context.Context, client rbacclientv1.RolesGetter, recorder ev
 
 // ApplyRoleBinding merges objectmeta, requires subjects and role refs
 // TODO on non-matching roleref, delete and recreate
-func ApplyRoleBinding(ctx context.Context, client rbacclientv1.RoleBindingsGetter, recorder events.Recorder, required *rbacv1.RoleBinding) (*rbacv1.RoleBinding, bool, error) {
+func ApplyRoleBinding(ctx context.Context, client rbacclientv1.RoleBindingsGetter, recorder events.Recorder, required *rbacv1.RoleBinding, deleteConditionals ...ConditionalFunction) (*rbacv1.RoleBinding, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.RoleBindings(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		actual, err := client.RoleBindings(required.Namespace).Create(ctx, required, metav1.CreateOptions{})
 		reportCreateEvent(recorder, required, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.RoleBindings(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 	requiredCopy := required.DeepCopy()

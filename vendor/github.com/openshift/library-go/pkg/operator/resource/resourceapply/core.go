@@ -21,17 +21,35 @@ import (
 )
 
 // ApplyNamespace merges objectmeta, does not worry about anything else
-func ApplyNamespace(ctx context.Context, client coreclientv1.NamespacesGetter, recorder events.Recorder, required *corev1.Namespace) (*corev1.Namespace, bool, error) {
+func ApplyNamespace(ctx context.Context, client coreclientv1.NamespacesGetter, recorder events.Recorder, required *corev1.Namespace, deleteConditionals ...ConditionalFunction) (*corev1.Namespace, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.Namespaces().Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.Namespaces().
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.Namespace), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
+	}
+	if shouldDelete {
+		err := client.Namespaces().Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
 	}
 
 	modified := resourcemerge.BoolPtr(false)
@@ -54,19 +72,37 @@ func ApplyNamespace(ctx context.Context, client coreclientv1.NamespacesGetter, r
 // ApplyService merges objectmeta and requires
 // TODO, since this cannot determine whether changes are due to legitimate actors (api server) or illegitimate ones (users), we cannot update
 // TODO I've special cased the selector for now
-func ApplyService(ctx context.Context, client coreclientv1.ServicesGetter, recorder events.Recorder, required *corev1.Service) (*corev1.Service, bool, error) {
+func ApplyService(ctx context.Context, client coreclientv1.ServicesGetter, recorder events.Recorder, required *corev1.Service, deleteConditionals ...ConditionalFunction) (*corev1.Service, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.Services(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.Services(requiredCopy.Namespace).
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.Service), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.Services(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -97,19 +133,37 @@ func ApplyService(ctx context.Context, client coreclientv1.ServicesGetter, recor
 }
 
 // ApplyPod merges objectmeta, does not worry about anything else
-func ApplyPod(ctx context.Context, client coreclientv1.PodsGetter, recorder events.Recorder, required *corev1.Pod) (*corev1.Pod, bool, error) {
+func ApplyPod(ctx context.Context, client coreclientv1.PodsGetter, recorder events.Recorder, required *corev1.Pod, deleteConditionals ...ConditionalFunction) (*corev1.Pod, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	existing, err := client.Pods(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.Pods(requiredCopy.Namespace).
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.Pod), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.Pods(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -128,19 +182,36 @@ func ApplyPod(ctx context.Context, client coreclientv1.PodsGetter, recorder even
 }
 
 // ApplyServiceAccount merges objectmeta, does not worry about anything else
-func ApplyServiceAccount(ctx context.Context, client coreclientv1.ServiceAccountsGetter, recorder events.Recorder, required *corev1.ServiceAccount) (*corev1.ServiceAccount, bool, error) {
+func ApplyServiceAccount(ctx context.Context, client coreclientv1.ServiceAccountsGetter, recorder events.Recorder, required *corev1.ServiceAccount, deleteConditionals ...ConditionalFunction) (*corev1.ServiceAccount, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+		}
+	}
 	existing, err := client.ServiceAccounts(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.ServiceAccounts(requiredCopy.Namespace).
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.ServiceAccount), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.ServiceAccounts(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -157,19 +228,36 @@ func ApplyServiceAccount(ctx context.Context, client coreclientv1.ServiceAccount
 }
 
 // ApplyConfigMap merges objectmeta, requires data
-func ApplyConfigMap(ctx context.Context, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, required *corev1.ConfigMap) (*corev1.ConfigMap, bool, error) {
+func ApplyConfigMap(ctx context.Context, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, required *corev1.ConfigMap, deleteConditionals ...ConditionalFunction) (*corev1.ConfigMap, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+		}
+	}
 	existing, err := client.ConfigMaps(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.ConfigMaps(requiredCopy.Namespace).
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.ConfigMap), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.ConfigMaps(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	modified := resourcemerge.BoolPtr(false)
 	existingCopy := existing.DeepCopy()
 
@@ -234,8 +322,15 @@ func ApplyConfigMap(ctx context.Context, client coreclientv1.ConfigMapsGetter, r
 	return actual, true, err
 }
 
-// ApplySecret merges objectmeta, requires data
-func ApplySecret(ctx context.Context, client coreclientv1.SecretsGetter, recorder events.Recorder, requiredInput *corev1.Secret) (*corev1.Secret, bool, error) {
+func ApplySecret(ctx context.Context, client coreclientv1.SecretsGetter, recorder events.Recorder, requiredInput *corev1.Secret, deleteConditionals ...ConditionalFunction) (*corev1.Secret, bool, error) {
+	shouldDelete := false
+	// If any of the delete conditionals is true, we should delete the resource
+	for _, deleteConditional := range deleteConditionals {
+		if deleteConditional() {
+			shouldDelete = true
+			break
+		}
+	}
 	// copy the stringData to data.  Error on a data content conflict inside required.  This is usually a bug.
 	required := requiredInput.DeepCopy()
 	if required.Data == nil {
@@ -252,17 +347,27 @@ func ApplySecret(ctx context.Context, client coreclientv1.SecretsGetter, recorde
 	required.StringData = nil
 
 	existing, err := client.Secrets(required.Namespace).Get(ctx, required.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) && !shouldDelete {
 		requiredCopy := required.DeepCopy()
 		actual, err := client.Secrets(requiredCopy.Namespace).
 			Create(ctx, resourcemerge.WithCleanLabelsAndAnnotations(requiredCopy).(*corev1.Secret), metav1.CreateOptions{})
 		reportCreateEvent(recorder, requiredCopy, err)
 		return actual, true, err
+	} else if apierrors.IsNotFound(err) && shouldDelete {
+		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 
+	if shouldDelete {
+		err := client.Secrets(existing.Namespace).Delete(ctx, existing.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return nil, false, err
+		}
+		reportDeleteEvent(recorder, required, err)
+		return nil, true, nil
+	}
 	existingCopy := existing.DeepCopy()
 
 	resourcemerge.EnsureObjectMeta(resourcemerge.BoolPtr(false), &existingCopy.ObjectMeta, required.ObjectMeta)

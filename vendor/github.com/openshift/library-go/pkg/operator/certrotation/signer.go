@@ -53,6 +53,7 @@ func (c SigningRotation) ensureSigningCertKeyPair(ctx context.Context) (*crypto.
 		LabelAsManagedSecret(signingCertKeyPairSecret, CertificateTypeSigner)
 
 		actualSigningCertKeyPairSecret, _, err := resourceapply.ApplySecret(ctx, c.Client, c.EventRecorder, signingCertKeyPairSecret)
+
 		if err != nil {
 			return nil, err
 		}
