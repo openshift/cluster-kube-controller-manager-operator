@@ -55,6 +55,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
+	operatorLister := dynamicInformers.ForResource(operatorv1.GroupVersion.WithResource("kubecontrollermanagers")).Lister()
 
 	resourceSyncController, err := resourcesynccontroller.NewResourceSyncController(
 		operatorClient,
@@ -109,6 +110,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		os.Getenv("TOOLS_IMAGE"),
 		kubeInformersForNamespaces,
 		operatorClient,
+		operatorLister,
 		kubeClient,
 		configInformers.Config().V1().Infrastructures(),
 		cc.EventRecorder,
