@@ -9,8 +9,8 @@ import (
 
 	"github.com/ghodss/yaml"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
+	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
 	"github.com/spf13/cobra"

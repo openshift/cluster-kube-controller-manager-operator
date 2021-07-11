@@ -38,8 +38,8 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
+	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/v411_00_assets"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 )
 
