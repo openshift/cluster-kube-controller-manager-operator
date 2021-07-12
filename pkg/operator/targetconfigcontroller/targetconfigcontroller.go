@@ -287,8 +287,8 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 }
 
 func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cm.yaml"))
-	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/defaultconfig.yaml")
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cm.yaml"))
+	defaultConfig := bindata.MustAsset("assets/config/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&kubecontrolplanev1.KubeControllerManagerConfig{},
 		configMap,
@@ -304,8 +304,8 @@ func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.
 }
 
 func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/cluster-policy-controller-cm.yaml"))
-	defaultConfig := v411_00_assets.MustAsset("v4.1.0/config/default-cluster-policy-controller-config.yaml")
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cluster-policy-controller-cm.yaml"))
+	defaultConfig := bindata.MustAsset("assets/config/default-cluster-policy-controller-config.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&openshiftcontrolplanev1.OpenShiftControllerManagerConfig{},
 		configMap,
@@ -321,8 +321,8 @@ func manageClusterPolicyControllerConfig(ctx context.Context, client corev1clien
 }
 
 func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
-	requiredSA := resourceread.ReadServiceAccountV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-sa.yaml"))
-	requiredToken := resourceread.ReadSecretV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/localhost-recovery-token.yaml"))
+	requiredSA := resourceread.ReadServiceAccountV1OrDie(bindata.MustAsset("assets/kube-controller-manager/localhost-recovery-sa.yaml"))
+	requiredToken := resourceread.ReadSecretV1OrDie(bindata.MustAsset("assets/kube-controller-manager/localhost-recovery-token.yaml"))
 
 	saClient := client.ServiceAccounts(operatorclient.TargetNamespace)
 	serviceAccount, err := saClient.Get(ctx, requiredSA.Name, metav1.GetOptions{})
@@ -370,7 +370,7 @@ func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.Cor
 }
 
 func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.CoreV1Interface, infrastructureLister configv1listers.InfrastructureLister, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	cmString := string(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/kubeconfig-cm.yaml"))
+	cmString := string(bindata.MustAsset("assets/kube-controller-manager/kubeconfig-cm.yaml"))
 
 	infrastructure, err := infrastructureLister.Get("cluster")
 	if err != nil {
@@ -394,7 +394,7 @@ func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.
 // manageRecycler applies a ConfigMap containing the recycler config.
 // Owned by storage team/fbertina@redhat.com.
 func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, recorder events.Recorder, imagePullSpec string) (*corev1.ConfigMap, bool, error) {
-	cmString := string(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/recycler-cm.yaml"))
+	cmString := string(bindata.MustAsset("assets/kube-controller-manager/recycler-cm.yaml"))
 	for pattern, value := range map[string]string{
 		"${TOOLS_IMAGE}": imagePullSpec,
 	} {
@@ -405,7 +405,7 @@ func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMap
 }
 
 func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
-	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
+	required := resourceread.ReadPodV1OrDie(bindata.MustAsset("assets/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
 		"${IMAGE}":                           imagePullSpec,
@@ -540,7 +540,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		}
 	}
 
-	configMap := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod-cm.yaml"))
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/pod-cm.yaml"))
 	configMap.Data["pod.yaml"] = resourceread.WritePodV1OrDie(required)
 	configMap.Data["forceRedeploymentReason"] = operatorSpec.ForceRedeploymentReason
 	configMap.Data["version"] = version.Get().String()
@@ -744,7 +744,7 @@ func ManageCSRIntermediateCABundle(ctx context.Context, lister corev1listers.Sec
 }
 
 func ensureKubeControllerManagerTrustedCA(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder) error {
-	required := resourceread.ReadConfigMapV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/trusted-ca-cm.yaml"))
+	required := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/trusted-ca-cm.yaml"))
 	cmCLient := client.ConfigMaps(operatorclient.TargetNamespace)
 
 	cm, err := cmCLient.Get(ctx, "trusted-ca-bundle", metav1.GetOptions{})

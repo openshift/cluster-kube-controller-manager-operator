@@ -20,10 +20,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	bootstrapVersion = "v4.1.0"
-)
-
 // renderOpts holds values to drive the render command.
 type renderOpts struct {
 	manifest genericrenderoptions.ManifestOptions
@@ -221,7 +217,7 @@ func (r *renderOpts) Run() error {
 
 	if err := r.generic.ApplyTo(
 		&renderConfig.FileConfig,
-		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "defaultconfig.yaml"))},
+		genericrenderoptions.Template{FileName: "defaultconfig.yaml", Content: bindata.MustAsset(filepath.Join("assets", "config", "defaultconfig.yaml"))},
 		mustReadTemplateFile(filepath.Join(r.generic.TemplatesDir, "config", "bootstrap-config-overrides.yaml")),
 		&renderConfig,
 		nil,
@@ -233,7 +229,7 @@ func (r *renderOpts) Run() error {
 		&renderConfig.ClusterPolicyControllerFileConfig,
 		genericrenderoptions.Template{
 			FileName: "default-cluster-policy-controller-config.yaml",
-			Content:  v411_00_assets.MustAsset(filepath.Join(bootstrapVersion, "config", "default-cluster-policy-controller-config.yaml")),
+			Content:  bindata.MustAsset(filepath.Join("assets", "config", "default-cluster-policy-controller-config.yaml")),
 		},
 		mustReadTemplateFile(filepath.Join(r.generic.TemplatesDir, "config", "bootstrap-cluster-policy-controller-config-overrides.yaml")),
 		&renderConfig,
