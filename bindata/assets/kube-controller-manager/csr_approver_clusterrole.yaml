@@ -6,15 +6,27 @@ metadata:
   name: system:openshift:controller:cluster-csr-approver-controller
 rules:
   - apiGroups:
-      - certificates.k8s.io
+    - certificates.k8s.io
     resources:
-      - certificatesigningrequests
-      - certificatesigningrequests/approval
-      - certificatesigningrequests/status
+    - certificatesigningrequests
     verbs:
-      - get
-      - list
-      - watch
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - certificates.k8s.io
+    resources:
+    - certificatesigningrequests/approval
+    verbs:
+    - update
+  - apiGroups:
+    - certificates.k8s.io
+    resources:
+    - signers
+    resourceNames:
+    - kubernetes.io/kube-apiserver-client
+    verbs:
+    - approve
   - apiGroups:
       - ""
     resources:
