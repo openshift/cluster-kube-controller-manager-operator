@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -56,6 +56,7 @@ type TargetConfigController struct {
 	toolsImagePullSpec              string
 
 	operatorClient v1helpers.StaticPodOperatorClient
+	operatorLister cache.GenericLister
 
 	kubeClient          kubernetes.Interface
 	configMapLister     corev1listers.ConfigMapLister
@@ -72,6 +73,7 @@ func NewTargetConfigController(
 	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, toolsImagePullSpec string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorClient v1helpers.StaticPodOperatorClient,
+	operatorLister cache.GenericLister,
 	kubeClient kubernetes.Interface,
 	infrastuctureInformer configv1informers.InfrastructureInformer,
 	eventRecorder events.Recorder,
@@ -87,6 +89,7 @@ func NewTargetConfigController(
 		secretLister:        kubeInformersForNamespaces.SecretLister(),
 		infrastuctureLister: infrastuctureInformer.Lister(),
 		operatorClient:      operatorClient,
+		operatorLister:      operatorLister,
 		kubeClient:          kubeClient,
 		eventRecorder:       eventRecorder.WithComponentSuffix("target-config-controller"),
 
@@ -141,7 +144,24 @@ func (c TargetConfigController) sync() error {
 		return err
 	}
 
-	requeue, err := createTargetConfigController(c.ctx, c, c.eventRecorder, operatorSpec)
+	// TODO this entire block should become a configobserver, but that requires changes to the observedconfig format.
+	//  I would do that in 4.9, not 4.8.
+	// we need to get at the content of the kcm operator resource itself.  The operatorClient should be improved to return this
+	uncastOperator, err := c.operatorLister.Get("cluster")
+	if err != nil {
+		return err
+	}
+	rawOperator := uncastOperator.(*unstructured.Unstructured)
+	kcmOperator := &operatorv1.KubeControllerManager{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawOperator.UnstructuredContent(), kcmOperator); err != nil {
+		return err
+	}
+	// because of the way the injector ratchets and only allows injecting the "secure" approach, we only need see a positive value.
+	// in the case of an upgraded cluster, this value is empty to begin and may eventually become "good".
+	// in the case of a new cluster, the first instance ever created will be "good", so there is no possibility to accidentally create a "bad" set of flags.
+	useSecureServiceCA := kcmOperator.Spec.UseMoreSecureServiceCA
+
+	requeue, err := createTargetConfigController(c.ctx, c, c.eventRecorder, operatorSpec, useSecureServiceCA)
 	if err != nil {
 		return err
 	}
@@ -187,7 +207,7 @@ func isRequiredConfigPresent(config []byte) error {
 }
 
 // createTargetConfigController takes care of synchronizing (not upgrading) the thing we're managing.
-func createTargetConfigController(ctx context.Context, c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (bool, error) {
+func createTargetConfigController(ctx context.Context, c TargetConfigController, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, useSecureServiceCA bool) (bool, error) {
 	errors := []error{}
 
 	_, _, err := manageKubeControllerManagerConfig(c.kubeClient.CoreV1(), recorder, operatorSpec)
@@ -248,7 +268,7 @@ func createTargetConfigController(ctx context.Context, c TargetConfigController,
 		}
 	}
 
-	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, addServingServiceCAToTokenSecrets)
+	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), recorder, operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, addServingServiceCAToTokenSecrets, useSecureServiceCA)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -423,7 +443,7 @@ func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMap
 	return resourceapply.ApplyConfigMap(configMapsGetter, recorder, requiredCM)
 }
 
-func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets bool) (*corev1.ConfigMap, bool, error) {
+func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets, useSecureServiceCA bool) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(v411_00_assets.MustAsset("v4.1.0/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
@@ -543,6 +563,18 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	proxyEnvVars := proxyMapToEnvVars(proxyConfig)
 	for i, container := range required.Spec.Containers {
 		required.Spec.Containers[i].Env = append(container.Env, proxyEnvVars...)
+	}
+
+	// set the env var to indicate that we want this vulnerable behavior.
+	if !useSecureServiceCA {
+		for i, container := range required.Spec.Containers {
+			// if the KCM is ever started without this env var, then some namespaces will forever have the secure
+			// (updated) version of the ca bundle content.
+			required.Spec.Containers[i].Env = append(container.Env, corev1.EnvVar{
+				Name:  "OPENSHIFT_USE_VULNERABLE_LEGACY_SERVICE_CA_CRT",
+				Value: "true",
+			})
+		}
 	}
 
 	if addServingServiceCAToTokenSecrets {
@@ -786,7 +818,7 @@ func ensureKubeControllerManagerTrustedCA(ctx context.Context, client corev1clie
 
 // Run starts the kube-controller-manager and blocks until stopCh is closed.
 func (c *TargetConfigController) Run(workers int, stopCh <-chan struct{}) {
-	defer runtime.HandleCrash()
+	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
 	klog.Infof("Starting TargetConfigController")
@@ -816,7 +848,7 @@ func (c *TargetConfigController) processNextWorkItem() bool {
 		return true
 	}
 
-	runtime.HandleError(fmt.Errorf("%v failed with : %v", dsKey, err))
+	utilruntime.HandleError(fmt.Errorf("%v failed with : %v", dsKey, err))
 	c.queue.AddRateLimited(dsKey)
 
 	return true
@@ -859,12 +891,12 @@ func (c *TargetConfigController) namespaceEventHandler() cache.ResourceEventHand
 			if !ok {
 				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
-					runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+					utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 					return
 				}
 				ns, ok = tombstone.Obj.(*corev1.Namespace)
 				if !ok {
-					runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Namespace %#v", obj))
+					utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a Namespace %#v", obj))
 					return
 				}
 			}
