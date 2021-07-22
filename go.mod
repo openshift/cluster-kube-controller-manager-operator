@@ -25,3 +25,7 @@ require (
 
 // points to temporary-watch-reduction-patch-1.21 to pick up k/k/pull/101102 - please remove it once the pr merges and a new Z release is cut
 replace k8s.io/apiserver => github.com/openshift/kubernetes-apiserver v0.0.0-20210419140141-620426e63a99
+
+// Workaround to deal with https://github.com/kubernetes/klog/issues/253
+// Should be deleted when https://github.com/kubernetes/klog/pull/242 is merged
+exclude github.com/go-logr/logr v1.0.0
