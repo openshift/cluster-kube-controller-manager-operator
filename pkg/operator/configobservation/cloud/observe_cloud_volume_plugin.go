@@ -20,12 +20,8 @@ func ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder ev
 	}()
 	prevObservedConfig := map[string]interface{}{}
 
-	currentCloudVolumePlugin, _, err := unstructured.NestedString(existingConfig, volumePluginPath...)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	if len(currentCloudVolumePlugin) > 0 {
-		if err := unstructured.SetNestedField(prevObservedConfig, currentCloudVolumePlugin, volumePluginPath...); err != nil {
+	if currentCloudVolumePlugin, _, _ := unstructured.NestedStringSlice(existingConfig, volumePluginPath...); len(currentCloudVolumePlugin) > 0 {
+		if err := unstructured.SetNestedStringSlice(prevObservedConfig, currentCloudVolumePlugin, volumePluginPath...); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -46,7 +42,7 @@ func ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder ev
 
 	// If the cloud provider is external, we should set the option, else leave it empty.
 	if external && len(cloudProvider) > 0 {
-		if err := unstructured.SetNestedField(observedConfig, cloudProvider, volumePluginPath...); err != nil {
+		if err := unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider}, volumePluginPath...); err != nil {
 			recorder.Warningf("ObserveCloudVolumePlugin", "Failed setting cloudVolumePlugin: %v", err)
 			return existingConfig, append(errs, err)
 		}

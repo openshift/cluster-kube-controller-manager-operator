@@ -52,7 +52,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
-					"external-cloud-volume-plugin": "aws",
+					"external-cloud-volume-plugin": []interface{}{"aws"},
 				}},
 			false,
 		},
@@ -62,7 +62,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			nil,
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
-					"external-cloud-volume-plugin": "aws",
+					"external-cloud-volume-plugin": []interface{}{"aws"},
 				}},
 			map[string]interface{}{},
 			false,
