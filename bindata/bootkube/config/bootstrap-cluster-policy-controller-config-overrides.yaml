@@ -1,7 +1,5 @@
 apiVersion: openshiftcontrolplane.config.openshift.io/v1
 kind: OpenShiftControllerManagerConfig
-kubeClientConfig:
-  kubeConfig: /etc/kubernetes/secrets/kubeconfig
 servingInfo:
   clientCA: /etc/kubernetes/secrets/kube-control-plane-ca-bundle.crt
   certFile: /etc/kubernetes/secrets/kube-control-plane-kube-controller-manager-client.crt
