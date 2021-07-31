@@ -81,7 +81,7 @@ func newCertRotationController(
 
 	certRotator := certrotation.NewCertRotationController(
 		"CSRSigningCert",
-		certrotation.SigningRotation{
+		certrotation.RotatedSigningCASecret{
 			Namespace: operatorclient.OperatorNamespace,
 			// this is not a typo, this is the signer of the signer
 			Name:                   "csr-signer-signer",
@@ -93,7 +93,7 @@ func newCertRotationController(
 			Client:                 secretsGetter,
 			EventRecorder:          eventRecorder,
 		},
-		certrotation.CABundleRotation{
+		certrotation.CABundleConfigMap{
 			Namespace:     operatorclient.OperatorNamespace,
 			Name:          "csr-controller-signer-ca",
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps(),
@@ -101,7 +101,7 @@ func newCertRotationController(
 			Client:        configMapsGetter,
 			EventRecorder: eventRecorder,
 		},
-		certrotation.TargetRotation{
+		certrotation.RotatedSelfSignedCertKeySecret{
 			Namespace:              operatorclient.OperatorNamespace,
 			Name:                   "csr-signer",
 			Validity:               30 * rotationDay,
