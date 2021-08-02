@@ -1,9 +1,11 @@
 package configobservercontroller
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	libgocloudprovider "github.com/openshift/library-go/pkg/cloudprovider"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	libgoapiserver "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
@@ -20,6 +22,14 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
+)
+
+// openShiftOnlyFeatureGates are feature gate names that are only used within
+// OpenShift. Passing these to KCM causes it to log an error on startup.
+// This list is passed to the feature gate config observer as a blacklist,
+// excluding them from the feature gate output passed to KCM.
+var openShiftOnlyFeatureGates = sets.NewString(
+	libgocloudprovider.ExternalCloudProviderFeature,
 )
 
 type ConfigObserver struct {
@@ -88,7 +98,7 @@ func NewConfigObserver(
 				[]string{"extendedArguments", "cloud-config"}),
 			featuregates.NewObserveFeatureFlagsFunc(
 				nil,
-				nil,
+				openShiftOnlyFeatureGates,
 				[]string{"extendedArguments", "feature-gates"},
 			),
 			network.ObserveClusterCIDRs,
