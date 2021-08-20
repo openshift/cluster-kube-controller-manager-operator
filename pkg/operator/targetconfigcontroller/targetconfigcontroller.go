@@ -31,6 +31,7 @@ import (
 	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/crypto"
+	"github.com/openshift/library-go/pkg/operator/condition"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -296,6 +297,10 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 		return true, nil
 	}
 
+	if err = setCloudControllerOwnerCondition(c); err != nil {
+		return true, err
+	}
+
 	condition := operatorv1.OperatorCondition{
 		Type:   "TargetConfigControllerDegraded",
 		Status: operatorv1.ConditionFalse,
@@ -305,6 +310,68 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 	}
 
 	return false, nil
+}
+
+// setCloudControllerOwnerCondition sets the condition to False if either external cloud
+// provider has been successfully applied for all static pods or it's not set at all. Otherwise
+// it sets the condition to True.
+func setCloudControllerOwnerCondition(c TargetConfigController) error {
+	_, status, _, err := c.operatorClient.GetStaticPodOperatorState()
+	if err != nil {
+		return fmt.Errorf("could not get operator state: %v", err)
+	}
+	// Once we have successfully set CloudControllerOwner to False, we should not change it again.
+	if v1helpers.IsOperatorConditionFalse(status.Conditions, "CloudControllerOwner") {
+		return nil
+	}
+
+	// Get the latest config. Then check if it contains "cloud-provider" argument which is equal
+	// to "external" or just empty.
+	cm, err := c.configMapLister.ConfigMaps(operatorclient.TargetNamespace).Get("config")
+	if err != nil {
+		return err
+	}
+	configuredToOwnCloudController, err := isConfiguredToOwnCloudController(cm)
+	if err != nil {
+		return err
+	}
+
+	cond := operatorv1.OperatorCondition{
+		Type:   "CloudControllerOwner",
+		Status: operatorv1.ConditionTrue,
+	}
+
+	if !configuredToOwnCloudController {
+		// We set the condition to False only if all static pods have successfully started with required configuration.
+		// After that we are sure that KCM doesn't own CloudController anymore. Otherwise we set it to True by implying
+		// that KCM is still the owner for some pods.
+		progressingCondition := v1helpers.FindOperatorCondition(status.Conditions, condition.NodeInstallerProgressingConditionType)
+		expectedMessage := fmt.Sprintf("%d nodes are at revision %d", len(status.NodeStatuses), status.LatestAvailableRevision)
+		if progressingCondition != nil && progressingCondition.Status == operatorv1.ConditionFalse && progressingCondition.Reason == "AllNodesAtLatestRevision" && progressingCondition.Message == expectedMessage {
+			cond.Status = operatorv1.ConditionFalse
+		}
+	}
+
+	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(cond)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isConfiguredToOwnCloudController(cm *corev1.ConfigMap) (bool, error) {
+	var observedConfig map[string]interface{}
+	if err := yaml.Unmarshal([]byte(cm.Data["config.yaml"]), &observedConfig); err != nil {
+		return false, fmt.Errorf("failed to unmarshal the observedConfig: %v", err)
+	}
+
+	cloudProvider, found, err := unstructured.NestedSlice(observedConfig, "extendedArguments", "cloud-provider")
+	if !found || err != nil {
+		return false, err
+	}
+
+	// KCM is not configured to own Cloud Controllers if cloudProvider parameter is set to "external" or it's just empty.
+	return len(cloudProvider) != 1 || (cloudProvider[0] != "external" && cloudProvider[0] != ""), nil
 }
 
 func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
