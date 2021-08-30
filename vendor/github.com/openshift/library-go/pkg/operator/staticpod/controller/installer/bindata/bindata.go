@@ -90,8 +90,6 @@ spec:
         - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           name: kube-api-access
           readOnly: true
-        - mountPath: /var/lock
-          name: var-lock
       resources:
         requests:
           memory: 200M
@@ -109,9 +107,6 @@ spec:
     - hostPath:
         path: /etc/kubernetes/
       name: kubelet-dir
-    - hostPath:
-        path: /var/lock
-      name: var-lock
     - name: kube-api-access
       projected:
         defaultMode: 420

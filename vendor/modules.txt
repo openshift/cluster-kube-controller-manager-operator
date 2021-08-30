@@ -209,7 +209,7 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20210730114916-d82fae7e3feb
+# github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345
 ## explicit
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
@@ -263,13 +263,9 @@ github.com/openshift/library-go/pkg/operator/staticpod/controller/node
 github.com/openshift/library-go/pkg/operator/staticpod/controller/prune
 github.com/openshift/library-go/pkg/operator/staticpod/controller/prune/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/revision
-github.com/openshift/library-go/pkg/operator/staticpod/controller/startupmonitorcondition
-github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodfallback
 github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodstate
 github.com/openshift/library-go/pkg/operator/staticpod/installerpod
-github.com/openshift/library-go/pkg/operator/staticpod/internal/flock
 github.com/openshift/library-go/pkg/operator/staticpod/prune
-github.com/openshift/library-go/pkg/operator/staticpod/startupmonitor/annotations
 github.com/openshift/library-go/pkg/operator/staticresourcecontroller
 github.com/openshift/library-go/pkg/operator/status
 github.com/openshift/library-go/pkg/operator/unsupportedconfigoverridescontroller
@@ -598,6 +594,7 @@ k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 # k8s.io/apiextensions-apiserver v0.22.0-rc.0
+## explicit
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
@@ -1078,6 +1075,7 @@ k8s.io/component-base/version
 ## explicit
 k8s.io/klog/v2
 # k8s.io/kube-aggregator v0.22.0-rc.0
+## explicit
 k8s.io/kube-aggregator/pkg/apis/apiregistration
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1

@@ -15,16 +15,12 @@ import (
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/installerstate"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/node"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/prune"
-	"github.com/openshift/library-go/pkg/operator/staticpod/controller/startupmonitorcondition"
-	"github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodfallback"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodstate"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/unsupportedconfigoverridescontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/kubernetes"
 )
@@ -37,11 +33,10 @@ type staticPodOperatorControllerBuilder struct {
 	eventRecorder           events.Recorder
 
 	// resource information
-	operandNamespace        string
-	staticPodName           string
-	operandPodLabelSelector labels.Selector
-	revisionConfigMaps      []revisioncontroller.RevisionResource
-	revisionSecrets         []revisioncontroller.RevisionResource
+	operandNamespace   string
+	staticPodName      string
+	revisionConfigMaps []revisioncontroller.RevisionResource
+	revisionSecrets    []revisioncontroller.RevisionResource
 
 	// cert information
 	certDir        string
@@ -56,7 +51,6 @@ type staticPodOperatorControllerBuilder struct {
 	installCommand           []string
 	installerPodMutationFunc installer.InstallerPodMutationFunc
 	minReadyDuration         time.Duration
-	enableStartMonitor       func() (bool, error)
 
 	// pruning information
 	pruneCommand []string
@@ -73,7 +67,6 @@ func NewBuilder(
 		staticPodOperatorClient: staticPodOperatorClient,
 		kubeClient:              kubeClient,
 		kubeInformers:           kubeInformers,
-		enableStartMonitor:      func() (bool, error) { return false, nil },
 	}
 }
 
@@ -85,8 +78,6 @@ type Builder interface {
 	WithUnrevisionedCerts(certDir string, certConfigMaps, certSecrets []installer.UnrevisionedResource) Builder
 	WithInstaller(command []string) Builder
 	WithMinReadyDuration(minReadyDuration time.Duration) Builder
-	WithStartupMonitor(enabledStartupMonitor func() (bool, error), operandPodLabelSelector labels.Selector) Builder
-
 	// WithCustomInstaller allows mutating the installer pod definition just before
 	// the installer pod is created for a revision.
 	WithCustomInstaller(command []string, installerPodMutationFunc installer.InstallerPodMutationFunc) Builder
@@ -130,12 +121,6 @@ func (b *staticPodOperatorControllerBuilder) WithInstaller(command []string) Bui
 
 func (b *staticPodOperatorControllerBuilder) WithMinReadyDuration(minReadyDuration time.Duration) Builder {
 	b.minReadyDuration = minReadyDuration
-	return b
-}
-
-func (b *staticPodOperatorControllerBuilder) WithStartupMonitor(enabledStartupMonitor func() (bool, error), operandPodLabelSelector labels.Selector) Builder {
-	b.enableStartMonitor = enabledStartupMonitor
-	b.operandPodLabelSelector = operandPodLabelSelector
 	return b
 }
 
@@ -210,8 +195,6 @@ func (b *staticPodOperatorControllerBuilder) ToControllers() (manager.Controller
 			b.installerPodMutationFunc,
 		).WithMinReadyDuration(
 			b.minReadyDuration,
-		).WithStartupMonitorSupport(
-			b.enableStartMonitor,
 		), 1)
 
 		manager.WithController(installerstate.NewInstallerStateController(
@@ -258,24 +241,6 @@ func (b *staticPodOperatorControllerBuilder) ToControllers() (manager.Controller
 	} else {
 		eventRecorder.Warning("PruningControllerMissing", "not enough information provided, not all functionality is present")
 	}
-
-	manager.WithController(startupmonitorcondition.New(
-		b.operandNamespace,
-		b.staticPodName,
-		b.staticPodOperatorClient,
-		b.kubeInformers,
-		b.enableStartMonitor,
-		eventRecorder,
-	), 1)
-
-	manager.WithController(staticpodfallback.New(
-		b.operandNamespace,
-		b.operandPodLabelSelector,
-		b.staticPodOperatorClient,
-		b.kubeInformers,
-		b.enableStartMonitor,
-		b.eventRecorder,
-	), 1)
 
 	manager.WithController(node.NewNodeController(
 		b.staticPodOperatorClient,

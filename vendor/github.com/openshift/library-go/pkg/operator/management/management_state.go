@@ -1,12 +1,22 @@
 package management
 
 import (
-	v1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/api/operator/v1"
 )
 
 var (
 	allowOperatorUnmanagedState = true
 	allowOperatorRemovedState   = true
+)
+
+// These are for unit testing
+var (
+	getAllowedOperatorUnmanaged = func() bool {
+		return allowOperatorUnmanagedState
+	}
+	getAllowedOperatorRemovedState = func() bool {
+		return allowOperatorRemovedState
+	}
 )
 
 // SetOperatorAlwaysManaged is one time choice when an operator want to opt-out from supporting the "unmanaged" state.
@@ -16,12 +26,6 @@ func SetOperatorAlwaysManaged() {
 	allowOperatorUnmanagedState = false
 }
 
-// SetOperatorUnmanageable is one time choice when an operator wants to support the "unmanaged" state.
-// This is the default setting, provided here mostly for unit tests.
-func SetOperatorUnmanageable() {
-	allowOperatorUnmanagedState = true
-}
-
 // SetOperatorNotRemovable is one time choice the operator author can make to indicate the operator does not support
 // removing of his operand. This makes sense for operators like kube-apiserver where removing operand will lead to a
 // bricked, non-automatically recoverable state.
@@ -29,26 +33,14 @@ func SetOperatorNotRemovable() {
 	allowOperatorRemovedState = false
 }
 
-// SetOperatorRemovable is one time choice the operator author can make to indicate the operator supports
-// removing of his operand.
-// This is the default setting, provided here mostly for unit tests.
-func SetOperatorRemovable() {
-	allowOperatorRemovedState = true
-}
-
 // IsOperatorAlwaysManaged means the operator can't be set to unmanaged state.
 func IsOperatorAlwaysManaged() bool {
-	return !allowOperatorUnmanagedState
+	return !getAllowedOperatorUnmanaged()
 }
 
-// IsOperatorNotRemovable means the operator can't be set to removed state.
+// IsOperatorNotRemovable means the operator can't bet set to removed state.
 func IsOperatorNotRemovable() bool {
-	return !allowOperatorRemovedState
-}
-
-// IsOperatorRemovable means the operator can be set to removed state.
-func IsOperatorRemovable() bool {
-	return allowOperatorRemovedState
+	return !getAllowedOperatorRemovedState()
 }
 
 func IsOperatorUnknownState(state v1.ManagementState) bool {
