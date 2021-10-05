@@ -26,7 +26,7 @@ extendedArguments:
   - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
   - "-bootstrapsigner"
   - "-tokencleaner"
-  experimental-cluster-signing-duration:
+  cluster-signing-duration:
   - "720h"
   secure-port:
   - "10257"
