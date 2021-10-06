@@ -17,6 +17,8 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -425,6 +427,57 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 			if !reflect.DeepEqual(output, tc.expected) {
 				t.Errorf("Unexpected difference between %s and %s", tc.expected, output)
 			}
+		})
+	}
+}
+
+func TestConfiguredToOwnCloudController(t *testing.T) {
+	testCases := []struct {
+		name           string
+		content        string
+		expectedResult bool
+		expectedError  bool
+	}{
+		{
+			name:           "Non external cloud provider",
+			content:        `{"apiVersion":"kubecontrolplane.config.openshift.io/v1","extendedArguments":{"allocate-node-cidrs":["false"],"cert-dir":["/var/run/kubernetes"],"cloud-config":["/etc/kubernetes/static-pod-resources/configmaps/cloud-config/cloud.conf"],"cloud-provider":["vsphere"],"cluster-cidr":["10.128.0.0/14"],"cluster-name":["upi-4qzt2"],"cluster-signing-cert-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt"],"cluster-signing-key-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"],"configure-cloud-routes":["false"],"controllers":["*","-ttl","-bootstrapsigner","-tokencleaner"],"enable-dynamic-provisioning":["true"],"experimental-cluster-signing-duration":["720h"],"feature-gates":["APIPriorityAndFairness=true","RotateKubeletServerCertificate=true","SupportPodPidsLimit=true","NodeDisruptionExclusion=true","ServiceNodeExclusion=true","SCTPSupport=true","LegacyNodeRoleBehavior=false","RemoveSelfLink=false"],"flex-volume-plugin-dir":["/etc/kubernetes/kubelet-plugins/volume/exec"],"kube-api-burst":["300"],"kube-api-qps":["150"],"leader-elect":["true"],"leader-elect-resource-lock":["configmaps"],"leader-elect-retry-period":["3s"],"port":["0"],"pv-recycler-pod-template-filepath-hostpath":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"pv-recycler-pod-template-filepath-nfs":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"root-ca-file":["/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"],"secure-port":["10257"],"service-account-private-key-file":["/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"],"service-cluster-ip-range":["172.30.0.0/16"],"use-service-account-credentials":["true"]},"kind":"KubeControllerManagerConfig","serviceServingCert":{"certFile":"/etc/kubernetes/static-pod-resources/configmaps/service-ca/ca-bundle.crt"}}`,
+			expectedResult: true,
+			expectedError:  false,
+		},
+		{
+			name:           "External cloud provider",
+			content:        `{"apiVersion":"kubecontrolplane.config.openshift.io/v1","extendedArguments":{"allocate-node-cidrs":["false"],"cert-dir":["/var/run/kubernetes"],"cloud-config":["/etc/kubernetes/static-pod-resources/configmaps/cloud-config/cloud.conf"],"cloud-provider":["external"],"cluster-cidr":["10.128.0.0/14"],"cluster-name":["upi-4qzt2"],"cluster-signing-cert-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt"],"cluster-signing-key-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"],"configure-cloud-routes":["false"],"controllers":["*","-ttl","-bootstrapsigner","-tokencleaner"],"enable-dynamic-provisioning":["true"],"experimental-cluster-signing-duration":["720h"],"feature-gates":["APIPriorityAndFairness=true","RotateKubeletServerCertificate=true","SupportPodPidsLimit=true","NodeDisruptionExclusion=true","ServiceNodeExclusion=true","SCTPSupport=true","LegacyNodeRoleBehavior=false","RemoveSelfLink=false"],"flex-volume-plugin-dir":["/etc/kubernetes/kubelet-plugins/volume/exec"],"kube-api-burst":["300"],"kube-api-qps":["150"],"leader-elect":["true"],"leader-elect-resource-lock":["configmaps"],"leader-elect-retry-period":["3s"],"port":["0"],"pv-recycler-pod-template-filepath-hostpath":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"pv-recycler-pod-template-filepath-nfs":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"root-ca-file":["/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"],"secure-port":["10257"],"service-account-private-key-file":["/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"],"service-cluster-ip-range":["172.30.0.0/16"],"use-service-account-credentials":["true"]},"kind":"KubeControllerManagerConfig","serviceServingCert":{"certFile":"/etc/kubernetes/static-pod-resources/configmaps/service-ca/ca-bundle.crt"}}`,
+			expectedResult: false,
+			expectedError:  false,
+		},
+		{
+			name:           "No cloud provider",
+			content:        `{"apiVersion":"kubecontrolplane.config.openshift.io/v1","extendedArguments":{"allocate-node-cidrs":["false"],"cert-dir":["/var/run/kubernetes"],"cloud-config":["/etc/kubernetes/static-pod-resources/configmaps/cloud-config/cloud.conf"],"cloud-provider":[""],"cluster-cidr":["10.128.0.0/14"],"cluster-name":["upi-4qzt2"],"cluster-signing-cert-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.crt"],"cluster-signing-key-file":["/etc/kubernetes/static-pod-certs/secrets/csr-signer/tls.key"],"configure-cloud-routes":["false"],"controllers":["*","-ttl","-bootstrapsigner","-tokencleaner"],"enable-dynamic-provisioning":["true"],"experimental-cluster-signing-duration":["720h"],"feature-gates":["APIPriorityAndFairness=true","RotateKubeletServerCertificate=true","SupportPodPidsLimit=true","NodeDisruptionExclusion=true","ServiceNodeExclusion=true","SCTPSupport=true","LegacyNodeRoleBehavior=false","RemoveSelfLink=false"],"flex-volume-plugin-dir":["/etc/kubernetes/kubelet-plugins/volume/exec"],"kube-api-burst":["300"],"kube-api-qps":["150"],"leader-elect":["true"],"leader-elect-resource-lock":["configmaps"],"leader-elect-retry-period":["3s"],"port":["0"],"pv-recycler-pod-template-filepath-hostpath":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"pv-recycler-pod-template-filepath-nfs":["/etc/kubernetes/static-pod-resources/configmaps/recycler-config/recycler-pod.yaml"],"root-ca-file":["/etc/kubernetes/static-pod-resources/configmaps/serviceaccount-ca/ca-bundle.crt"],"secure-port":["10257"],"service-account-private-key-file":["/etc/kubernetes/static-pod-resources/secrets/service-account-private-key/service-account.key"],"service-cluster-ip-range":["172.30.0.0/16"],"use-service-account-credentials":["true"]},"kind":"KubeControllerManagerConfig","serviceServingCert":{"certFile":"/etc/kubernetes/static-pod-resources/configmaps/service-ca/ca-bundle.crt"}}`,
+			expectedResult: false,
+			expectedError:  false,
+		},
+		{
+			name:           "Broken content format",
+			content:        "INVALID",
+			expectedResult: false,
+			expectedError:  true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeConfigMap := &corev1.ConfigMap{
+				Data: map[string]string{
+					"config.yaml": tc.content,
+				},
+			}
+			result, err := isConfiguredToOwnCloudController(fakeConfigMap)
+			if tc.expectedError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Equal(t, tc.expectedResult, result)
 		})
 	}
 }
