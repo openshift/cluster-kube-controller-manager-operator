@@ -111,7 +111,7 @@ func NewTargetConfigController(
 }
 
 func (c TargetConfigController) sync(ctx context.Context, syncCtx factory.SyncContext) error {
-	operatorSpec, _, _, err := c.operatorClient.GetStaticPodOperatorStateWithQuorum()
+	operatorSpec, _, _, err := c.operatorClient.GetStaticPodOperatorStateWithQuorum(ctx)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 			Status: operatorv1.ConditionTrue,
 		}
 	}
-	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(upgradeableCondition)); err != nil {
+	if _, _, err := v1helpers.UpdateStaticPodStatus(ctx, c.operatorClient, v1helpers.UpdateStaticPodConditionFn(upgradeableCondition)); err != nil {
 		return true, err
 	}
 
@@ -291,13 +291,13 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 			Reason:  "SynchronizationError",
 			Message: v1helpers.NewMultiLineAggregate(errors).Error(),
 		}
-		if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
+		if _, _, err := v1helpers.UpdateStaticPodStatus(ctx, c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
 			return true, err
 		}
 		return true, nil
 	}
 
-	if err = setCloudControllerOwnerCondition(c); err != nil {
+	if err = setCloudControllerOwnerCondition(ctx, c); err != nil {
 		return true, err
 	}
 
@@ -305,7 +305,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 		Type:   "TargetConfigControllerDegraded",
 		Status: operatorv1.ConditionFalse,
 	}
-	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
+	if _, _, err := v1helpers.UpdateStaticPodStatus(ctx, c.operatorClient, v1helpers.UpdateStaticPodConditionFn(condition)); err != nil {
 		return true, err
 	}
 
@@ -315,7 +315,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 // setCloudControllerOwnerCondition sets the condition to False if either external cloud
 // provider has been successfully applied for all static pods or it's not set at all. Otherwise
 // it sets the condition to True.
-func setCloudControllerOwnerCondition(c TargetConfigController) error {
+func setCloudControllerOwnerCondition(ctx context.Context, c TargetConfigController) error {
 	_, status, _, err := c.operatorClient.GetStaticPodOperatorState()
 	if err != nil {
 		return fmt.Errorf("could not get operator state: %v", err)
@@ -352,7 +352,7 @@ func setCloudControllerOwnerCondition(c TargetConfigController) error {
 		}
 	}
 
-	if _, _, err := v1helpers.UpdateStaticPodStatus(c.operatorClient, v1helpers.UpdateStaticPodConditionFn(cond)); err != nil {
+	if _, _, err := v1helpers.UpdateStaticPodStatus(ctx, c.operatorClient, v1helpers.UpdateStaticPodConditionFn(cond)); err != nil {
 		return err
 	}
 
