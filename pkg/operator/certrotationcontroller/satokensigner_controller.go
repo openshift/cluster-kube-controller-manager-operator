@@ -72,7 +72,7 @@ func (c *SATokenSignerController) sync(ctx context.Context, syncCtx factory.Sync
 		condition.Reason = "Error"
 		condition.Message = syncErr.Error()
 	}
-	if _, _, updateErr := v1helpers.UpdateStatus(c.operatorClient, v1helpers.UpdateConditionFn(condition)); updateErr != nil {
+	if _, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition)); updateErr != nil {
 		return updateErr
 	}
 
