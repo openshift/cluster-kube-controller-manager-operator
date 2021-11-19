@@ -90,7 +90,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"assets/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml",
 			"assets/kube-controller-manager/namespace-openshift-infra.yaml",
 			"assets/kube-controller-manager/svc.yaml",
-			"assets/kube-controller-manager/svc-cluster-policy-controller.yaml",
 			"assets/kube-controller-manager/sa.yaml",
 			"assets/kube-controller-manager/recycler-sa.yaml",
 			"assets/kube-controller-manager/localhost-recovery-client-crb.yaml",
