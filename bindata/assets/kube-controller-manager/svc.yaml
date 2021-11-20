@@ -5,12 +5,12 @@ metadata:
   name: kube-controller-manager
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: serving-cert
-  labels:
-    prometheus: "kube-controller-manager"
+    prometheus.io/scrape: "true"
+    prometheus.io/scheme: https
 spec:
   selector:
     kube-controller-manager: "true"
   ports:
   - name: https
-    port: 10257
+    port: 443
     targetPort: 10257
