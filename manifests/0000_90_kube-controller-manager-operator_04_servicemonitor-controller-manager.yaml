@@ -75,4 +75,6 @@ spec:
   namespaceSelector:
     matchNames:
     - openshift-kube-controller-manager
-  selector: {}
+  selector:
+    matchLabels:
+      prometheus: kube-controller-manager

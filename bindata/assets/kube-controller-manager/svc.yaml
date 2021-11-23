@@ -5,8 +5,8 @@ metadata:
   name: kube-controller-manager
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: serving-cert
-    prometheus.io/scrape: "true"
-    prometheus.io/scheme: https
+  labels:
+    prometheus: "kube-controller-manager"
 spec:
   selector:
     kube-controller-manager: "true"
