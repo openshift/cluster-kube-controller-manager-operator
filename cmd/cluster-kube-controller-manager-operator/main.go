@@ -53,7 +53,7 @@ func NewSSCSCommand(ctx context.Context) *cobra.Command {
 
 	cmd.AddCommand(operatorcmd.NewOperator())
 	cmd.AddCommand(render.NewRenderCommand(os.Stderr))
-	cmd.AddCommand(installerpod.NewInstaller())
+	cmd.AddCommand(installerpod.NewInstaller(ctx))
 	cmd.AddCommand(prune.NewPrune())
 	cmd.AddCommand(resourcegraph.NewResourceChainCommand())
 	cmd.AddCommand(certsyncpod.NewCertSyncControllerCommand(operator.CertConfigMaps, operator.CertSecrets))

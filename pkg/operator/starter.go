@@ -162,7 +162,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
-	certRotationScale, err := certrotation.GetCertRotationScale(kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
+	certRotationScale, err := certrotation.GetCertRotationScale(ctx, kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
 	if err != nil {
 		return err
 	}
