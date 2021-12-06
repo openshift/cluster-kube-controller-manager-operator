@@ -39,3 +39,30 @@ spec:
           for: 15m
           labels:
             severity: critical
+        - alert: GarbageCollectorSyncFailed
+          annotations:
+            summary: There was a problem with syncing the resources for garbage collection.
+            description: Garbage Collector had a problem with syncing and monitoring the available resources. For more details, please see KubeControllerManagerOperator status for more details.
+          expr: |
+            rate(garbagecollector_controller_garbagecollector_resources_sync_error_total{}[1h]) > 0
+          for: 15m
+          labels:
+            severity: warning
+        - alert: GarbageCollectorObjectDeletionFailed
+          annotations:
+            summary: There was a problem with deleting an object in the last 24h.
+            description: Garbage Collector had a problem when attempting to delete an object in the last 24h. For more details, please see KubeControllerManagerOperator status for more details.
+          expr: |
+            rate(workqueue_retries_total{name="garbage_collector_attempt_to_delete"}[24h]) > 0
+          for: 1m
+          labels:
+            severity: warning
+        - alert: GarbageCollectorObjectOrphaningFailed
+          annotations:
+            summary: There was a problem with orphaning an object in the last 24h.
+            description: Garbage Collector had a problem when attempting to orphan an object in the last 24h. For more details, please see KubeControllerManagerOperator status for more details.
+          expr: |
+            rate(workqueue_retries_total{name="garbage_collector_attempt_to_orphan"}[24h]) > 0
+          for: 1m
+          labels:
+            severity: warning
