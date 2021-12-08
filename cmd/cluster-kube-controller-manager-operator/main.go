@@ -2,17 +2,11 @@ package main
 
 import (
 	"context"
-	goflag "flag"
-	"fmt"
-	"math/rand"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
-	utilflag "k8s.io/component-base/cli/flag"
-	"k8s.io/component-base/logs"
+	"k8s.io/component-base/cli"
 
 	"github.com/openshift/library-go/pkg/operator/staticpod/certsyncpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/installerpod"
@@ -26,19 +20,9 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	pflag.CommandLine.SetNormalizeFunc(utilflag.WordSepNormalizeFunc)
-	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-
-	logs.InitLogs()
-	defer logs.FlushLogs()
-
 	command := NewSSCSCommand(context.Background())
-	if err := command.Execute(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
+	code := cli.Run(command)
+	os.Exit(code)
 }
 
 func NewSSCSCommand(ctx context.Context) *cobra.Command {
