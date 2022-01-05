@@ -21,6 +21,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
+	"github.com/openshift/library-go/pkg/operator/staticpod/controller/guard"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/installer"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -51,6 +52,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		operatorclient.TargetNamespace,
 		"kube-system",
 	)
+
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(cc.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
 	if err != nil {
 		return err
@@ -136,6 +138,16 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		WithRevisionedResources(operatorclient.TargetNamespace, "kube-controller-manager", deploymentConfigMaps, deploymentSecrets).
 		WithUnrevisionedCerts("kube-controller-manager-certs", CertConfigMaps, CertSecrets).
 		WithVersioning("kube-controller-manager", versionRecorder).
+		WithPodDisruptionBudgetGuard(
+			"openshift-kube-controller-manager-operator",
+			"kube-controller-manager-operator",
+			"10257",
+			func() (bool, error) {
+				isSNO, err := guard.IsSNOCheckFnc(configInformers.Config().V1().Infrastructures().Lister())()
+				// create only when not a single node topology
+				return !isSNO, err
+			},
+		).
 		ToControllers()
 	if err != nil {
 		return err
