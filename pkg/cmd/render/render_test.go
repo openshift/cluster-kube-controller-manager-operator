@@ -184,7 +184,6 @@ func TestRenderCommand(t *testing.T) {
 						"--leader-elect-resource-lock=configmaps",
 						"--leader-elect-retry-period=3s",
 						"--leader-elect=true",
-						"--port=0",
 						"--pv-recycler-pod-template-filepath-hostpath=",
 						"--pv-recycler-pod-template-filepath-nfs=",
 						"--root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt",
