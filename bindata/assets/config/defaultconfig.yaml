@@ -30,8 +30,6 @@ extendedArguments:
   - "720h"
   secure-port:
   - "10257"
-  port:
-  - "0"
   cert-dir:
   - "/var/run/kubernetes"
   root-ca-file:
