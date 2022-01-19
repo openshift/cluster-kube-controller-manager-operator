@@ -143,10 +143,10 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"openshift-kube-controller-manager-operator",
 			"kube-controller-manager-operator",
 			"10257",
-			func() (bool, error) {
-				isSNO, err := guard.IsSNOCheckFnc(configInformers.Config().V1().Infrastructures().Lister())()
+			func() (bool, bool, error) {
+				isSNO, precheckSucceeded, err := guard.IsSNOCheckFnc(configInformers.Config().V1().Infrastructures())()
 				// create only when not a single node topology
-				return !isSNO, err
+				return !isSNO, precheckSucceeded, err
 			},
 		).
 		WithOperandPodLabelSelector(labels.Set{"app": "kube-controller-manager"}.AsSelector()).
