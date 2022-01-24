@@ -264,15 +264,15 @@ func TestKCMRecovery(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Try to delete the kube controller manager's configmap in kube-system
-	err = kubeClient.CoreV1().ConfigMaps("kube-system").Delete(ctx, "kube-controller-manager", metav1.DeleteOptions{})
+	// Try to delete the kube controller manager's lease object in kube-system
+	err = kubeClient.CoordinationV1().Leases("kube-system").Delete(ctx, "kube-controller-manager", metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check to see that the configmap then gets recreated
+	// Check to see that the lease object then gets recreated
 	err = wait.Poll(time.Second*5, time.Second*300, func() (bool, error) {
-		_, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "kube-controller-manager", metav1.GetOptions{})
+		_, err := kubeClient.CoordinationV1().Leases("kube-system").Get(ctx, "kube-controller-manager", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
 		}

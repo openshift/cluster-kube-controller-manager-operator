@@ -181,7 +181,7 @@ func TestRenderCommand(t *testing.T) {
 						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
 						"--kube-api-burst=300",
 						"--kube-api-qps=150",
-						"--leader-elect-resource-lock=configmaps",
+						"--leader-elect-resource-lock=leases",
 						"--leader-elect-retry-period=3s",
 						"--leader-elect=true",
 						"--pv-recycler-pod-template-filepath-hostpath=",
