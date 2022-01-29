@@ -4,7 +4,7 @@ metadata:
   namespace: openshift-kube-controller-manager
   name: kube-controller-manager
   annotations:
-    service.alpha.openshift.io/serving-cert-secret-name: serving-cert
+    service.beta.openshift.io/serving-cert-secret-name: serving-cert
   labels:
     prometheus: "kube-controller-manager"
 spec:

@@ -23,6 +23,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/cert"
+	"k8s.io/klog/v2"
 
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
@@ -43,6 +44,10 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
+)
+
+const (
+	ServingCertSecretAnnotation = "service.beta.openshift.io/serving-cert-secret-name"
 )
 
 type TargetConfigController struct {
@@ -391,17 +396,47 @@ func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.
 	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
-func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cluster-policy-controller-cm.yaml"))
 	defaultConfig := bindata.MustAsset("assets/config/default-cluster-policy-controller-config.yaml")
+	kcmService := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/kube-controller-manager/svc.yaml"))
+	configYamls := [][]byte{
+		defaultConfig,
+		operatorSpec.ObservedConfig.Raw,
+	}
+
+	servingCertName := ""
+	if kcmService.Annotations != nil {
+		servingCertName = kcmService.Annotations[ServingCertSecretAnnotation]
+	}
+
+	if len(servingCertName) == 0 {
+		return nil, false, fmt.Errorf("missing %s annotation in %s/%s service", kcmService.Namespace, kcmService.Name, ServingCertSecretAnnotation)
+	}
+
+	_, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, servingCertName, metav1.GetOptions{})
+
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, false, err
+	} else if apierrors.IsNotFound(err) {
+		// Should only apply when starting the cluster so cluster-policy-controller is able to annotate openshift-service-ca namespace.
+		// Then service-ca controller should start and create serving-cert.
+		// We will put the serving-cert into the config as soon as it appears which will then trigger new installer.
+
+		klog.V(1).Info("serving-cert not found: falling back to default self-signed certificate in cluster-policy-controller")
+		configOverride := "{\"servingInfo\": { \"certFile\": \"\", \"keyFile\": \"\"} }"
+		// this will trigger defaulting here https://github.com/openshift/library-go/blob/512c504748ee57ea97f6014e8fe3085c8dd5b144/pkg/controller/controllercmd/cmd.go#L204
+		configYamls = append(configYamls, []byte(configOverride))
+	}
+
+	configYamls = append(configYamls, operatorSpec.UnsupportedConfigOverrides.Raw)
+
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&openshiftcontrolplanev1.OpenShiftControllerManagerConfig{},
 		configMap,
 		"config.yaml",
 		nil,
-		defaultConfig,
-		operatorSpec.ObservedConfig.Raw,
-		operatorSpec.UnsupportedConfigOverrides.Raw)
+		configYamls...)
 	if err != nil {
 		return nil, false, err
 	}
