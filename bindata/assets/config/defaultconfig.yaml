@@ -20,7 +20,7 @@ extendedArguments:
   leader-elect-retry-period:
   - "3s"
   leader-elect-resource-lock:
-  - "leases"
+  - "configmapsleases"
   controllers:
   - "*"
   - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
