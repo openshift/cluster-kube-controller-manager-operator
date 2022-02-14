@@ -254,7 +254,7 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20220131201636-2a46ecd044b3
+# github.com/openshift/library-go v0.0.0-20220131201636-2a46ecd044b3 => github.com/dgrisonnet/library-go v0.0.0-20220214171349-d29493785229
 ## explicit; go 1.17
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
@@ -306,6 +306,7 @@ github.com/openshift/library-go/pkg/operator/staticpod/controller/guard/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/installer
 github.com/openshift/library-go/pkg/operator/staticpod/controller/installer/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/installerstate
+github.com/openshift/library-go/pkg/operator/staticpod/controller/missingstaticpod
 github.com/openshift/library-go/pkg/operator/staticpod/controller/node
 github.com/openshift/library-go/pkg/operator/staticpod/controller/prune
 github.com/openshift/library-go/pkg/operator/staticpod/controller/prune/bindata
@@ -314,6 +315,7 @@ github.com/openshift/library-go/pkg/operator/staticpod/controller/startupmonitor
 github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodfallback
 github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodstate
 github.com/openshift/library-go/pkg/operator/staticpod/installerpod
+github.com/openshift/library-go/pkg/operator/staticpod/internal
 github.com/openshift/library-go/pkg/operator/staticpod/internal/flock
 github.com/openshift/library-go/pkg/operator/staticpod/prune
 github.com/openshift/library-go/pkg/operator/staticpod/startupmonitor/annotations
@@ -1241,3 +1243,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/openshift/library-go => github.com/dgrisonnet/library-go v0.0.0-20220214171349-d29493785229
