@@ -78,3 +78,46 @@ spec:
   selector:
     matchLabels:
       prometheus: kube-controller-manager
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: kube-controller-manager
+  name: cluster-policy-controller
+  namespace: openshift-kube-controller-manager
+  annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
+    include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      interval: 30s
+      metricRelabelings:
+        - action: drop
+          regex: etcd_(debugging|disk|request|server).*
+          sourceLabels:
+            - __name__
+        - action: drop
+          regex: rest_client_request_latency_seconds_(bucket|count|sum)
+          sourceLabels:
+            - __name__
+        - action: drop
+          regex: root_ca_cert_publisher_sync_duration_seconds_(bucket|count|sum)
+          sourceLabels:
+            - __name__
+      port: https
+      scheme: https
+      path: /cluster-policy-controller/metrics
+      tlsConfig:
+        caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+        serverName: kube-controller-manager.openshift-kube-controller-manager.svc
+        certFile: /etc/prometheus/secrets/metrics-client-certs/tls.crt
+        keyFile: /etc/prometheus/secrets/metrics-client-certs/tls.key
+  namespaceSelector:
+    matchNames:
+      - openshift-kube-controller-manager
+  selector:
+    matchLabels:
+      prometheus: kube-controller-manager
