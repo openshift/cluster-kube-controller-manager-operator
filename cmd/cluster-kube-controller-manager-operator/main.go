@@ -16,6 +16,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/recoverycontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/resourcegraph"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/reverseproxy"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
 )
 
@@ -42,6 +43,7 @@ func NewSSCSCommand(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(resourcegraph.NewResourceChainCommand())
 	cmd.AddCommand(certsyncpod.NewCertSyncControllerCommand(operator.CertConfigMaps, operator.CertSecrets))
 	cmd.AddCommand(recoverycontroller.NewCertRecoveryControllerCommand(ctx))
+	cmd.AddCommand(reverseproxy.NewReverseProxyCommand())
 
 	return cmd
 }

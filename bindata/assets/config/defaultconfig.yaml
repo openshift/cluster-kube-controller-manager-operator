@@ -29,7 +29,7 @@ extendedArguments:
   cluster-signing-duration:
   - "720h"
   secure-port:
-  - "10257"
+  - "10358"
   cert-dir:
   - "/var/run/kubernetes"
   root-ca-file:

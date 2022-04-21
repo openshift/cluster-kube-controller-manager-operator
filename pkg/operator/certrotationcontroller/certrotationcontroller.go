@@ -118,7 +118,86 @@ func newCertRotationController(
 		operatorClient,
 		eventRecorder,
 	)
+	ret.certRotators = append(ret.certRotators, certRotator)
 
+	certRotator = certrotation.NewCertRotationController(
+		"KubeControllerManagerLocalhostServing",
+		certrotation.RotatedSigningCASecret{
+			Namespace:              operatorclient.OperatorNamespace,
+			Name:                   "kcm-localhost-serving-signer",
+			Validity:               10 * 365 * rotationDay,
+			Refresh:                8 * 365 * rotationDay, // this means we effectively do not rotate
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:                 secretsGetter,
+			EventRecorder:          eventRecorder,
+		},
+		certrotation.CABundleConfigMap{
+			Namespace:     operatorclient.TargetNamespace,
+			Name:          "kcm-localhost-serving-ca",
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
+			Client:        configMapsGetter,
+			EventRecorder: eventRecorder,
+		},
+		certrotation.RotatedSelfSignedCertKeySecret{
+			Namespace:              operatorclient.TargetNamespace,
+			Name:                   "kcm-localhost-serving-cert",
+			Validity:               850 * rotationDay, // 28 months - kcm-cpc-reverse-proxy-serving-cert has 26 months
+			Refresh:                425 * rotationDay, // 14 months - kcm-cpc-reverse-proxy-serving-cert has 13 months
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			CertCreator: &certrotation.ServingRotation{
+				Hostnames: func() []string { return []string{"localhost", "127.0.0.1"} },
+			},
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Lister(),
+			Client:        secretsGetter,
+			EventRecorder: eventRecorder,
+		},
+		operatorClient,
+		eventRecorder,
+	)
+	ret.certRotators = append(ret.certRotators, certRotator)
+
+	certRotator = certrotation.NewCertRotationController(
+		"ClusterPolicyControllerLocalhostServing",
+		certrotation.RotatedSigningCASecret{
+			Namespace:              operatorclient.OperatorNamespace,
+			Name:                   "cpc-localhost-serving-signer",
+			Validity:               10 * 365 * rotationDay,
+			Refresh:                8 * 365 * rotationDay, // this means we effectively do not rotate
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:                 secretsGetter,
+			EventRecorder:          eventRecorder,
+		},
+		certrotation.CABundleConfigMap{
+			Namespace:     operatorclient.TargetNamespace,
+			Name:          "cpc-localhost-serving-ca",
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Lister(),
+			Client:        configMapsGetter,
+			EventRecorder: eventRecorder,
+		},
+		certrotation.RotatedSelfSignedCertKeySecret{
+			Namespace:              operatorclient.TargetNamespace,
+			Name:                   "cpc-localhost-serving-cert",
+			Validity:               850 * rotationDay, // 28 months - kcm-cpc-reverse-proxy-serving-cert has 26 months
+			Refresh:                425 * rotationDay, // 14 months - kcm-cpc-reverse-proxy-serving-cert has 13 months
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			CertCreator: &certrotation.ServingRotation{
+				Hostnames: func() []string { return []string{"localhost", "127.0.0.1"} },
+			},
+			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets(),
+			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().Secrets().Lister(),
+			Client:        secretsGetter,
+			EventRecorder: eventRecorder,
+		},
+		operatorClient,
+		eventRecorder,
+	)
 	ret.certRotators = append(ret.certRotators, certRotator)
 
 	return ret, nil

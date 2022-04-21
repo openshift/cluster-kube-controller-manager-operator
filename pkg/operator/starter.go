@@ -238,14 +238,22 @@ var deploymentConfigMaps = []revision.RevisionResource{
 	{Name: "serviceaccount-ca"},
 	{Name: "service-ca"},
 	{Name: "recycler-config"},
+
+	// created by certrotation controller
+	{Name: "kcm-localhost-serving-ca"},
+	{Name: "cpc-localhost-serving-ca"},
 }
 
 // deploymentSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.
 var deploymentSecrets = []revision.RevisionResource{
 	{Name: "service-account-private-key"},
 
+	// created by certrotation controller
+	{Name: "kcm-localhost-serving-cert"},
+	{Name: "cpc-localhost-serving-cert"},
+
 	// this cert is created by the service-ca controller, which doesn't come up until after we are available. this piece of config must be optional.
-	{Name: "serving-cert", Optional: true},
+	{Name: "kcm-cpc-reverse-proxy-serving-cert", Optional: true},
 
 	// this needs to be revisioned as certsyncer's kubeconfig isn't wired to be live reloaded, nor will be autorecovery
 	{Name: "localhost-recovery-client-token"},

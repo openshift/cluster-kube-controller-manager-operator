@@ -19,7 +19,7 @@ spec:
     command: ["/bin/bash", "-euxo", "pipefail", "-c"]
     args:
         - |
-          timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10257 \))" ]; do sleep 1; done'
+          timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10358 \))" ]; do sleep 1; done'
 
           if [ -f /etc/kubernetes/static-pod-certs/configmaps/trusted-ca-bundle/ca-bundle.crt ]; then
             echo "Copying system trust bundle"
@@ -42,7 +42,7 @@ spec:
         memory: 200Mi
         cpu: 60m
     ports:
-      - containerPort: 10257
+      - containerPort: 10358
     volumeMounts:
     - mountPath: /etc/kubernetes/static-pod-resources
       name: resource-dir
@@ -51,21 +51,21 @@ spec:
     startupProbe:
       httpGet:
         scheme: HTTPS
-        port: 10257
+        port: 10358
         path: healthz
       initialDelaySeconds: 0
       timeoutSeconds: 3
     livenessProbe:
       httpGet:
         scheme: HTTPS
-        port: 10257
+        port: 10358
         path: healthz
       initialDelaySeconds: 45
       timeoutSeconds: 10
     readinessProbe:
       httpGet:
         scheme: HTTPS
-        port: 10257
+        port: 10358
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
@@ -173,6 +173,52 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+  - name: kcm-cpc-reverse-proxy
+    image: ${OPERATOR_IMAGE}
+    imagePullPolicy: IfNotPresent
+    terminationMessagePolicy: FallbackToLogsOnError
+    command: ["/bin/bash", "-euxo", "pipefail", "-c"]
+    args:
+      - |
+        timeout 3m /bin/bash -exuo pipefail -c 'while [ -n "$(ss -Htanop \( sport = 10257 \))" ]; do sleep 1; done'
+        
+        exec cluster-kube-controller-manager-operator reverse-proxy \
+          --listen=0.0.0.0:10257 \
+          --kcm-port=10358 \
+          --cpc-port=10357 \
+          --cpc-url-path-prefix=/cluster-policy-controller
+    resources:
+      requests:
+        memory: 50Mi
+        cpu: 5m
+    ports:
+      - containerPort: 10257
+    volumeMounts:
+      - mountPath: /etc/kubernetes/static-pod-resources
+        name: resource-dir
+      - mountPath: /etc/kubernetes/static-pod-certs
+        name: cert-dir
+    startupProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 0
+      timeoutSeconds: 3
+    livenessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 45
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        scheme: HTTPS
+        port: 10257
+        path: healthz
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:

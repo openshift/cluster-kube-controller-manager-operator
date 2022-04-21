@@ -399,31 +399,18 @@ func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.
 func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cluster-policy-controller-cm.yaml"))
 	defaultConfig := bindata.MustAsset("assets/config/default-cluster-policy-controller-config.yaml")
-	kcmService := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/kube-controller-manager/svc.yaml"))
 	configYamls := [][]byte{
 		defaultConfig,
 		operatorSpec.ObservedConfig.Raw,
 	}
 
-	servingCertName := ""
-	if kcmService.Annotations != nil {
-		servingCertName = kcmService.Annotations[ServingCertSecretAnnotation]
-	}
-
-	if len(servingCertName) == 0 {
-		return nil, false, fmt.Errorf("missing %s annotation in %s/%s service", kcmService.Namespace, kcmService.Name, ServingCertSecretAnnotation)
-	}
-
-	_, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, servingCertName, metav1.GetOptions{})
-
+	// Ensure that we always have a serving certificate (either managed or self-signed generated one),
+	// even though the secret is currently non-optional installer resource.
+	_, err := client.Secrets(operatorclient.TargetNamespace).Get(ctx, "cpc-localhost-serving-cert", metav1.GetOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
 	} else if apierrors.IsNotFound(err) {
-		// Should only apply when starting the cluster so cluster-policy-controller is able to annotate openshift-service-ca namespace.
-		// Then service-ca controller should start and create serving-cert.
-		// We will put the serving-cert into the config as soon as it appears which will then trigger new installer.
-
-		klog.V(1).Info("serving-cert not found: falling back to default self-signed certificate in cluster-policy-controller")
+		klog.V(1).Info("cpc-localhost-serving-cert not found: falling back to default self-signed certificate in cluster-policy-controller")
 		configOverride := "{\"servingInfo\": { \"certFile\": \"\", \"keyFile\": \"\"} }"
 		// this will trigger defaulting here https://github.com/openshift/library-go/blob/512c504748ee57ea97f6014e8fe3085c8dd5b144/pkg/controller/controllercmd/cmd.go#L204
 		configYamls = append(configYamls, []byte(configOverride))
@@ -593,11 +580,13 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 
 	kcmContainerArgsWithLoglevel[0] = strings.TrimSpace(kcmContainerArgsWithLoglevel[0])
 
-	if _, err := secretsGetter.Secrets(required.Namespace).Get(ctx, "serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	// ensure that we always have a serving certificate (either managed or self-signed generated one),
+	// even though the secret is currently non-optional installer resource.
+	if _, err := secretsGetter.Secrets(required.Namespace).Get(ctx, "kcm-localhost-serving-cert", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
 	} else if err == nil {
-		kcmContainerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.crt"
-		kcmContainerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/serving-cert/tls.key"
+		kcmContainerArgsWithLoglevel[0] += " --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/kcm-localhost-serving-cert/tls.crt"
+		kcmContainerArgsWithLoglevel[0] += " --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/kcm-localhost-serving-cert/tls.key"
 	}
 
 	kubeControllerManagerConfigMap, err := configMapsGetter.ConfigMaps(required.Namespace).Get(ctx, "config", metav1.GetOptions{})
@@ -638,6 +627,45 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	}
 
 	kcmContainerArgsWithLoglevel[0] = strings.TrimSpace(kcmContainerArgsWithLoglevel[0])
+
+	// resolve kcm-cpc-reverse-proxy certs
+	kcmCpcReverseProxyArgs := required.Spec.Containers[4].Args
+	if !strings.Contains(kcmCpcReverseProxyArgs[0], "exec cluster-kube-controller-manager-operator reverse-proxy") {
+		return nil, false, fmt.Errorf("exec cluster-kube-controller-manager-operator reverse-proxy not found in fifth argument %q", kcmCpcReverseProxyArgs[0])
+	}
+
+	kcmCpcReverseProxyArgs[0] = strings.TrimSpace(kcmCpcReverseProxyArgs[0])
+
+	kcmProxyService := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/kube-controller-manager/svc.yaml"))
+	kcmProxyServingCertName := ""
+	if kcmProxyService.Annotations != nil {
+		kcmProxyServingCertName = kcmProxyService.Annotations[ServingCertSecretAnnotation]
+	}
+
+	if len(kcmProxyServingCertName) == 0 {
+		return nil, false, fmt.Errorf("missing %s annotation in %s/%s service", kcmProxyService.Namespace, kcmProxyService.Name, ServingCertSecretAnnotation)
+	}
+
+	if _, err := secretsGetter.Secrets(required.Namespace).Get(ctx, kcmProxyServingCertName, metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return nil, false, err
+	} else if err == nil {
+		kcmCpcReverseProxyArgs[0] += fmt.Sprintf(" --tls-cert-file=/etc/kubernetes/static-pod-resources/secrets/%v/tls.crt", kcmProxyServingCertName)
+		kcmCpcReverseProxyArgs[0] += fmt.Sprintf(" --tls-private-key-file=/etc/kubernetes/static-pod-resources/secrets/%v/tls.key", kcmProxyServingCertName)
+	}
+
+	if _, err := configMapsGetter.ConfigMaps(required.Namespace).Get(ctx, "kcm-localhost-serving-ca", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return nil, false, err
+	} else if err == nil {
+		kcmCpcReverseProxyArgs[0] += " --kcm-cabundle-file=/etc/kubernetes/static-pod-resources/configmaps/kcm-localhost-serving-ca/ca-bundle.crt"
+	}
+
+	if _, err := configMapsGetter.ConfigMaps(required.Namespace).Get(ctx, "cpc-localhost-serving-ca", metav1.GetOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return nil, false, err
+	} else if err == nil {
+		kcmCpcReverseProxyArgs[0] += " --cpc-cabundle-file=/etc/kubernetes/static-pod-resources/configmaps/cpc-localhost-serving-ca/ca-bundle.crt"
+	}
+
+	kcmCpcReverseProxyArgs[0] = strings.TrimSpace(kcmCpcReverseProxyArgs[0])
 
 	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
 	if err != nil {
