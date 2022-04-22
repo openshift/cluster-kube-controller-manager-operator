@@ -153,6 +153,8 @@ func TestRenderCommand(t *testing.T) {
 				"manifests/manifests/00_namespace-security-allocation-controller-clusterrolebinding.yaml",
 				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
 				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
 				"manifests/manifests/secret-csr-signer-signer.yaml",
 				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
 			},
