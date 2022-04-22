@@ -65,7 +65,7 @@ spec:
       sourceLabels:
       - __name__
     - action: drop
-      regex: rest_client_request_latency_seconds_(bucket|count|sum)
+      regex: rest_client_request_duration_seconds_(bucket|count|sum)
       sourceLabels:
       - __name__
     - action: drop
@@ -114,7 +114,7 @@ spec:
           sourceLabels:
             - __name__
         - action: drop
-          regex: rest_client_request_latency_seconds_(bucket|count|sum)
+          regex: rest_client_request_duration_seconds_(bucket|count|sum)
           sourceLabels:
             - __name__
         - action: drop
