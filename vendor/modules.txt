@@ -167,7 +167,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20220209124712-b632c5fc10c0
+# github.com/openshift/api v0.0.0-20220315184754-d7c10d0b647e
 ## explicit; go 1.16
 github.com/openshift/api
 github.com/openshift/api/apiserver
@@ -254,7 +254,7 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20220215130638-e570dd7004e5
+# github.com/openshift/library-go v0.0.0-20220425105615-5e6227194fbe => github.com/shiftstack/library-go v0.0.0-20220425131106-ce052bd4e4e4
 ## explicit; go 1.17
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
@@ -300,16 +300,12 @@ github.com/openshift/library-go/pkg/operator/staleconditions
 github.com/openshift/library-go/pkg/operator/staticpod
 github.com/openshift/library-go/pkg/operator/staticpod/certsyncpod
 github.com/openshift/library-go/pkg/operator/staticpod/controller/backingresource
-github.com/openshift/library-go/pkg/operator/staticpod/controller/backingresource/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/guard
-github.com/openshift/library-go/pkg/operator/staticpod/controller/guard/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/installer
-github.com/openshift/library-go/pkg/operator/staticpod/controller/installer/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/installerstate
 github.com/openshift/library-go/pkg/operator/staticpod/controller/missingstaticpod
 github.com/openshift/library-go/pkg/operator/staticpod/controller/node
 github.com/openshift/library-go/pkg/operator/staticpod/controller/prune
-github.com/openshift/library-go/pkg/operator/staticpod/controller/prune/bindata
 github.com/openshift/library-go/pkg/operator/staticpod/controller/revision
 github.com/openshift/library-go/pkg/operator/staticpod/controller/startupmonitorcondition
 github.com/openshift/library-go/pkg/operator/staticpod/controller/staticpodfallback
@@ -335,7 +331,7 @@ github.com/pkg/profile
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/client_golang v1.11.0
+# github.com/prometheus/client_golang v1.11.1
 ## explicit; go 1.13
 github.com/prometheus/client_golang/api
 github.com/prometheus/client_golang/api/prometheus/v1
@@ -1243,3 +1239,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/openshift/library-go => github.com/shiftstack/library-go v0.0.0-20220425131106-ce052bd4e4e4

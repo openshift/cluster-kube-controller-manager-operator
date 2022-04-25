@@ -6,10 +6,10 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.6
-	github.com/openshift/api v0.0.0-20220209124712-b632c5fc10c0
+	github.com/openshift/api v0.0.0-20220315184754-d7c10d0b647e
 	github.com/openshift/build-machinery-go v0.0.0-20211213093930-7e33a7eb4ce3
 	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
-	github.com/openshift/library-go v0.0.0-20220215130638-e570dd7004e5
+	github.com/openshift/library-go v0.0.0-20220425105615-5e6227194fbe
 	github.com/prometheus/common v0.28.0
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
@@ -65,7 +65,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
@@ -118,3 +118,5 @@ require (
 // Workaround to deal with https://github.com/kubernetes/klog/issues/253
 // Should be deleted when https://github.com/kubernetes/klog/pull/242 is merged
 exclude github.com/go-logr/logr v1.0.0
+
+replace github.com/openshift/library-go => github.com/shiftstack/library-go v0.0.0-20220425131106-ce052bd4e4e4
