@@ -21,3 +21,13 @@ rules:
   - create
   - update
   - delete
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  resourceNames:
+  - cluster-policy-controller-lock
+  verbs:
+  - get
+  - create
+  - update
