@@ -24,10 +24,19 @@ spec:
       labels:
         app: kube-controller-manager-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
       automountServiceAccountToken: false
       serviceAccountName: kube-controller-manager-operator
       containers:
       - name: kube-controller-manager-operator
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         image: docker.io/openshift/origin-cluster-kube-controller-manager-operator:v4.0
         imagePullPolicy: IfNotPresent
         ports:
