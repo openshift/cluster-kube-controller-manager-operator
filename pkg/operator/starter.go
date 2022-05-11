@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/node"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/gcwatchercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
@@ -261,6 +262,10 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
+	gcWatcherController := gcwatchercontroller.NewGarbageCollectorWatcherController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder, []string{
+		"GarbageCollectorSyncFailed",
+	})
+
 	configInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
@@ -275,6 +280,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go saTokenController.Run(ctx, 1)
 	go staleConditions.Run(ctx, 1)
 	go latencyProfileController.Run(ctx, 1)
+	go gcWatcherController.Run(ctx, 1)
 
 	<-ctx.Done()
 	return nil
