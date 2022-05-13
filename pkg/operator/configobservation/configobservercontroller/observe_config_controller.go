@@ -11,6 +11,7 @@ import (
 	libgoapiserver "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
+	nodeobserver "github.com/openshift/library-go/pkg/operator/configobserver/node"
 	"github.com/openshift/library-go/pkg/operator/configobserver/proxy"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
@@ -20,6 +21,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/cloud"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/clustername"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/node"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/serviceca"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
@@ -60,6 +62,7 @@ func NewConfigObserver(
 		configinformers.Config().V1().FeatureGates().Informer(),
 		configinformers.Config().V1().Infrastructures().Informer(),
 		configinformers.Config().V1().Networks().Informer(),
+		configinformers.Config().V1().Nodes().Informer(),
 		configinformers.Config().V1().Proxies().Informer(),
 	}
 	for _, ns := range interestingNamespaces {
@@ -74,6 +77,7 @@ func NewConfigObserver(
 				FeatureGateLister_:    configinformers.Config().V1().FeatureGates().Lister(),
 				InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
 				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
+				NodeLister_:           configinformers.Config().V1().Nodes().Lister(),
 				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
 				APIServerLister_:      configinformers.Config().V1().APIServers().Lister(),
 
@@ -88,6 +92,7 @@ func NewConfigObserver(
 					configinformers.Config().V1().FeatureGates().Informer().HasSynced,
 					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
 					configinformers.Config().V1().Networks().Informer().HasSynced,
+					configinformers.Config().V1().Nodes().Informer().HasSynced,
 					configinformers.Config().V1().Proxies().Informer().HasSynced,
 				),
 			},
@@ -103,6 +108,14 @@ func NewConfigObserver(
 			),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
+			nodeobserver.NewLatencyProfileObserver(
+				node.LatencyConfigs,
+				nodeobserver.NewSuppressConfigUpdateUntilSameProfileFunc(
+					operatorClient.(v1helpers.StaticPodOperatorClient),
+					kubeInformersForNamespaces.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace),
+					node.LatencyConfigs,
+				),
+			),
 			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
