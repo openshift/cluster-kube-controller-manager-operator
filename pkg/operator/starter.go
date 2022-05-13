@@ -12,16 +12,18 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/node"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
+	"github.com/openshift/library-go/pkg/operator/latencyprofilecontroller"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
-	"github.com/openshift/library-go/pkg/operator/staticpod/controller/guard"
+	"github.com/openshift/library-go/pkg/operator/staticpod/controller/common"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/installer"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/revision"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -132,7 +134,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	}
 	versionRecorder.SetVersion("raw-internal", status.VersionForOperatorFromEnv())
 
-	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces).
+	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces, configInformers).
 		WithEvents(cc.EventRecorder).
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
@@ -144,7 +146,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"kube-controller-manager-operator",
 			"10257",
 			func() (bool, bool, error) {
-				isSNO, precheckSucceeded, err := guard.IsSNOCheckFnc(configInformers.Config().V1().Infrastructures())()
+				isSNO, precheckSucceeded, err := common.NewIsSingleNodePlatformFn(configInformers.Config().V1().Infrastructures())()
 				// create only when not a single node topology
 				return !isSNO, precheckSucceeded, err
 			},
@@ -168,6 +170,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			{Group: "certificates.k8s.io", Resource: "certificatesigningrequests"},
 			// TODO move to a more appropriate operator. One that creates and manages these.
 			{Resource: "nodes"},
+			{Group: "config.openshift.io", Resource: "nodes", Name: "cluster"},
 		},
 		configClient.ConfigV1(),
 		configInformers.Config().V1().ClusterOperators(),
@@ -207,6 +210,19 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
+	latencyProfileController := latencyprofilecontroller.NewLatencyProfileController(
+		operatorClient,
+		operatorclient.TargetNamespace,
+		node.LatencyConfigs,
+		latencyprofilecontroller.NewInstallerRevisionConfigMatcher(
+			kubeInformersForNamespaces.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace),
+			node.LatencyConfigs,
+		),
+		configInformers.Config().V1().Nodes(),
+		kubeInformersForNamespaces,
+		cc.EventRecorder,
+	)
+
 	configInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
@@ -220,6 +236,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go certRotationController.Run(ctx, 1)
 	go saTokenController.Run(ctx, 1)
 	go staleConditions.Run(ctx, 1)
+	go latencyProfileController.Run(ctx, 1)
 
 	<-ctx.Done()
 	return nil

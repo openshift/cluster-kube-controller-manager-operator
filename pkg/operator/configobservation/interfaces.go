@@ -15,6 +15,7 @@ type Listers struct {
 	FeatureGateLister_    configlistersv1.FeatureGateLister
 	InfrastructureLister_ configlistersv1.InfrastructureLister
 	NetworkLister         configlistersv1.NetworkLister
+	NodeLister_           configlistersv1.NodeLister
 	ProxyLister_          configlistersv1.ProxyLister
 	ConfigMapLister_      corev1listers.ConfigMapLister
 	APIServerLister_      configlistersv1.APIServerLister
@@ -33,6 +34,10 @@ func (l Listers) FeatureGateLister() configlistersv1.FeatureGateLister {
 
 func (l Listers) ProxyLister() configlistersv1.ProxyLister {
 	return l.ProxyLister_
+}
+
+func (l Listers) NodeLister() configlistersv1.NodeLister {
+	return l.NodeLister_
 }
 
 func (l Listers) ResourceSyncer() resourcesynccontroller.ResourceSyncer {
