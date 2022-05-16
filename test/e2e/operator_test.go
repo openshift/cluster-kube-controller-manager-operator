@@ -79,6 +79,10 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 		t.Fatalf("could not create test namespace: %v", err)
 	}
 	defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	err = test.WaitForServiceAccountInNamespace(kubeClient, name, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	labels := map[string]string{"app": "pdbtest"}
 	err = pdbCreate(policyClient, name, labels)
