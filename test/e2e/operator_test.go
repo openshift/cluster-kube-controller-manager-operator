@@ -8,14 +8,14 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/kubernetes"
-	policyclientv1beta1 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
+	policyclientv1 "k8s.io/client-go/kubernetes/typed/policy/v1"
 
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
@@ -60,7 +60,7 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policyClient, err := policyclientv1beta1.NewForConfig(kubeConfig)
+	policyClient, err := policyclientv1.NewForConfig(kubeConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,6 +79,10 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 		t.Fatalf("could not create test namespace: %v", err)
 	}
 	defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	err = test.WaitForServiceAccountInNamespace(kubeClient, name, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	labels := map[string]string{"app": "pdbtest"}
 	err = pdbCreate(policyClient, name, labels)
@@ -286,13 +290,13 @@ func TestKCMRecovery(t *testing.T) {
 	}
 }
 
-func pdbCreate(client *policyclientv1beta1.PolicyV1beta1Client, name string, labels map[string]string) error {
+func pdbCreate(client *policyclientv1.PolicyV1Client, name string, labels map[string]string) error {
 	minAvailable := intstr.FromInt(1)
-	pdb := &policyv1beta1.PodDisruptionBudget{
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+		Spec: policyv1.PodDisruptionBudgetSpec{
 			MinAvailable: &minAvailable,
 			Selector:     &metav1.LabelSelector{MatchLabels: labels},
 		},
