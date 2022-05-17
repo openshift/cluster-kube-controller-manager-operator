@@ -343,9 +343,13 @@ func TestLogLevel(t *testing.T) {
 
 	// wait for KCM pods to be successfully running
 	// then check that "v=4" was added to the appropriate containers
+	var lastListErr error
 	err = wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) {
-		pods, err := kubeClient.CoreV1().Pods(operatorclient.TargetNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=kube-controller-manager"})
-		require.NoError(t, err)
+		var pods *corev1.PodList
+		pods, lastListErr = kubeClient.CoreV1().Pods(operatorclient.TargetNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=kube-controller-manager"})
+		if lastListErr != nil {
+			return false, nil
+		}
 		for _, pod := range pods.Items {
 			if pod.Status.Phase != corev1.PodRunning {
 				return false, nil
@@ -361,4 +365,6 @@ func TestLogLevel(t *testing.T) {
 		}
 		return true, nil
 	})
+	require.NoError(t, lastListErr)
+	require.NoError(t, err)
 }
