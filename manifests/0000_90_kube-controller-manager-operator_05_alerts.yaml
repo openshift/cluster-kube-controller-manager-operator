@@ -26,7 +26,7 @@ spec:
             summary: The pod disruption budget is preventing further disruption to pods.
             description: The pod disruption budget is at minimum disruptions allowed level. The number of current healthy pods is equal to desired healthy pods.
           expr: |
-            max by(namespace, poddisruptionbudget) (kube_poddisruptionbudget_status_current_healthy == kube_poddisruptionbudget_status_desired_healthy)
+            max by(namespace, poddisruptionbudget) (kube_poddisruptionbudget_status_current_healthy == kube_poddisruptionbudget_status_desired_healthy and on (namespace, poddisruptionbudget) kube_poddisruptionbudget_status_expected_pods > 0)
           for: 60m
           labels:
             severity: warning
