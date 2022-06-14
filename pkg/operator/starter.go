@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	configinformersv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
@@ -33,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
@@ -104,13 +107,31 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"assets/kube-controller-manager/csr_approver_clusterrolebinding.yaml",
 			"assets/kube-controller-manager/gce/cloud-provider-role.yaml",
 			"assets/kube-controller-manager/gce/cloud-provider-binding.yaml",
-			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-sa.yaml",
-			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-role.yaml",
-			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-binding.yaml",
 		},
 		(&resourceapply.ClientHolder{}).WithKubernetes(kubeClient),
 		operatorClient,
 		cc.EventRecorder,
+	).WithConditionalResources(
+		bindata.Asset,
+		[]string{
+			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-sa.yaml",
+			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-role.yaml",
+			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-binding.yaml",
+		},
+		func() bool {
+			isVSphere, precheckSucceeded, err := newPlatformMatcherFn(configv1.VSpherePlatformType, configInformers.Config().V1().Infrastructures())()
+			if err != nil {
+				klog.Errorf("PlatformType check failed: %v", err)
+				return false
+			}
+			if !precheckSucceeded {
+				klog.V(4).Infof("PlatformType precheck did not succeed, skipping")
+				return false
+			}
+			// create only if platform type is vsphere
+			return isVSphere
+		},
+		nil,
 	).AddKubeInformers(kubeInformersForNamespaces)
 
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
@@ -282,4 +303,25 @@ var CertConfigMaps = []installer.UnrevisionedResource{
 var CertSecrets = []installer.UnrevisionedResource{
 	{Name: "kube-controller-manager-client-cert-key"},
 	{Name: "csr-signer"},
+}
+
+// newPlatformMatcherFn returns a function that checks if the cluster PlatformType matches with the passed one.
+// In case if err is nil, precheckSucceeded signifies whether the `matched` is valid.
+// If precheckSucceeded is false, the `matched` return value does not reflect if the cluster platform type matches on not.
+func newPlatformMatcherFn(platform configv1.PlatformType, infraInformer configinformersv1.InfrastructureInformer) func() (matched, preconditionFulfilled bool, err error) {
+	return func() (matched, precheckSucceeded bool, err error) {
+		if !infraInformer.Informer().HasSynced() {
+			// Do not return transient error
+			return false, false, nil
+		}
+		infraData, err := infraInformer.Lister().Get("cluster")
+		if err != nil {
+			return false, true, fmt.Errorf("Unable to list infrastructures.config.openshift.io/cluster object, unable to determine platform type")
+		}
+		if infraData.Status.PlatformStatus.Type == "" {
+			return false, true, fmt.Errorf("PlatformType was not set, unable to determine platform type")
+		}
+
+		return infraData.Status.PlatformStatus.Type == platform, true, nil
+	}
 }
