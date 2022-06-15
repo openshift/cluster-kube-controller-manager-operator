@@ -93,6 +93,8 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"assets/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
 			"assets/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml",
 			"assets/kube-controller-manager/namespace-security-allocation-controller-clusterrolebinding.yaml",
+			"assets/kube-controller-manager/podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+			"assets/kube-controller-manager/podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
 			"assets/kube-controller-manager/namespace-openshift-infra.yaml",
 			"assets/kube-controller-manager/svc.yaml",
 			"assets/kube-controller-manager/sa.yaml",
