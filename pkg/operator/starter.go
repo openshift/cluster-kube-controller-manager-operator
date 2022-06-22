@@ -72,13 +72,17 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-	configObserver := configobservercontroller.NewConfigObserver(
+
+	configObserver, err := configobservercontroller.NewConfigObserver(
 		operatorClient,
 		configInformers,
 		kubeInformersForNamespaces,
 		resourceSyncController,
 		cc.EventRecorder,
 	)
+	if err != nil {
+		return err
+	}
 
 	staticResourceController := staticresourcecontroller.NewStaticResourceController(
 		"KubeControllerManagerStaticResources",
@@ -210,10 +214,18 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
+	latencyProfileRejectionChecker, err := latencyprofilecontroller.NewInstallerProfileRejectionChecker(
+		kubeInformersForNamespaces.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace),
+		node.LatencyConfigs,
+		node.LatencyProfileRejectionScenarios,
+	)
+	if err != nil {
+		return err
+	}
 	latencyProfileController := latencyprofilecontroller.NewLatencyProfileController(
 		operatorClient,
 		operatorclient.TargetNamespace,
-		node.LatencyConfigs,
+		latencyProfileRejectionChecker,
 		latencyprofilecontroller.NewInstallerRevisionConfigMatcher(
 			kubeInformersForNamespaces.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace),
 			node.LatencyConfigs,
