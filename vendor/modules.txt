@@ -259,7 +259,7 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
+# github.com/openshift/library-go v0.0.0-20220622115547-84d884f4c9f6
 ## explicit; go 1.17
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
