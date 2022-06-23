@@ -39,3 +39,12 @@ spec:
           for: 15m
           labels:
             severity: critical
+        - alert: GarbageCollectorSyncFailed
+          annotations:
+            summary: There was a problem with syncing the resources for garbage collection.
+            description: Garbage Collector had a problem with syncing and monitoring the available resources. Please see KubeControllerManager logs for more details.
+          expr: |
+            rate(garbagecollector_controller_resources_sync_error_total{}[5m]) > 0
+          for: 60m
+          labels:
+            severity: warning
