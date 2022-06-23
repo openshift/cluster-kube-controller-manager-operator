@@ -39,6 +39,14 @@ spec:
           for: 15m
           labels:
             severity: critical
+        - alert: PodsUnableToDelete
+          annotations:
+            summary: Some pods are unable to be deleted.
+            description: Some pods have been unable to be deleted for last 24h (since their grace period for termination has been reached).
+          expr: |
+            count by (namespace) (time() - kube_pod_deletion_timestamp > 86400)
+          labels:
+            severity: warning
         - alert: GarbageCollectorSyncFailed
           annotations:
             summary: There was a problem with syncing the resources for garbage collection.
