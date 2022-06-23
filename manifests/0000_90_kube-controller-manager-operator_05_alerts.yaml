@@ -48,3 +48,21 @@ spec:
           for: 60m
           labels:
             severity: warning
+        - alert: GarbageCollectorObjectDeletionFailed
+          annotations:
+            summary: There was a problem with deleting an object.
+            description: Garbage Collector had some problems when attempting to delete an object. Please see KubeControllerManager logs for more details.
+          expr: |
+            garbagecollector_controller_attempt_to_delete_queue_retry_since_seconds_count - ignoring(le) garbagecollector_controller_attempt_to_delete_queue_retry_since_seconds_bucket{le="100"} > 0
+          for: 60m
+          labels:
+            severity: warning
+        - alert: GarbageCollectorObjectOrphaningFailed
+          annotations:
+            summary: There was a problem with orphaning an object.
+            description: Garbage Collector had a problem when attempting to orphan an object. Please see KubeControllerManager logs for more details.
+          expr: |
+            garbagecollector_controller_attempt_to_orphan_queue_retry_since_seconds_count - ignoring(le) garbagecollector_controller_attempt_to_orphan_queue_retry_since_seconds_bucket{le="100"} > 0
+          for: 60m
+          labels:
+            severity: warning

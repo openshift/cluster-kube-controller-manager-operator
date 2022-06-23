@@ -264,6 +264,8 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	gcWatcherController := gcwatchercontroller.NewGarbageCollectorWatcherController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder, []string{
 		"GarbageCollectorSyncFailed",
+		"GarbageCollectorObjectDeletionFailed",
+		"GarbageCollectorObjectOrphaningFailed",
 	})
 
 	configInformers.Start(ctx.Done())
