@@ -16,3 +16,11 @@ var LatencyConfigs = []nodeobserver.LatencyConfigProfileTuple{
 		},
 	},
 }
+
+var LatencyProfileRejectionScenarios = []nodeobserver.LatencyProfileRejectionScenario{
+	{FromProfile: "", ToProfile: configv1.LowUpdateSlowReaction},
+	{FromProfile: configv1.LowUpdateSlowReaction, ToProfile: ""},
+
+	{FromProfile: configv1.DefaultUpdateDefaultReaction, ToProfile: configv1.LowUpdateSlowReaction},
+	{FromProfile: configv1.LowUpdateSlowReaction, ToProfile: configv1.DefaultUpdateDefaultReaction},
+}
