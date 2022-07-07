@@ -10,12 +10,12 @@ import (
 	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prometheusmodel "github.com/prometheus/common/model"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/klog/v2"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -70,21 +70,29 @@ func (c *GarbageCollectorWatcherController) sync(ctx context.Context, syncCtx fa
 	}
 
 	syncErr := c.syncWorker(ctx, syncCtx)
-	condition := operatorv1.OperatorCondition{
-		Type:   "GarbageCollectorDegraded",
-		Status: operatorv1.ConditionFalse,
-		Reason: "AsExpected",
-	}
+
+	// Don't set the operator to degraded status here as we don't want to have hard dependency on monitoring
+	// which can be optional component in some deployment scenarios.
+	// TODO: Think if there is better way to inform users of the GC controller failing to garbage collect
+
+	// condition := operatorv1.OperatorCondition{
+	// 	Type:   "GarbageCollectorDegraded",
+	// 	Status: operatorv1.ConditionFalse,
+	// 	Reason: "AsExpected",
+	// }
+	// if syncErr != nil {
+	// 	condition.Status = operatorv1.ConditionTrue
+	// 	condition.Reason = "Error"
+	// 	condition.Message = syncErr.Error()
+	// }
+
+	// if _, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition)); updateErr != nil {
+	// 	return updateErr
+	// }
+	// Warn users
 	if syncErr != nil {
-		condition.Status = operatorv1.ConditionTrue
-		condition.Reason = "Error"
-		condition.Message = syncErr.Error()
+		syncCtx.Recorder().Warningf("GC controller metrics collection errors", "GC controller metrics collection is failing with %v. Please look at logs as fallback to identify if GC controller is failing to garbage collect", syncErr)
 	}
-
-	if _, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition)); updateErr != nil {
-		return updateErr
-	}
-
 	return syncErr
 }
 
@@ -95,7 +103,11 @@ func (c *GarbageCollectorWatcherController) syncWorker(ctx context.Context, sync
 	requiredAlertsSet := sets.NewString(c.alertNames...)
 
 	prometheusClient, err := newPrometheusClient(ctx, c.configMapClient)
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
+		// Prometheus client when failed to instantiate should not result in error being generated. This makes sure we don't
+		// generate excessive events.
+		return nil
+	} else if err != nil {
 		return err
 	}
 
