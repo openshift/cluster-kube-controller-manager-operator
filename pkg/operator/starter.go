@@ -262,7 +262,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
-	gcWatcherController := gcwatchercontroller.NewGarbageCollectorWatcherController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder, []string{
+	gcWatcherController := gcwatchercontroller.NewGarbageCollectorWatcherController(operatorClient, kubeInformersForNamespaces, configInformers, kubeClient, cc.EventRecorder, []string{
 		"GarbageCollectorSyncFailed",
 	})
 
