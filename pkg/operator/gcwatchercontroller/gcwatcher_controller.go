@@ -16,6 +16,9 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/klog/v2"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	configlisters "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -29,6 +32,18 @@ type GarbageCollectorWatcherController struct {
 	alertNames             []string
 	alertingRulesCache     []prometheusv1.AlertingRule
 	alertingRulesCacheLock sync.RWMutex
+	clusterLister          configlisters.ClusterOperatorLister
+	promConnectivity       prometheusConnectivity
+}
+
+// prometheusConnectivity sets up the prometheus connectivity.
+type prometheusConnectivity struct {
+	// usedCachedClient asks reconciler not to establish new connection but re-use existing connections.
+	// This is only used for unit testing. In future, we can break the newPrometheusClient function to be a method
+	// in this  struct for easier testing and debugging
+	useCachedClient bool
+	// client is the actual prometheus client
+	client prometheusv1.API
 }
 
 const (
@@ -40,14 +55,17 @@ const (
 func NewGarbageCollectorWatcherController(
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
+	configInformers configinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
 	eventRecorder events.Recorder,
 	alertNames []string,
 ) factory.Controller {
 	c := &GarbageCollectorWatcherController{
-		operatorClient:  operatorClient,
-		configMapClient: v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
-		alertNames:      alertNames,
+		operatorClient:   operatorClient,
+		configMapClient:  v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
+		alertNames:       alertNames,
+		clusterLister:    configInformers.Config().V1().ClusterOperators().Lister(),
+		promConnectivity: prometheusConnectivity{useCachedClient: false, client: nil},
 	}
 
 	eventRecorderWithSuffix := eventRecorder.WithComponentSuffix(controllerName)
@@ -56,6 +74,7 @@ func NewGarbageCollectorWatcherController(
 
 	return factory.New().WithInformers(
 		operatorClient.Informer(),
+		configInformers.Config().V1().ClusterOperators().Informer(), // To check if monitoring is installed or not
 		kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer(), // for prometheus client
 	).ResyncEvery(5*time.Minute).WithSyncContext(syncContext).WithSync(c.sync).ToController("GarbageCollectorWatcherController", eventRecorderWithSuffix)
 }
@@ -68,31 +87,32 @@ func (c *GarbageCollectorWatcherController) sync(ctx context.Context, syncCtx fa
 		c.invalidateRulesCache()
 		return nil
 	}
-
+	_, err := c.clusterLister.Get("monitoring")
+	if err != nil && errors.IsNotFound(err) {
+		klog.V(5).Info("Monitoring is disabled in the cluster and a diagnostic of the garbage collector is not working. Please look at the kcm logs for more information to debug the garbage collector further")
+		return nil
+	}
+	if err != nil { // Could be intermittent issues with connectivity, try after sometime, don't set the status yet.
+		return err
+	}
 	syncErr := c.syncWorker(ctx, syncCtx)
 
-	// Don't set the operator to degraded status here as we don't want to have hard dependency on monitoring
-	// which can be optional component in some deployment scenarios.
-	// TODO: Think if there is better way to inform users of the GC controller failing to garbage collect
-
-	// condition := operatorv1.OperatorCondition{
-	// 	Type:   "GarbageCollectorDegraded",
-	// 	Status: operatorv1.ConditionFalse,
-	// 	Reason: "AsExpected",
-	// }
-	// if syncErr != nil {
-	// 	condition.Status = operatorv1.ConditionTrue
-	// 	condition.Reason = "Error"
-	// 	condition.Message = syncErr.Error()
-	// }
-
-	// if _, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition)); updateErr != nil {
-	// 	return updateErr
-	// }
-	// Warn users
-	if syncErr != nil {
-		syncCtx.Recorder().Warningf("GC controller metrics collection errors", "GC controller metrics collection is failing with %v. Please look at logs as fallback to identify if GC controller is failing to garbage collect", syncErr)
+	condition := operatorv1.OperatorCondition{
+		Type:   "GarbageCollectorDegraded",
+		Status: operatorv1.ConditionFalse,
+		Reason: "AsExpected",
 	}
+	if syncErr != nil {
+		condition.Status = operatorv1.ConditionTrue
+		condition.Reason = "Error"
+		condition.Message = syncErr.Error()
+	}
+
+	_, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition))
+	if updateErr != nil {
+		return updateErr
+	}
+
 	return syncErr
 }
 
@@ -102,16 +122,23 @@ func (c *GarbageCollectorWatcherController) syncWorker(ctx context.Context, sync
 	}
 	requiredAlertsSet := sets.NewString(c.alertNames...)
 
-	prometheusClient, err := newPrometheusClient(ctx, c.configMapClient)
-	if err != nil && errors.IsNotFound(err) {
-		// Prometheus client when failed to instantiate should not result in error being generated. This makes sure we don't
-		// generate excessive events.
-		return nil
-	} else if err != nil {
-		return err
+	// useCachedClient for unit testing. We can try re-using the connections in future
+	if !c.promConnectivity.useCachedClient {
+		prometheusClient, err := newPrometheusClient(ctx, c.configMapClient)
+		if err != nil {
+			// Prometheus client when failed to instantiate should not result in error being generated. We can reach
+			// this stage if CMO is disabled day-2  and thanos services are removed after cluster installation
+			// has happened.
+			// TODO: In future, cluster operators can have status which states if they are managed by CVO or not
+			//		and we can use to represent failure.
+			klog.Errorf("failed to instantiate prometheus client. Thanos is not queriable at the moment with %v",
+				err)
+			return nil
+		}
+		c.promConnectivity.client = prometheusClient
 	}
 
-	alertingRules, err := c.getAlertingRulesCached(ctx, requiredAlertsSet, prometheusClient)
+	alertingRules, err := c.getAlertingRulesCached(ctx, requiredAlertsSet)
 	if err != nil {
 		return err
 	}
@@ -120,8 +147,7 @@ func (c *GarbageCollectorWatcherController) syncWorker(ctx context.Context, sync
 	if missingAlertsErr != nil {
 		klog.Warning(missingAlertsErr)
 	}
-
-	return checkFiringAlerts(ctx, requiredAlertsSet, prometheusClient)
+	return checkFiringAlerts(ctx, requiredAlertsSet, c.promConnectivity.client)
 }
 
 func (c *GarbageCollectorWatcherController) invalidateRulesCache() {
@@ -130,7 +156,7 @@ func (c *GarbageCollectorWatcherController) invalidateRulesCache() {
 	c.alertingRulesCache = nil
 }
 
-func (c *GarbageCollectorWatcherController) getAlertingRulesCached(ctx context.Context, requiredAlertsSet sets.String, prometheusClient prometheusv1.API) ([]prometheusv1.AlertingRule, error) {
+func (c *GarbageCollectorWatcherController) getAlertingRulesCached(ctx context.Context, requiredAlertsSet sets.String) ([]prometheusv1.AlertingRule, error) {
 	c.alertingRulesCacheLock.Lock()
 	defer c.alertingRulesCacheLock.Unlock()
 
@@ -138,7 +164,8 @@ func (c *GarbageCollectorWatcherController) getAlertingRulesCached(ctx context.C
 		return c.alertingRulesCache, nil
 	}
 
-	rules, err := prometheusClient.Rules(ctx)
+	rules, err := c.promConnectivity.client.Rules(ctx)
+
 	if err != nil {
 		return nil, fmt.Errorf("error fetching rules: %v", err)
 	}
