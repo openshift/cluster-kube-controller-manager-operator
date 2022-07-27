@@ -259,7 +259,7 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20220622115547-84d884f4c9f6 => github.com/JoelSpeed/library-go v0.0.0-20220726100516-3431d9d80fd1
+# github.com/openshift/library-go v0.0.0-20220727134723-6802b30e83ba
 ## explicit; go 1.17
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
@@ -1252,4 +1252,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/openshift/library-go => github.com/JoelSpeed/library-go v0.0.0-20220726100516-3431d9d80fd1
