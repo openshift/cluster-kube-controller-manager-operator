@@ -350,6 +350,8 @@ func pdbCreate(client *policyclientv1.PolicyV1Client, name string, minAvailable 
 }
 
 func podCreate(client *kubernetes.Clientset, name string, labels map[string]string) error {
+	runAsNonRoot := true
+	allowPrivilegeEscalation := false
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -357,6 +359,12 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: &runAsNonRoot,
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "test",
@@ -365,6 +373,14 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 						"sh",
 						"-c",
 						"trap exit TERM; while true; do sleep 5; done",
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{
+								"ALL",
+							},
+						},
 					},
 				},
 			},
