@@ -15,6 +15,7 @@ spec:
           annotations:
             summary: Target disappeared from Prometheus target discovery.
             description: KubeControllerManager has disappeared from Prometheus target discovery.
+            runbook_url: https://github.com/openshift/runbooks/blob/master/alerts/cluster-kube-controller-manager-operator/KubeControllerManagerDown.md
           expr: |
             absent(up{job="kube-controller-manager"} == 1)
           for: 15m
@@ -24,7 +25,8 @@ spec:
         - alert: PodDisruptionBudgetAtLimit
           annotations:
             summary: The pod disruption budget is preventing further disruption to pods.
-            description: The pod disruption budget is at minimum disruptions allowed level. The number of current healthy pods is equal to desired healthy pods.
+            description: The pod disruption budget is at the minimum disruptions allowed level. The number of current healthy pods is equal to the desired healthy pods.
+            runbook_url: https://github.com/openshift/runbooks/blob/master/alerts/cluster-kube-controller-manager-operator/PodDisruptionBudgetAtLimit.md
           expr: |
             max by(namespace, poddisruptionbudget) (kube_poddisruptionbudget_status_current_healthy == kube_poddisruptionbudget_status_desired_healthy)
           for: 60m
@@ -33,7 +35,8 @@ spec:
         - alert: PodDisruptionBudgetLimit
           annotations:
             summary: The pod disruption budget registers insufficient amount of pods.
-            description: The pod disruption budget is below minimum disruptions allowed level and is not satisfied. The number of current healthy pods is less than then desired healthy pods.
+            description: The pod disruption budget is below the minimum disruptions allowed level and is not satisfied. The number of current healthy pods is less than the desired healthy pods.
+            runbook_url: https://github.com/openshift/runbooks/blob/master/alerts/cluster-kube-controller-manager-operator/PodDisruptionBudgetLimit.md
           expr: |
             max by (namespace, poddisruptionbudget) (kube_poddisruptionbudget_status_current_healthy < kube_poddisruptionbudget_status_desired_healthy)
           for: 15m
