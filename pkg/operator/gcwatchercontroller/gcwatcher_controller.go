@@ -156,7 +156,13 @@ func (c *GarbageCollectorWatcherController) syncWorker(ctx context.Context, sync
 
 	// useCachedClient for unit testing. We can try re-using the connections in future
 	if !c.promConnectivity.useCachedClient {
-		prometheusClient, err := newPrometheusClient(ctx, c.configMapClient)
+		prometheusClient, transport, err := newPrometheusClient(ctx, c.configMapClient)
+		defer func() {
+			// we need to close established connections, since we are creating a client and transport from scratch each sync
+			if transport != nil {
+				transport.CloseIdleConnections()
+			}
+		}()
 		if err != nil {
 			// Prometheus client when failed to instantiate should not result in error being generated. We can reach
 			// this stage if CMO is disabled day-2  and thanos services are removed after cluster installation
