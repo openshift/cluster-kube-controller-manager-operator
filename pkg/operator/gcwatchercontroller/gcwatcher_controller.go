@@ -11,9 +11,11 @@ import (
 	prometheusmodel "github.com/prometheus/common/model"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -72,9 +74,39 @@ func NewGarbageCollectorWatcherController(
 	syncContext := factory.NewSyncContext(controllerName, eventRecorder)
 	syncContext.Queue().Add(invalidateAlertingRulesCacheKey)
 
-	return factory.New().WithInformers(
-		operatorClient.Informer(),
-		configInformers.Config().V1().ClusterOperators().Informer(), // To check if monitoring is installed or not
+	// calls to thanos are expensive - do the least amount of possible
+	monitoringHandler := func(obj interface{}) {
+		if metaObj, ok := obj.(metav1.Object); ok && metaObj.GetName() == "monitoring" {
+			syncContext.Queue().Add(factory.DefaultQueueKey)
+		}
+	}
+	serviceCAHandler := func(obj interface{}) {
+		if metaObj, ok := obj.(metav1.Object); ok && metaObj.GetName() == "service-ca" {
+			syncContext.Queue().Add(factory.DefaultQueueKey)
+		}
+	}
+
+	configInformers.Config().V1().ClusterOperators().Informer().AddEventHandlerWithResyncPeriod(
+		// we are only interested in adds and deletes of monitoring object
+		cache.ResourceEventHandlerFuncs{
+			AddFunc:    monitoringHandler,
+			DeleteFunc: monitoringHandler,
+		},
+		0,
+	)
+	kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().AddEventHandlerWithResyncPeriod(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: serviceCAHandler,
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				serviceCAHandler(newObj)
+			},
+			DeleteFunc: serviceCAHandler,
+		},
+		0,
+	)
+
+	return factory.New().WithBareInformers(
+		configInformers.Config().V1().ClusterOperators().Informer(),                                                                       // To check if monitoring is installed or not
 		kubeInformersForNamespaces.InformersFor(operatorclient.GlobalMachineSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer(), // for prometheus client
 	).ResyncEvery(5*time.Minute).WithSyncContext(syncContext).WithSync(c.sync).ToController("GarbageCollectorWatcherController", eventRecorderWithSuffix)
 }
@@ -124,7 +156,13 @@ func (c *GarbageCollectorWatcherController) syncWorker(ctx context.Context, sync
 
 	// useCachedClient for unit testing. We can try re-using the connections in future
 	if !c.promConnectivity.useCachedClient {
-		prometheusClient, err := newPrometheusClient(ctx, c.configMapClient)
+		prometheusClient, transport, err := newPrometheusClient(ctx, c.configMapClient)
+		defer func() {
+			// we need to close established connections, since we are creating a client and transport from scratch each sync
+			if transport != nil {
+				transport.CloseIdleConnections()
+			}
+		}()
 		if err != nil {
 			// Prometheus client when failed to instantiate should not result in error being generated. We can reach
 			// this stage if CMO is disabled day-2  and thanos services are removed after cluster installation
