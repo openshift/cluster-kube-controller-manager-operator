@@ -266,6 +266,11 @@ func TestGarbageCollectorSync(t *testing.T) {
 		Status: operatorv1.ConditionFalse,
 		Reason: "AsExpected",
 	}
+	successMonitoringDisabledCondition := operatorv1.OperatorCondition{
+		Type:   "GarbageCollectorDegraded",
+		Status: operatorv1.ConditionFalse,
+		Reason: "MonitoringDisabled",
+	}
 	syncError := fmt.Errorf("error querying alerts: prometheus querying failed")
 	failureCondition := operatorv1.OperatorCondition{
 		Type:    "GarbageCollectorDegraded",
@@ -296,7 +301,7 @@ func TestGarbageCollectorSync(t *testing.T) {
 			clusterMonitoringExists: false,
 			gc:                      gcw,
 			expectErr:               false,
-			expectedStatusCondition: operatorv1.OperatorCondition{},
+			expectedStatusCondition: successMonitoringDisabledCondition,
 		},
 		{
 			name:                    "Garbage Collector Watcher with monitoring enabled but with failing prometheus client",
