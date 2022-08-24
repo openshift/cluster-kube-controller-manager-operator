@@ -87,21 +87,24 @@ func (c *GarbageCollectorWatcherController) sync(ctx context.Context, syncCtx fa
 		c.invalidateRulesCache()
 		return nil
 	}
+	condition := operatorv1.OperatorCondition{
+		Type:   "GarbageCollectorDegraded",
+		Status: operatorv1.ConditionFalse,
+		Reason: "AsExpected",
+	}
 	_, err := c.clusterLister.Get("monitoring")
 	if err != nil && errors.IsNotFound(err) {
 		klog.V(5).Info("Monitoring is disabled in the cluster and a diagnostic of the garbage collector is not working. Please look at the kcm logs for more information to debug the garbage collector further")
-		return nil
+		// Disabled monitoring works as expected and is not degraded
+		condition.Reason = "MonitoringDisabled"
+		_, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition))
+		return updateErr
 	}
 	if err != nil { // Could be intermittent issues with connectivity, try after sometime, don't set the status yet.
 		return err
 	}
 	syncErr := c.syncWorker(ctx, syncCtx)
 
-	condition := operatorv1.OperatorCondition{
-		Type:   "GarbageCollectorDegraded",
-		Status: operatorv1.ConditionFalse,
-		Reason: "AsExpected",
-	}
 	if syncErr != nil {
 		condition.Status = operatorv1.ConditionTrue
 		condition.Reason = "Error"
