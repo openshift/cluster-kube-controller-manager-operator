@@ -20,44 +20,48 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 )
 
-func newPrometheusClient(ctx context.Context, configMapClient corev1client.ConfigMapsGetter) (prometheusv1.API, error) {
+func newPrometheusClient(ctx context.Context, configMapClient corev1client.ConfigMapsGetter) (prometheusv1.API, *http.Transport, error) {
 	host := "thanos-querier.openshift-monitoring.svc"
 
 	saToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return nil, fmt.Errorf("error reading service account token: %w", err)
+		return nil, nil, fmt.Errorf("error reading service account token: %w", err)
 	}
 
 	routerCAConfigMap, err := configMapClient.ConfigMaps(operatorclient.GlobalMachineSpecifiedConfigNamespace).Get(ctx, "service-ca", metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	bundlePEM := []byte(routerCAConfigMap.Data["ca-bundle.crt"])
 
 	roots := x509.NewCertPool()
 	roots.AppendCertsFromPEM(bundlePEM)
 
+	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:        100,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig: &tls.Config{
+			RootCAs:    roots,
+			ServerName: host,
+		},
+	}
+
 	client, err := prometheusapi.NewClient(prometheusapi.Config{
 		Address: "https://" + net.JoinHostPort(host, "9091"),
 		RoundTripper: transport.NewBearerAuthRoundTripper(
 			string(saToken),
-			&http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}).DialContext,
-				TLSHandshakeTimeout: 10 * time.Second,
-				TLSClientConfig: &tls.Config{
-					RootCAs:    roots,
-					ServerName: host,
-				},
-			},
+			t,
 		),
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return prometheusv1.NewAPI(client), nil
+	return prometheusv1.NewAPI(client), t, nil
 }
