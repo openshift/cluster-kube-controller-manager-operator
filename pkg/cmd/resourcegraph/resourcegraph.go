@@ -80,6 +80,10 @@ func Resources() resourcegraph.Resources {
 		From(user).
 		From(installer).
 		Add(ret)
+	nodesConfig := resourcegraph.NewConfig("nodes").
+		From(user).
+		From(installer).
+		Add(ret)
 
 	// key for signing service account tokens
 	initialServiceAccountKey := resourcegraph.NewSecret(operatorclient.GlobalUserSpecifiedConfigNamespace, "initial-service-account-private-key").
@@ -224,10 +228,11 @@ func Resources() resourcegraph.Resources {
 	config := resourcegraph.NewConfigMap(operatorclient.TargetNamespace, "config").
 		Note("Managed").
 		From(infrastructureConfig). // cloud provider
-		From(networkConfig).        // service cidr for controllers
-		From(apiserversConfig).     // TLS security profile
+		From(networkConfig).        // cluster-cidr Range for Pods in cluster and service-cluster-ip-range for Services in cluster
+		From(apiserversConfig).     // for TLSSecurityProfile, which decides TLS version and allowed ciphers
 		From(proxiesConfig).        // proxy env in KCM pod
 		From(featureGatesConfig).   // feature gates
+		From(nodesConfig).          // for workerLatencyProfile (affects node-monitor-grace-period)
 		Add(ret)
 
 	// and finally our target pod
