@@ -27,6 +27,10 @@ spec:
     - --v=2
     - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log
 {{ .ExtendedArguments }}
+    resources:
+      requests:
+        memory: 200Mi
+        cpu: 60m
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
@@ -84,6 +88,10 @@ spec:
     - --alsologtostderr
     - --v=2
     - --log-file=/var/log/bootstrap-control-plane/cluster-policy-controller.log
+    resources:
+      requests:
+        memory: 200Mi
+        cpu: 10m
     ports:
       - containerPort: 10357
     volumeMounts:
