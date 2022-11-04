@@ -24,7 +24,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/latencyprofilecontroller"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
-	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticpod"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/common"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/installer"
@@ -231,16 +230,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	}
 	saTokenController := certrotationcontroller.NewSATokenSignerController(operatorClient, kubeInformersForNamespaces, kubeClient, cc.EventRecorder)
 
-	staleConditions := staleconditions.NewRemoveStaleConditionsController(
-		[]string{
-			// the static pod operator used to directly set these. this removes those conditions since the static pod operator was updated.
-			// these can be removed in 4.5
-			"Available", "Progressing",
-		},
-		operatorClient,
-		cc.EventRecorder,
-	)
-
 	latencyProfileRejectionChecker, err := latencyprofilecontroller.NewInstallerProfileRejectionChecker(
 		kubeInformersForNamespaces.ConfigMapLister().ConfigMaps(operatorclient.TargetNamespace),
 		node.LatencyConfigs,
@@ -278,7 +267,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	go resourceSyncController.Run(ctx, 1)
 	go certRotationController.Run(ctx, 1)
 	go saTokenController.Run(ctx, 1)
-	go staleConditions.Run(ctx, 1)
 	go latencyProfileController.Run(ctx, 1)
 	go gcWatcherController.Run(ctx, 1)
 
