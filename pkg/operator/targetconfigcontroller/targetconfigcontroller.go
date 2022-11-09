@@ -172,6 +172,10 @@ func isRequiredConfigPresent(config []byte) error {
 
 	requiredPaths := [][]string{
 		{"extendedArguments", "cluster-name"},
+
+		// featuregates are needed to ensure proper security is enabled.
+		{"extendedArguments", "feature-gates"},
+		{"featureGates"},
 	}
 	for _, requiredPath := range requiredPaths {
 		configVal, found, err := unstructured.NestedFieldNoCopy(existingConfig, requiredPath...)

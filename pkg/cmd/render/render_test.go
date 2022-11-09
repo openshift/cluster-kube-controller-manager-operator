@@ -184,7 +184,6 @@ func TestRenderCommand(t *testing.T) {
 						"--feature-gates=CSIMigrationAzureFile=false",
 						"--feature-gates=CSIMigrationvSphere=false",
 						"--feature-gates=DownwardAPIHugePages=true",
-						"--feature-gates=OpenShiftPodSecurityAdmission=true",
 						"--feature-gates=RotateKubeletServerCertificate=true",
 						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
 						"--kube-api-burst=300",
