@@ -94,8 +94,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"assets/kube-controller-manager/ns.yaml",
 			"assets/kube-controller-manager/kubeconfig-cert-syncer.yaml",
 			"assets/kube-controller-manager/leader-election-rolebinding.yaml",
-			"assets/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml",
-			"assets/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
 			"assets/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
 			"assets/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
 			"assets/kube-controller-manager/namespace-security-allocation-controller-clusterrole.yaml",
@@ -117,6 +115,19 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		(&resourceapply.ClientHolder{}).WithKubernetes(kubeClient),
 		operatorClient,
 		cc.EventRecorder,
+	).WithConditionalResources(
+		bindata.Asset,
+		[]string{
+			// TODO: remove all of these leader-election entries and files in 4.13
+			"assets/kube-controller-manager/leader-election-cluster-policy-controller-role.yaml",
+			"assets/kube-controller-manager/leader-election-cluster-policy-controller-rolebinding.yaml",
+		},
+		func() bool {
+			return false
+		},
+		func() bool {
+			return true
+		},
 	).WithConditionalResources(
 		bindata.Asset,
 		[]string{
