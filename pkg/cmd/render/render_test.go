@@ -163,8 +163,6 @@ func TestRenderCommand(t *testing.T) {
 					"spec.containers[0].args": []interface{}{
 						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
 						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
-						"--logtostderr=false",
-						"--alsologtostderr",
 						"--v=2",
 						"--log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log",
 						"--allocate-node-cidrs=false",
