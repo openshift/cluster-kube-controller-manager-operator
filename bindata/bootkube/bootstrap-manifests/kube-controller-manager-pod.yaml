@@ -22,8 +22,6 @@ spec:
     args:
     - --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }}
     - --kubeconfig=/etc/kubernetes/secrets/kubeconfig
-    - --logtostderr=false
-    - --alsologtostderr
     - --v=2
     - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log{{ .ExtendedArguments }}
     resources:
