@@ -18,12 +18,14 @@ spec:
     imagePullPolicy: '{{ .ImagePullPolicy }}'
     ports:
       - containerPort: 10257
-    command: ["hyperkube", "kube-controller-manager"]
+    command: [ "/bin/bash", "-ec" ]
     args:
-    - --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }}
-    - --kubeconfig=/etc/kubernetes/secrets/kubeconfig
-    - --v=2
-    - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log{{ .ExtendedArguments }}
+    - >
+      hyperkube kube-controller-manager
+      --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }}
+      --kubeconfig=/etc/kubernetes/secrets/kubeconfig
+      --v=2{{ .ExtendedArguments }}
+      &> /var/log/bootstrap-control-plane/kube-controller-manager.log
     resources:
       requests:
         memory: 200Mi

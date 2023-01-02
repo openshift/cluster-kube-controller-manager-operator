@@ -161,35 +161,7 @@ func TestRenderCommand(t *testing.T) {
 			expectedContents: map[string]map[string]interface{}{
 				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml": {
 					"spec.containers[0].args": []interface{}{
-						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
-						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
-						"--v=2",
-						"--log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log",
-						"--allocate-node-cidrs=false",
-						"--authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
-						"--authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
-						"--cert-dir=/var/run/kubernetes",
-						"--cluster-signing-cert-file=/etc/kubernetes/secrets/kubelet-signer.crt",
-						"--cluster-signing-duration=720h",
-						"--cluster-signing-key-file=/etc/kubernetes/secrets/kubelet-signer.key",
-						"--configure-cloud-routes=false",
-						"--controllers=*",
-						"--controllers=-bootstrapsigner",
-						"--controllers=-tokencleaner",
-						"--controllers=-ttl",
-						"--enable-dynamic-provisioning=true",
-						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
-						"--kube-api-burst=300",
-						"--kube-api-qps=150",
-						"--leader-elect-resource-lock=configmapsleases",
-						"--leader-elect-retry-period=3s",
-						"--leader-elect=true",
-						"--pv-recycler-pod-template-filepath-hostpath=",
-						"--pv-recycler-pod-template-filepath-nfs=",
-						"--root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt",
-						"--secure-port=10257",
-						"--service-account-private-key-file=/etc/kubernetes/secrets/service-account.key",
-						"--use-service-account-credentials=true",
+						"hyperkube kube-controller-manager --openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml --kubeconfig=/etc/kubernetes/secrets/kubeconfig --v=2 --allocate-node-cidrs=false --authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig --authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig --cert-dir=/var/run/kubernetes --cluster-signing-cert-file=/etc/kubernetes/secrets/kubelet-signer.crt --cluster-signing-duration=720h --cluster-signing-key-file=/etc/kubernetes/secrets/kubelet-signer.key --configure-cloud-routes=false --controllers=* --controllers=-bootstrapsigner --controllers=-tokencleaner --controllers=-ttl --enable-dynamic-provisioning=true --flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec --kube-api-burst=300 --kube-api-qps=150 --leader-elect-resource-lock=configmapsleases --leader-elect-retry-period=3s --leader-elect=true --pv-recycler-pod-template-filepath-hostpath= --pv-recycler-pod-template-filepath-nfs= --root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt --secure-port=10257 --service-account-private-key-file=/etc/kubernetes/secrets/service-account.key --use-service-account-credentials=true &> /var/log/bootstrap-control-plane/kube-controller-manager.log\n",
 					},
 				},
 			},
@@ -264,7 +236,7 @@ func TestRenderCommand(t *testing.T) {
 						continue
 					}
 					if !reflect.DeepEqual(actualValue, expectedValue) {
-						t.Errorf("error comparing %s: \n%s\nvs\n%s\n", field, expectedValue, actualValue)
+						t.Errorf("error comparing %s: \n%q\nvs\n%q\n", field, expectedValue, actualValue)
 						continue
 					}
 				}
