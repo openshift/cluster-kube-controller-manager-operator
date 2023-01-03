@@ -118,19 +118,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	).WithConditionalResources(
 		bindata.Asset,
 		[]string{
-			// TODO: remove all of these leader-election entries and files in 4.13
-			"assets/kube-controller-manager/leader-election-kube-controller-manager-role-kube-system.yaml",
-			"assets/kube-controller-manager/leader-election-kube-controller-manager-rolebinding-kube-system.yaml",
-		},
-		func() bool {
-			return false
-		},
-		func() bool {
-			return true
-		},
-	).WithConditionalResources(
-		bindata.Asset,
-		[]string{
 			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-sa.yaml",
 			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-role.yaml",
 			"assets/kube-controller-manager/vsphere/legacy-cloud-provider-binding.yaml",
