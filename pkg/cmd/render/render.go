@@ -246,7 +246,7 @@ func (r *renderOpts) Run() error {
 	}
 	extendedArguments := targetconfigcontroller.GetKubeControllerManagerArgs(kubeControllerManagerConfig)
 	for _, arg := range extendedArguments {
-		renderConfig.ExtendedArguments += fmt.Sprintf("\n      %s", arg)
+		renderConfig.ExtendedArguments += fmt.Sprintf("\n    - %s", arg)
 	}
 
 	// add additional kubeconfig asset
