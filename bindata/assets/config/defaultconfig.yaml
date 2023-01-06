@@ -21,6 +21,8 @@ extendedArguments:
   - "3s"
   leader-elect-resource-lock:
   - "configmapsleases"
+  leader-elect-renew-deadline:
+  - "12s" # This will increase timeout value from 5s to 6s that is required in case primary dns server in resolv.conf fail.  
   controllers:
   - "*"
   - "-ttl" # TODO: this is excluded in kube-core, but not in #21092

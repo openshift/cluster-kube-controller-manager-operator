@@ -185,6 +185,7 @@ func TestRenderCommand(t *testing.T) {
 						"--kube-api-qps=150",
 						"--leader-elect-resource-lock=configmapsleases",
 						"--leader-elect-retry-period=3s",
+						"--leader-elect-renew-deadline=12s",
 						"--leader-elect=true",
 						"--pv-recycler-pod-template-filepath-hostpath=",
 						"--pv-recycler-pod-template-filepath-nfs=",
