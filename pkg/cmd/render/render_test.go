@@ -164,7 +164,6 @@ func TestRenderCommand(t *testing.T) {
 						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
 						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
 						"--v=2",
-						"--log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log",
 						"--allocate-node-cidrs=false",
 						"--authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
 						"--authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
