@@ -4,3 +4,5 @@ servingInfo:
   clientCA: /etc/kubernetes/secrets/kube-control-plane-ca-bundle.crt
   certFile: /etc/kubernetes/secrets/kube-control-plane-kube-controller-manager-client.crt
   keyFile: /etc/kubernetes/secrets/kube-control-plane-kube-controller-manager-client.key
+featureGates: {{range .FeatureGates}}
+    - {{.}}{{end}}

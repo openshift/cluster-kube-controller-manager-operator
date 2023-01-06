@@ -180,6 +180,11 @@ func TestRenderCommand(t *testing.T) {
 						"--controllers=-tokencleaner",
 						"--controllers=-ttl",
 						"--enable-dynamic-provisioning=true",
+						"--feature-gates=APIPriorityAndFairness=true",
+						"--feature-gates=CSIMigrationAzureFile=false",
+						"--feature-gates=CSIMigrationvSphere=false",
+						"--feature-gates=DownwardAPIHugePages=true",
+						"--feature-gates=RotateKubeletServerCertificate=true",
 						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
 						"--kube-api-burst=300",
 						"--kube-api-qps=150",
@@ -266,7 +271,7 @@ func TestRenderCommand(t *testing.T) {
 						continue
 					}
 					if !reflect.DeepEqual(actualValue, expectedValue) {
-						t.Errorf("error comparing %s: \n%s\nvs\n%s\n", field, expectedValue, actualValue)
+						t.Errorf("error comparing %s: \n%s\n", field, cmp.Diff(expectedValue, actualValue))
 						continue
 					}
 				}
