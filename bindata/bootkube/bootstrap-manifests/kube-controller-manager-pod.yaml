@@ -22,8 +22,7 @@ spec:
     args:
     - --openshift-config=/etc/kubernetes/config/{{ .ConfigFileName }}
     - --kubeconfig=/etc/kubernetes/secrets/kubeconfig
-    - --v=2
-    - --log-file=/var/log/bootstrap-control-plane/kube-controller-manager.log{{ .ExtendedArguments }}
+    - --v=2{{ .ExtendedArguments }}
     resources:
       requests:
         memory: 200Mi
