@@ -181,6 +181,7 @@ func TestRenderCommand(t *testing.T) {
 						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
 						"--kube-api-burst=300",
 						"--kube-api-qps=150",
+						"--leader-elect-renew-deadline=12s",
 						"--leader-elect-resource-lock=configmapsleases",
 						"--leader-elect-retry-period=3s",
 						"--leader-elect=true",
