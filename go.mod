@@ -6,7 +6,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.6
-	github.com/openshift/api v0.0.0-20220831183848-09c070622e2c
+	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/build-machinery-go v0.0.0-20220720161851-9b4f0386f6b0
 	github.com/openshift/client-go v0.0.0-20220831193253-4950ae70c8ea
 	github.com/openshift/library-go v0.0.0-20230215170552-9fdba43d77f8
