@@ -25,3 +25,5 @@ extendedArguments:
   - ""
   pv-recycler-pod-template-filepath-hostpath:
   - ""
+  feature-gates: {{range .FeatureGates}}
+    - {{.}}{{end}}
