@@ -23,6 +23,8 @@ require (
 	k8s.io/klog/v2 v2.70.1
 )
 
+replace github.com/openshift/library-go => github.com/JoelSpeed/library-go v0.0.0-20230109105426-a2230524c08e
+
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

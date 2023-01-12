@@ -43,6 +43,8 @@ github.com/Azure/go-autorest/tracing v0.5.0/go.mod h1:r/s2XiOKccPW3HrqB+W0TQzfbt
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
+github.com/JoelSpeed/library-go v0.0.0-20230109105426-a2230524c08e h1:4yxWd38o6duoO3vAyYFpvpEReaBavDfTSO78+hSVF7M=
+github.com/JoelSpeed/library-go v0.0.0-20230109105426-a2230524c08e/go.mod h1:KPBAXGaq7pPmA+1wUVtKr5Axg3R68IomWDkzaOxIhxM=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
@@ -410,8 +412,6 @@ github.com/openshift/build-machinery-go v0.0.0-20220720161851-9b4f0386f6b0 h1:uc
 github.com/openshift/build-machinery-go v0.0.0-20220720161851-9b4f0386f6b0/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20220831193253-4950ae70c8ea h1:7JbjIzWt3Q75ErY1PAZ+gCA+bErI6HSlpffHFmMMzqM=
 github.com/openshift/client-go v0.0.0-20220831193253-4950ae70c8ea/go.mod h1:+J8DqZC60acCdpYkwVy/KH4cudgWiFZRNOBeghCzdGA=
-github.com/openshift/library-go v0.0.0-20221213175740-eaa3941d403b h1:jH3g7I6fQAk20feIbMhh0zeeeTxogExS0VSVwB9HLw4=
-github.com/openshift/library-go v0.0.0-20221213175740-eaa3941d403b/go.mod h1:KPBAXGaq7pPmA+1wUVtKr5Axg3R68IomWDkzaOxIhxM=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
