@@ -27,12 +27,14 @@ func newFakePrometheusClient(firingAlerts []string, responseError error) prometh
 	return client
 }
 
+var _ prometheusv1.API = &fakePrometheusClient{}
+
 type fakePrometheusClient struct {
 	queryResultVal prometheusmodel.Vector
 	queryErr       error
 }
 
-func (f fakePrometheusClient) Query(ctx context.Context, query string, ts time.Time) (prometheusmodel.Value, prometheusv1.Warnings, error) {
+func (f fakePrometheusClient) Query(ctx context.Context, query string, ts time.Time, opts ...prometheusv1.Option) (prometheusmodel.Value, prometheusv1.Warnings, error) {
 	return f.queryResultVal, nil, f.queryErr
 }
 
@@ -67,7 +69,8 @@ func (f fakePrometheusClient) LabelNames(ctx context.Context, matches []string, 
 func (f fakePrometheusClient) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time) (prometheusmodel.LabelValues, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
-func (f fakePrometheusClient) QueryRange(ctx context.Context, query string, r prometheusv1.Range) (prometheusmodel.Value, prometheusv1.Warnings, error) {
+
+func (f fakePrometheusClient) QueryRange(ctx context.Context, query string, r prometheusv1.Range, opts ...prometheusv1.Option) (prometheusmodel.Value, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
 
