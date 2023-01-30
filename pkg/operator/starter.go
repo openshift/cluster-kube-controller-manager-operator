@@ -176,6 +176,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"openshift-kube-controller-manager-operator",
 			"kube-controller-manager-operator",
 			"10257",
+			"healthz",
 			func() (bool, bool, error) {
 				isSNO, precheckSucceeded, err := common.NewIsSingleNodePlatformFn(configInformers.Config().V1().Infrastructures())()
 				// create only when not a single node topology
