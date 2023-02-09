@@ -62,6 +62,9 @@ func newPrometheusClient(ctx context.Context, configMapClient corev1client.Confi
 	if err != nil {
 		return nil, nil, err
 	}
-
-	return prometheusv1.NewAPI(client), t, nil
+	prometheusClient := prometheusv1.NewAPI(client)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = prometheusClient.Rules(ctx)
+	return prometheusClient, t, err
 }
