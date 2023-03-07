@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
+	configv1 "github.com/openshift/api/config/v1"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
@@ -107,12 +108,30 @@ func (r *renderOpts) Complete() error {
 type TemplateData struct {
 	genericrenderoptions.TemplateData
 
+	// FeatureGates is list of featuregates to apply
+	FeatureGates                          []string
 	ExtendedArguments                     string
 	ClusterPolicyControllerImage          string
 	ClusterPolicyControllerConfigFileName string
 	ClusterPolicyControllerFileConfig     genericrenderoptions.FileConfig
 	ClusterCIDR                           []string
 	ServiceClusterIPRange                 []string
+}
+
+func setFeatureGates(renderConfig *TemplateData, opts *renderOpts) error {
+	featureSet, ok := configv1.FeatureSets[configv1.FeatureSet(opts.generic.FeatureSet)]
+	if !ok {
+		return fmt.Errorf("featureSet %q not found", featureSet)
+	}
+	allGates := []string{}
+	for _, enabled := range featureSet.Enabled {
+		allGates = append(allGates, fmt.Sprintf("%v=true", enabled))
+	}
+	for _, disabled := range featureSet.Disabled {
+		allGates = append(allGates, fmt.Sprintf("%v=false", disabled))
+	}
+	renderConfig.FeatureGates = allGates
+	return nil
 }
 
 func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
@@ -208,6 +227,9 @@ func (r *renderOpts) Run() error {
 		if err != nil {
 			return fmt.Errorf("unable to parse restricted CIDRs from config: %v", err)
 		}
+	}
+	if err := setFeatureGates(&renderConfig, r); err != nil {
+		return err
 	}
 	if err := r.manifest.ApplyTo(&renderConfig.ManifestConfig); err != nil {
 		return err
