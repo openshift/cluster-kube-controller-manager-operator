@@ -271,6 +271,11 @@ func TestGarbageCollectorSync(t *testing.T) {
 		Status: operatorv1.ConditionFalse,
 		Reason: "MonitoringDisabled",
 	}
+	successMonitoringTemporarilyUnavailableCondition := operatorv1.OperatorCondition{
+		Type:   "GarbageCollectorDegraded",
+		Status: operatorv1.ConditionFalse,
+		Reason: "MonitoringTemporarilyUnavailable",
+	}
 	syncError := fmt.Errorf("error querying alerts: prometheus querying failed")
 	failureCondition := operatorv1.OperatorCondition{
 		Type:    "GarbageCollectorDegraded",
@@ -287,13 +292,17 @@ func TestGarbageCollectorSync(t *testing.T) {
 	}
 	prometheusResponseError := fmt.Errorf("prometheus querying failed")
 	type test struct {
-		name                    string
-		clusterMonitoringExists bool
-		isPrometheusEnabled     bool
-		gc                      *GarbageCollectorWatcherController
-		expectErr               bool
-		expectedErrorMsg        error
-		expectedStatusCondition operatorv1.OperatorCondition
+		name                                   string
+		clusterMonitoringExists                bool
+		isClusterMonitoringRolloutProgressing  bool
+		clusterMonitoringRolloutProgressingFor time.Duration
+		isClusterMonitoringOperatorNotRunning  bool
+		clusterMonitoringOperatorNotRunningFor time.Duration
+		isPrometheusEnabled                    bool
+		gc                                     *GarbageCollectorWatcherController
+		expectErr                              bool
+		expectedErrorMsg                       error
+		expectedStatusCondition                operatorv1.OperatorCondition
 	}
 	tests := []test{
 		{
@@ -312,6 +321,48 @@ func TestGarbageCollectorSync(t *testing.T) {
 			expectedStatusCondition: successCondition,
 		},
 		{
+			name:                                   "Garbage Collector Watcher with monitoring enabled but with monitoring temporarily unavailable (cluster install and operator not running yet)",
+			clusterMonitoringExists:                true,
+			isPrometheusEnabled:                    true,
+			isClusterMonitoringOperatorNotRunning:  true,
+			clusterMonitoringOperatorNotRunningFor: 20 * time.Minute,
+			gc:                                     gcw,
+			expectErr:                              false,
+			expectedStatusCondition:                successMonitoringTemporarilyUnavailableCondition,
+		},
+		{
+			name:                                   "Garbage Collector Watcher with monitoring enabled but with monitoring temporarily unavailable (rolling out cluster monitoring)",
+			clusterMonitoringExists:                true,
+			isPrometheusEnabled:                    true,
+			isClusterMonitoringRolloutProgressing:  true,
+			clusterMonitoringRolloutProgressingFor: 20 * time.Minute,
+			gc:                                     gcw,
+			expectErr:                              false,
+			expectedStatusCondition:                successMonitoringTemporarilyUnavailableCondition,
+		},
+		{
+			name:                                   "Garbage Collector Watcher with monitoring enabled but with monitoring unavailable for longer period of time (cluster install and operator not running)",
+			clusterMonitoringExists:                true,
+			isPrometheusEnabled:                    true,
+			isClusterMonitoringOperatorNotRunning:  true,
+			clusterMonitoringOperatorNotRunningFor: 61 * time.Minute,
+			gc:                                     gcw,
+			expectErr:                              true,
+			expectedErrorMsg:                       syncError,
+			expectedStatusCondition:                failureCondition,
+		},
+		{
+			name:                                   "Garbage Collector Watcher with monitoring enabled but with monitoring unavailable for longer period of time (rolling out cluster monitoring)",
+			clusterMonitoringExists:                true,
+			isPrometheusEnabled:                    true,
+			isClusterMonitoringRolloutProgressing:  true,
+			clusterMonitoringRolloutProgressingFor: 61 * time.Minute,
+			gc:                                     gcw,
+			expectErr:                              true,
+			expectedErrorMsg:                       syncError,
+			expectedStatusCondition:                failureCondition,
+		},
+		{
 			name:                    "Garbage Collector Watcher with monitoring enabled but with correct prometheus client",
 			clusterMonitoringExists: true,
 			isPrometheusEnabled:     true,
@@ -325,19 +376,48 @@ func TestGarbageCollectorSync(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
 			var monitoringName string
+			var conditions []configv1.ClusterOperatorStatusCondition
+
 			if tc.clusterMonitoringExists {
 				monitoringName = "monitoring"
 			}
+
+			if !tc.isClusterMonitoringOperatorNotRunning {
+				if tc.isClusterMonitoringRolloutProgressing {
+					conditions = append(conditions, configv1.ClusterOperatorStatusCondition{
+						Type: "Progressing", Status: configv1.ConditionTrue, LastTransitionTime: metav1.NewTime(time.Now().Add(-tc.clusterMonitoringRolloutProgressingFor)), Reason: "", Message: "",
+					})
+					conditions = append(conditions, configv1.ClusterOperatorStatusCondition{
+						Type: "Available", Status: configv1.ConditionFalse, LastTransitionTime: metav1.Now(), Reason: "", Message: "",
+					})
+				} else {
+					conditions = append(conditions, configv1.ClusterOperatorStatusCondition{
+						Type: "Progressing", Status: configv1.ConditionFalse, LastTransitionTime: metav1.NewTime(time.Now().Add(-tc.clusterMonitoringRolloutProgressingFor)), Reason: "", Message: "",
+					})
+					conditions = append(conditions, configv1.ClusterOperatorStatusCondition{
+						Type: "Available", Status: configv1.ConditionTrue, LastTransitionTime: metav1.Now(), Reason: "", Message: "",
+					})
+				}
+			}
+
+			if err := indexer.Add(&configv1.ClusterOperator{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              monitoringName,
+					CreationTimestamp: metav1.NewTime(time.Now().Add(-time.Minute).Add(-tc.clusterMonitoringOperatorNotRunningFor)),
+				},
+				Status: configv1.ClusterOperatorStatus{
+					Conditions: conditions,
+				},
+			}); err != nil {
+				t.Fatal(err.Error())
+			}
+
 			if tc.isPrometheusEnabled {
 				promConnectivity := prometheusConnectivity{useCachedClient: true,
 					client: newFakePrometheusClient([]string{}, prometheusResponseError)}
 				tc.gc.promConnectivity = promConnectivity
 			}
-			if err := indexer.Add(&configv1.ClusterOperator{
-				ObjectMeta: metav1.ObjectMeta{Name: monitoringName},
-			}); err != nil {
-				t.Fatal(err.Error())
-			}
+
 			kubeClient := fake.NewSimpleClientset()
 			configMapInformers := informers.NewSharedInformerFactoryWithOptions(kubeClient, 1*time.Minute, informers.WithNamespace(operatorclient.GlobalMachineSpecifiedConfigNamespace))
 			configMapGetter := v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), v1helpers.NewFakeKubeInformersForNamespaces(map[string]informers.SharedInformerFactory{
