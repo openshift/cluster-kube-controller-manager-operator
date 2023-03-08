@@ -6,7 +6,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.9
-	github.com/openshift/api v0.0.0-20230221095031-69130006bb23
+	github.com/openshift/api v0.0.0-20230223193310-d964c7a58d75
 	github.com/openshift/build-machinery-go v0.0.0-20220913142420-e25cf57ea46d
 	github.com/openshift/client-go v0.0.0-20230120202327-72f107311084
 	github.com/openshift/library-go v0.0.0-20230130121854-13dc1e57ef79
@@ -23,7 +23,7 @@ require (
 	k8s.io/klog/v2 v2.80.1
 )
 
-replace github.com/openshift/library-go => github.com/JoelSpeed/library-go v0.0.0-20230307115500-45b41bd4cffd
+replace github.com/openshift/library-go => github.com/JoelSpeed/library-go v0.0.0-20230308154344-3706d32a00d0
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
