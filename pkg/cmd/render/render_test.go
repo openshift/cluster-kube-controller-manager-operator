@@ -179,7 +179,6 @@ func TestRenderCommand(t *testing.T) {
 						"--enable-dynamic-provisioning=true",
 						"--feature-gates=APIPriorityAndFairness=true",
 						"--feature-gates=DownwardAPIHugePages=true",
-						"--feature-gates=OpenShiftPodSecurityAdmission=true",
 						"--feature-gates=RetroactiveDefaultStorageClass=false",
 						"--feature-gates=RotateKubeletServerCertificate=true",
 						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
