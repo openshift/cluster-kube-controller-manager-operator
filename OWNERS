@@ -3,7 +3,6 @@ reviewers:
   - deads2k
   - ingvagabund
   - mfojtik
-  - ravisantoshgudimetla
   - soltysh
   - sttts
 approvers:
@@ -11,7 +10,6 @@ approvers:
   - deads2k
   - ingvagabund
   - mfojtik
-  - ravisantoshgudimetla
   - soltysh
   - sttts
 component: "kube-controller-manager"
