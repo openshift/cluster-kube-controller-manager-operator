@@ -3,6 +3,7 @@ package gcwatchercontroller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -18,9 +19,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configlisters "github.com/openshift/client-go/config/listers/config/v1"
+	clusteroperatorhelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -52,6 +55,7 @@ const (
 	controllerName                  = "garbage-collector-watcher-controller"
 	invalidateAlertingRulesCacheKey = "__internal/invalidateAlertingRulesCacheKey"
 	invalidateAlertingRulesPeriod   = 12 * time.Hour
+	monitoringStackDeployTimeout    = time.Hour
 )
 
 func NewGarbageCollectorWatcherController(
@@ -87,10 +91,27 @@ func NewGarbageCollectorWatcherController(
 	}
 
 	configInformers.Config().V1().ClusterOperators().Informer().AddEventHandlerWithResyncPeriod(
-		// we are only interested in adds and deletes of monitoring object
+		// we are only interested in adds, deletes, and partial updates of monitoring object
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    monitoringHandler,
 			DeleteFunc: monitoringHandler,
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				oldMonitoring, ok := oldObj.(*configv1.ClusterOperator)
+				if !ok || oldMonitoring.GetName() != "monitoring" {
+					return
+				}
+				newMonitoring, ok := newObj.(*configv1.ClusterOperator)
+				if !ok || newMonitoring.GetName() != "monitoring" {
+					return
+				}
+
+				oldProgressing := clusteroperatorhelpers.FindStatusCondition(oldMonitoring.Status.Conditions, "Progressing")
+				newProgressing := clusteroperatorhelpers.FindStatusCondition(newMonitoring.Status.Conditions, "Progressing")
+				if !reflect.DeepEqual(oldProgressing, newProgressing) {
+					// we are only interested in the progressing condition changes
+					syncContext.Queue().Add(factory.DefaultQueueKey)
+				}
+			},
 		},
 		0,
 	)
@@ -124,9 +145,9 @@ func (c *GarbageCollectorWatcherController) sync(ctx context.Context, syncCtx fa
 		Status: operatorv1.ConditionFalse,
 		Reason: "AsExpected",
 	}
-	_, err := c.clusterLister.Get("monitoring")
+	monitoringClusterOperator, err := c.clusterLister.Get("monitoring")
 	if err != nil && errors.IsNotFound(err) {
-		klog.V(5).Info("Monitoring is disabled in the cluster and a diagnostic of the garbage collector is not working. Please look at the kcm logs for more information to debug the garbage collector further")
+		klog.V(5).Info("Monitoring is disabled in the cluster and a diagnostic of the garbage collector is not working. Please look at the kube-controller-manager logs for more information to debug the garbage collector further")
 		// Disabled monitoring works as expected and is not degraded
 		condition.Reason = "MonitoringDisabled"
 		_, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition))
@@ -134,6 +155,19 @@ func (c *GarbageCollectorWatcherController) sync(ctx context.Context, syncCtx fa
 	}
 	if err != nil { // Could be intermittent issues with connectivity, try after sometime, don't set the status yet.
 		return err
+	}
+	progressingMonitoringCond := clusteroperatorhelpers.FindStatusCondition(monitoringClusterOperator.Status.Conditions, "Progressing")
+	// If we just started cluster monitoring stack rollout
+	// Time-out after one hour in case cluster monitoring operator gets stuck, so we can report degraded KCM
+	if (progressingMonitoringCond != nil &&
+		progressingMonitoringCond.Status == configv1.ConditionTrue &&
+		progressingMonitoringCond.LastTransitionTime.After(time.Now().Add(-monitoringStackDeployTimeout))) ||
+		(progressingMonitoringCond == nil && monitoringClusterOperator.CreationTimestamp.After(time.Now().Add(-monitoringStackDeployTimeout))) {
+		// To prevent degradation of KCM when installing the cluster monitoring stack or when a new version of cluster monitoring is being rolled out
+		klog.V(5).Info("Monitoring is being rolled out in the cluster and a diagnostic of the garbage collector is not available at this moment. Please look at the kube-controller-manager logs for more information to debug the garbage collector further")
+		condition.Reason = "MonitoringTemporarilyUnavailable"
+		_, _, updateErr := v1helpers.UpdateStatus(ctx, c.operatorClient, v1helpers.UpdateConditionFn(condition))
+		return updateErr
 	}
 	syncErr := c.syncWorker(ctx, syncCtx)
 
