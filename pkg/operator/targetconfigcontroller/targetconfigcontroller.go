@@ -499,15 +499,8 @@ func ensureLocalhostRecoverySAToken(ctx context.Context, client corev1client.Cor
 func manageControllerManagerKubeconfig(ctx context.Context, client corev1client.CoreV1Interface, infrastructureLister configv1listers.InfrastructureLister, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	cmString := string(bindata.MustAsset("assets/kube-controller-manager/kubeconfig-cm.yaml"))
 
-	infrastructure, err := infrastructureLister.Get("cluster")
-	if err != nil {
-		return nil, false, err
-	}
-	apiServerInternalURL := infrastructure.Status.APIServerInternalURL
-	if len(apiServerInternalURL) == 0 {
-		return nil, false, fmt.Errorf("infrastucture/cluster: missing APIServerInternalURL")
-	}
-
+        // change kcm connect to 127.0.0.1 , not to APIServerInternalURL, to make kcm run more rapidly
+        apiServerInternalURL := "https://127.0.0.1:6443"
 	for pattern, value := range map[string]string{
 		"$LB_INT_URL": apiServerInternalURL,
 	} {
