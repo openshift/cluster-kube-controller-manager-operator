@@ -17,6 +17,17 @@ import (
 )
 
 func TestObserveCloudVolumePlugin(t *testing.T) {
+	defaultFeatureGate := &configv1.FeatureGate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
+		Spec: configv1.FeatureGateSpec{
+			FeatureGateSelection: configv1.FeatureGateSelection{
+				FeatureSet: configv1.Default,
+			},
+		},
+	}
+
 	type Test struct {
 		name            string
 		platform        configv1.PlatformType
@@ -26,16 +37,35 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 	}
 	tests := []Test{
 		{
-			"No FG, on Tech Preview platform (AWS)",
+			"Default FG, on GA platform (AWS) post CSI migration",
 			configv1.AWSPlatformType,
-			nil,
+			defaultFeatureGate,
 			map[string]interface{}{},
 			map[string]interface{}{},
 			false,
 		},
 		{
-			"With FG, on Tech Preview platform (AWS)",
-			configv1.AWSPlatformType,
+			"Default FG, on GA platform (Azure) pre CSI migration",
+			configv1.AzurePlatformType,
+			defaultFeatureGate,
+			map[string]interface{}{},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"external-cloud-volume-plugin": []interface{}{"azure"},
+				}},
+			false,
+		},
+		{
+			"Default FG, on tech preview platform (GCP) pre CSI migration",
+			configv1.GCPPlatformType,
+			defaultFeatureGate,
+			map[string]interface{}{},
+			map[string]interface{}{},
+			false,
+		},
+		{
+			"With FG, on Tech Preview platform (GCP)",
+			configv1.GCPPlatformType,
 			&configv1.FeatureGate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster",
@@ -52,17 +82,17 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
-					"external-cloud-volume-plugin": []interface{}{"aws"},
+					"external-cloud-volume-plugin": []interface{}{"gce"},
 				}},
 			false,
 		},
 		{
-			"With FG removed, on Tech Preview platform (AWS)",
-			configv1.AWSPlatformType,
-			nil,
+			"With FG removed, on Tech Preview platform (GCP)",
+			configv1.GCPPlatformType,
+			defaultFeatureGate,
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
-					"external-cloud-volume-plugin": []interface{}{"aws"},
+					"external-cloud-volume-plugin": []interface{}{"gce"},
 				}},
 			map[string]interface{}{},
 			false,
