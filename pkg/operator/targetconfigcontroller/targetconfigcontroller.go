@@ -648,9 +648,19 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %v", err)
 	}
 
-	proxyEnvVars := proxyMapToEnvVars(proxyConfig)
+	proxyEnvVars := stringMapToEnvVars(proxyConfig)
 	for i, container := range required.Spec.Containers {
 		required.Spec.Containers[i].Env = append(container.Env, proxyEnvVars...)
+	}
+
+	// Set OPENSHIFT_DO_VSPHERE_MIGRATION to 'true' if vSphere migration is enabled
+	storageConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "storage")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the storage config from observedConfig: %v", err)
+	}
+	storageEnvVars := stringMapToEnvVars(storageConfig)
+	for i, container := range required.Spec.Containers {
+		required.Spec.Containers[i].Env = append(container.Env, storageEnvVars...)
 	}
 
 	// set the env var to indicate that we want this vulnerable behavior.
@@ -904,13 +914,13 @@ func ensureKubeControllerManagerTrustedCA(ctx context.Context, client corev1clie
 	return err
 }
 
-func proxyMapToEnvVars(proxyConfig map[string]string) []corev1.EnvVar {
-	if proxyConfig == nil {
+func stringMapToEnvVars(stringMap map[string]string) []corev1.EnvVar {
+	if stringMap == nil {
 		return nil
 	}
 
 	envVars := []corev1.EnvVar{}
-	for k, v := range proxyConfig {
+	for k, v := range stringMap {
 		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 	}
 
