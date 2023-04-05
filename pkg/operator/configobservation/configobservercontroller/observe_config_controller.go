@@ -116,11 +116,21 @@ func NewConfigObserver(
 			cloudprovider.NewCloudProviderObserver(
 				"openshift-kube-controller-manager",
 				[]string{"extendedArguments", "cloud-provider"},
-				[]string{"extendedArguments", "cloud-config"}),
+				[]string{"extendedArguments", "cloud-config"},
+			),
+
+			// this is picked up by the kube-controller-manager container
 			featuregates.NewObserveFeatureFlagsFunc(
 				nil,
 				openShiftOnlyFeatureGates,
 				[]string{"extendedArguments", "feature-gates"},
+			),
+
+			// this is picked up by the cluster-policy-controller container
+			featuregates.NewObserveFeatureFlagsFunc(
+				nil,
+				nil,
+				[]string{"featureGates"},
 			),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,

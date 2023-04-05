@@ -79,8 +79,10 @@ func TestIsRequiredConfigPresent(t *testing.T) {
 			name: "good",
 			config: `{
 			 "extendedArguments": {
-			   "cluster-name": ["some-name"]
-			 }
+			   "cluster-name": ["some-name"],
+			   "feature-gates": ["some-name"]
+			 },
+			 "featureGates": ["some-name"]
 		 }
 		`,
 		},
