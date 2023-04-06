@@ -11,8 +11,8 @@ import (
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configinformersv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
-	opv1client "github.com/openshift/client-go/operator/clientset/versioned"
-	opinformers "github.com/openshift/client-go/operator/informers/externalversions"
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
@@ -50,13 +50,13 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-	opClient, err := opv1client.NewForConfig(cc.KubeConfig)
+	opClient, err := operatorv1client.NewForConfig(cc.KubeConfig)
 	if err != nil {
 		return err
 	}
 
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
-	opInformers := opinformers.NewSharedInformerFactory(opClient, 10*time.Minute)
+	opInformers := operatorinformers.NewSharedInformerFactory(opClient, 10*time.Minute)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
 		operatorclient.GlobalUserSpecifiedConfigNamespace,

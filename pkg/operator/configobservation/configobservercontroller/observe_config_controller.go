@@ -5,7 +5,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
-	opinformers "github.com/openshift/client-go/operator/informers/externalversions"
+	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	libgocloudprovider "github.com/openshift/library-go/pkg/cloudprovider"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
@@ -43,7 +43,7 @@ type ConfigObserver struct {
 func NewConfigObserver(
 	operatorClient v1helpers.OperatorClient,
 	configinformers configinformers.SharedInformerFactory,
-	opinformers opinformers.SharedInformerFactory,
+	operatorinformers operatorinformers.SharedInformerFactory,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
 	eventRecorder events.Recorder,
@@ -67,7 +67,7 @@ func NewConfigObserver(
 		configinformers.Config().V1().Networks().Informer(),
 		configinformers.Config().V1().Nodes().Informer(),
 		configinformers.Config().V1().Proxies().Informer(),
-		opinformers.Operator().V1().Storages().Informer(),
+		operatorinformers.Operator().V1().Storages().Informer(),
 	}
 	for _, ns := range interestingNamespaces {
 		informers = append(informers, kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer())
@@ -100,7 +100,7 @@ func NewConfigObserver(
 				NodeLister_:           configinformers.Config().V1().Nodes().Lister(),
 				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
 				APIServerLister_:      configinformers.Config().V1().APIServers().Lister(),
-				StorageLister_:        opinformers.Operator().V1().Storages().Lister(),
+				StorageLister_:        operatorinformers.Operator().V1().Storages().Lister(),
 
 				ResourceSync:     resourceSyncer,
 				ConfigMapLister_: kubeInformersForNamespaces.ConfigMapLister(),
@@ -115,7 +115,7 @@ func NewConfigObserver(
 					configinformers.Config().V1().Networks().Informer().HasSynced,
 					configinformers.Config().V1().Nodes().Informer().HasSynced,
 					configinformers.Config().V1().Proxies().Informer().HasSynced,
-					opinformers.Operator().V1().Storages().Informer().HasSynced,
+					operatorinformers.Operator().V1().Storages().Informer().HasSynced,
 				),
 			},
 			informers,

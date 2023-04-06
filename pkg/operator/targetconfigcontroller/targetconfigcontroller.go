@@ -659,9 +659,8 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		return nil, false, fmt.Errorf("couldn't get the storage config from observedConfig: %v", err)
 	}
 	storageEnvVars := stringMapToEnvVars(storageConfig)
-	for i, container := range required.Spec.Containers {
-		required.Spec.Containers[i].Env = append(container.Env, storageEnvVars...)
-	}
+	// this environment variable is only needed for kube-controller-manager
+	required.Spec.Containers[0].Env = append(required.Spec.Containers[0].Env, storageEnvVars...)
 
 	// set the env var to indicate that we want this vulnerable behavior.
 	if !useSecureServiceCA {
