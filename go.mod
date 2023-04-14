@@ -23,6 +23,8 @@ require (
 	k8s.io/klog/v2 v2.80.1
 )
 
+replace github.com/openshift/library-go => github.com/neisw/library-go v0.0.0-20230414134228-93654b048f4e
+
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v1.4.10 // indirect

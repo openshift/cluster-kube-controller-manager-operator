@@ -49,10 +49,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			configv1.AzurePlatformType,
 			defaultFeatureGate,
 			map[string]interface{}{},
-			map[string]interface{}{
-				"extendedArguments": map[string]interface{}{
-					"external-cloud-volume-plugin": []interface{}{"azure"},
-				}},
+			map[string]interface{}{},
 			false,
 		},
 		{
