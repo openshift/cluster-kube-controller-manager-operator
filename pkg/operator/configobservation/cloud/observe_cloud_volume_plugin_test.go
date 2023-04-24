@@ -45,14 +45,45 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			false,
 		},
 		{
-			"Default FG, on GA platform (Azure) pre CSI migration",
+			"Default FG, on tech preview platform (Azure) pre CSI migration",
 			configv1.AzurePlatformType,
 			defaultFeatureGate,
+			map[string]interface{}{},
+			map[string]interface{}{},
+			false,
+		},
+		{
+			"With FG, on Tech Preview platform (Azure)",
+			configv1.AzurePlatformType,
+			&configv1.FeatureGate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.FeatureGateSpec{
+					FeatureGateSelection: configv1.FeatureGateSelection{
+						FeatureSet: configv1.CustomNoUpgrade,
+						CustomNoUpgrade: &configv1.CustomFeatureGates{
+							Enabled: []string{cloudprovider.ExternalCloudProviderFeature},
+						},
+					},
+				},
+			},
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
 					"external-cloud-volume-plugin": []interface{}{"azure"},
 				}},
+			false,
+		},
+		{
+			"With FG removed, on Tech Preview platform (Azure)",
+			configv1.AzurePlatformType,
+			defaultFeatureGate,
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"external-cloud-volume-plugin": []interface{}{"azure"},
+				}},
+			map[string]interface{}{},
 			false,
 		},
 		{
