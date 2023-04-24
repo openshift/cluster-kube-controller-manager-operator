@@ -63,7 +63,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 					FeatureGateSelection: configv1.FeatureGateSelection{
 						FeatureSet: configv1.CustomNoUpgrade,
 						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []string{cloudprovider.ExternalCloudProviderFeature},
+							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
 						},
 					},
 				},
@@ -105,7 +105,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 					FeatureGateSelection: configv1.FeatureGateSelection{
 						FeatureSet: configv1.CustomNoUpgrade,
 						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []string{cloudprovider.ExternalCloudProviderFeature},
+							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
 						},
 					},
 				},
@@ -139,7 +139,7 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 					FeatureGateSelection: configv1.FeatureGateSelection{
 						FeatureSet: configv1.CustomNoUpgrade,
 						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []string{cloudprovider.ExternalCloudProviderFeature},
+							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
 						},
 					},
 				},
