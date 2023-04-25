@@ -40,11 +40,17 @@ func ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder ev
 	observedConfig := map[string]interface{}{}
 	cloudProvider := cloudprovider.GetPlatformName(infrastructure.Status.PlatformStatus.Type, recorder)
 
-	// If the cloud provider is external, we should set the option, else leave it empty.
-	if external && len(cloudProvider) > 0 {
-		if err := unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider}, volumePluginPath...); err != nil {
-			recorder.Warningf("ObserveCloudVolumePlugin", "Failed setting cloudVolumePlugin: %v", err)
-			return existingConfig, append(errs, err)
+	switch cloudProvider {
+	case "aws":
+		// CSI migration GA'd more than 1 release ago, so we can safely remove the in-tree plugin.
+		// Do nothing on these platforms.
+	default:
+		// If the cloud provider is external, we should set the option, else leave it empty.
+		if external && len(cloudProvider) > 0 {
+			if err := unstructured.SetNestedStringSlice(observedConfig, []string{cloudProvider}, volumePluginPath...); err != nil {
+				recorder.Warningf("ObserveCloudVolumePlugin", "Failed setting cloudVolumePlugin: %v", err)
+				return existingConfig, append(errs, err)
+			}
 		}
 	}
 
