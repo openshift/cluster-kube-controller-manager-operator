@@ -1,6 +1,7 @@
 package configobservercontroller
 
 import (
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 
@@ -30,7 +31,7 @@ import (
 // OpenShift. Passing these to KCM causes it to log an error on startup.
 // This list is passed to the feature gate config observer as a blacklist,
 // excluding them from the feature gate output passed to KCM.
-var openShiftOnlyFeatureGates = sets.NewString(
+var openShiftOnlyFeatureGates = sets.New[configv1.FeatureGateName](
 	libgocloudprovider.ExternalCloudProviderFeature,
 )
 
@@ -43,6 +44,7 @@ func NewConfigObserver(
 	configinformers configinformers.SharedInformerFactory,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	resourceSyncer resourcesynccontroller.ResourceSyncer,
+	featureGateAccessor featuregates.FeatureGateAccess,
 	eventRecorder events.Recorder,
 ) (*ConfigObserver, error) {
 
@@ -124,6 +126,7 @@ func NewConfigObserver(
 				nil,
 				openShiftOnlyFeatureGates,
 				[]string{"extendedArguments", "feature-gates"},
+				featureGateAccessor,
 			),
 
 			// this is picked up by the cluster-policy-controller container
@@ -131,6 +134,7 @@ func NewConfigObserver(
 				nil,
 				nil,
 				[]string{"featureGates"},
+				featureGateAccessor,
 			),
 			network.ObserveClusterCIDRs,
 			network.ObserveServiceClusterIPRanges,
