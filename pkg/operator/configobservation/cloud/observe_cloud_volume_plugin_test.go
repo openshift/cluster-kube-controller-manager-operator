@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"reflect"
 	"testing"
 
@@ -10,30 +11,27 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
-	"github.com/openshift/library-go/pkg/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/events"
 
 	"github.com/ghodss/yaml"
 )
 
 func TestObserveCloudVolumePlugin(t *testing.T) {
-	defaultFeatureGate := &configv1.FeatureGate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster",
+	defaultFeatureGate := featuregates.NewHardcodedFeatureGateAccess(
+		[]configv1.FeatureGateName{},
+		[]configv1.FeatureGateName{
+			configv1.FeatureGateExternalCloudProvider,
+			configv1.FeatureGateExternalCloudProviderAzure,
+			configv1.FeatureGateExternalCloudProviderGCP,
 		},
-		Spec: configv1.FeatureGateSpec{
-			FeatureGateSelection: configv1.FeatureGateSelection{
-				FeatureSet: configv1.Default,
-			},
-		},
-	}
+	)
 
 	type Test struct {
-		name            string
-		platform        configv1.PlatformType
-		featureGate     *configv1.FeatureGate
-		input, expected map[string]interface{}
-		expectedError   bool
+		name                string
+		platform            configv1.PlatformType
+		featureGateAccessor featuregates.FeatureGateAccess
+		input, expected     map[string]interface{}
+		expectedError       bool
 	}
 	tests := []Test{
 		{
@@ -55,19 +53,10 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 		{
 			"With FG, on Tech Preview platform (Azure)",
 			configv1.AzurePlatformType,
-			&configv1.FeatureGate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: configv1.FeatureGateSpec{
-					FeatureGateSelection: configv1.FeatureGateSelection{
-						FeatureSet: configv1.CustomNoUpgrade,
-						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
-						},
-					},
-				},
-			},
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
+				[]configv1.FeatureGateName{},
+			),
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
@@ -97,19 +86,10 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 		{
 			"With FG, on Tech Preview platform (GCP)",
 			configv1.GCPPlatformType,
-			&configv1.FeatureGate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: configv1.FeatureGateSpec{
-					FeatureGateSelection: configv1.FeatureGateSelection{
-						FeatureSet: configv1.CustomNoUpgrade,
-						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
-						},
-					},
-				},
-			},
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
+				[]configv1.FeatureGateName{},
+			),
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
@@ -131,19 +111,10 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 		{
 			"With FG, on unsupported platform (libvirt)",
 			configv1.LibvirtPlatformType,
-			&configv1.FeatureGate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: configv1.FeatureGateSpec{
-					FeatureGateSelection: configv1.FeatureGateSelection{
-						FeatureSet: configv1.CustomNoUpgrade,
-						CustomNoUpgrade: &configv1.CustomFeatureGates{
-							Enabled: []configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeature},
-						},
-					},
-				},
-			},
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
+				[]configv1.FeatureGateName{},
+			),
 			map[string]interface{}{},
 			map[string]interface{}{},
 			false,
@@ -166,18 +137,19 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			fgIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-			if test.featureGate != nil {
-				if err := fgIndexer.Add(test.featureGate); err != nil {
-					t.Fatal(err.Error())
-				}
+			featureGates := featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{},
+				[]configv1.FeatureGateName{},
+			)
+			if test.featureGateAccessor != nil {
+				featureGates = test.featureGateAccessor
 			}
 
 			listers := configobservation.Listers{
 				InfrastructureLister_: configlistersv1.NewInfrastructureLister(infraIndexer),
-				FeatureGateLister_:    configlistersv1.NewFeatureGateLister(fgIndexer),
 			}
-			result, errs := ObserveCloudVolumePlugin(listers, events.NewInMemoryRecorder("cloud"), test.input)
+
+			result, errs := NewObserveCloudVolumePluginFunc(featureGates)(listers, events.NewInMemoryRecorder("cloud"), test.input)
 			if len(errs) > 0 && !test.expectedError {
 				t.Fatal(errs)
 			} else if len(errs) == 0 {

@@ -119,6 +119,7 @@ func NewConfigObserver(
 				"openshift-kube-controller-manager",
 				[]string{"extendedArguments", "cloud-provider"},
 				[]string{"extendedArguments", "cloud-config"},
+				featureGateAccessor,
 			),
 
 			// this is picked up by the kube-controller-manager container
@@ -153,7 +154,7 @@ func NewConfigObserver(
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
 			libgoapiserver.ObserveTLSSecurityProfile,
-			cloud.ObserveCloudVolumePlugin,
+			cloud.NewObserveCloudVolumePluginFunc(featureGateAccessor),
 		),
 	}
 

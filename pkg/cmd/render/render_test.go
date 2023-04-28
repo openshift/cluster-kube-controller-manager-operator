@@ -199,79 +199,81 @@ func TestRenderCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		teardown, outputDir, err := setupAssetOutputDir(test.name)
-		if err != nil {
-			t.Errorf("%s: unexpected error: %v", test.name, err)
-		}
-		defer teardown()
-
-		test.args = setOutputFlags(test.args, outputDir)
-
-		_, err = runRender(test.args...)
-		if !reflect.DeepEqual(err, test.expectedErr) {
-			t.Fatalf("expected error %#v, got %#v", test.expectedErr, err)
-		}
-
-		var files []string
-		err = filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
-			r, err := filepath.Rel(outputDir, path)
+		t.Run(test.name, func(t *testing.T) {
+			teardown, outputDir, err := setupAssetOutputDir(test.name)
 			if err != nil {
-				return err
+				t.Errorf("%s: unexpected error: %v", test.name, err)
+			}
+			defer teardown()
+
+			test.args = setOutputFlags(test.args, outputDir)
+
+			_, err = runRender(test.args...)
+			if !reflect.DeepEqual(err, test.expectedErr) {
+				t.Fatalf("expected error %#v, got %#v", test.expectedErr, err)
 			}
 
-			if !info.IsDir() {
-				files = append(files, r)
-			}
+			var files []string
+			err = filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
+				r, err := filepath.Rel(outputDir, path)
+				if err != nil {
+					return err
+				}
 
-			return nil
-		})
-		if err != nil {
-			t.Error(err)
-		}
+				if !info.IsDir() {
+					files = append(files, r)
+				}
 
-		sort.Strings(files)
-		sort.Strings(test.expectedFiles)
-
-		if !reflect.DeepEqual(files, test.expectedFiles) {
-			t.Errorf("expected and rendered files differ: %s", cmp.Diff(test.expectedFiles, files))
-		}
-
-		for _, f := range test.expectedFiles {
-			p := path.Join(outputDir, f)
-			_, err := os.Stat(p)
+				return nil
+			})
 			if err != nil {
-				t.Errorf("file %q: %v", f, err)
+				t.Error(err)
 			}
-			if file, ok := test.expectedContents[f]; ok {
-				data, err := ioutil.ReadFile(p)
+
+			sort.Strings(files)
+			sort.Strings(test.expectedFiles)
+
+			if !reflect.DeepEqual(files, test.expectedFiles) {
+				t.Errorf("expected and rendered files differ: %s", cmp.Diff(test.expectedFiles, files))
+			}
+
+			for _, f := range test.expectedFiles {
+				p := path.Join(outputDir, f)
+				_, err := os.Stat(p)
 				if err != nil {
-					t.Errorf("error reading file %s: %v", p, err)
-					continue
+					t.Errorf("file %q: %v", f, err)
 				}
-				dataJSON, err := yaml.YAMLToJSON(data)
-				if err != nil {
-					t.Errorf("error converting file %s: %v", p, err)
-					continue
-				}
-				configObj, err := runtime.Decode(unstructured.UnstructuredJSONScheme, dataJSON)
-				if err != nil {
-					t.Errorf("error decoding %s: %v", p, err)
-					continue
-				}
-				config := configObj.(*unstructured.Unstructured)
-				for field, expectedValue := range file {
-					actualValue, err := readPath(config.Object, field)
+				if file, ok := test.expectedContents[f]; ok {
+					data, err := ioutil.ReadFile(p)
 					if err != nil {
-						t.Errorf("error reading field %s: %v", field, err)
+						t.Errorf("error reading file %s: %v", p, err)
 						continue
 					}
-					if !reflect.DeepEqual(actualValue, expectedValue) {
-						t.Errorf("error comparing %s: \n%s\nvs\n%s\n", field, expectedValue, actualValue)
+					dataJSON, err := yaml.YAMLToJSON(data)
+					if err != nil {
+						t.Errorf("error converting file %s: %v", p, err)
 						continue
+					}
+					configObj, err := runtime.Decode(unstructured.UnstructuredJSONScheme, dataJSON)
+					if err != nil {
+						t.Errorf("error decoding %s: %v", p, err)
+						continue
+					}
+					config := configObj.(*unstructured.Unstructured)
+					for field, expectedValue := range file {
+						actualValue, err := readPath(config.Object, field)
+						if err != nil {
+							t.Errorf("error reading field %s: %v", field, err)
+							continue
+						}
+						if !reflect.DeepEqual(actualValue, expectedValue) {
+							t.Errorf("error comparing %s: \n%s\nvs\n%s\n", field, expectedValue, actualValue)
+							continue
+						}
 					}
 				}
 			}
-		}
+		})
 	}
 }
 
