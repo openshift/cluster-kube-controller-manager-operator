@@ -3,7 +3,6 @@ package render
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -31,32 +30,44 @@ type renderOpts struct {
 	clusterPolicyControllerConfigOutputFile string
 	clusterPolicyControllerImage            string
 	disablePhase2                           bool
-	errOut                                  io.Writer
+
+	// errHandler is used to handle errors in the command run.
+	// It is used by unit tests to change the behavior of the command on error.
+	// By default it will exit with a klog.Fatal.
+	// It may return an error to indicate that processing should stop.
+	errHandler func(error) error
 }
 
 // NewRenderCommand creates a render command.
-func NewRenderCommand(errOut io.Writer) *cobra.Command {
+func NewRenderCommand(errHandler func(error) error) *cobra.Command {
+	if errHandler == nil {
+		errHandler = func(err error) error {
+			if err != nil {
+				klog.Fatal(err)
+			}
+			return nil
+		}
+	}
+
 	renderOpts := &renderOpts{
-		manifest: *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
-		generic:  *genericrenderoptions.NewGenericOptions(),
-		errOut:   errOut,
+		manifest:   *genericrenderoptions.NewManifestOptions("kube-controller-manager", "openshift/origin-hyperkube:latest"),
+		generic:    *genericrenderoptions.NewGenericOptions(),
+		errHandler: errHandler,
 	}
 	cmd := &cobra.Command{
 		Use:   "render",
 		Short: "Render kubernetes controller manager bootstrap manifests, secrets and configMaps",
 		Run: func(cmd *cobra.Command, args []string) {
-			must := func(fn func() error) {
-				if err := fn(); err != nil {
-					if cmd.HasParent() {
-						klog.Fatal(err)
-					}
-					fmt.Fprint(renderOpts.errOut, err.Error())
-				}
+			if err := renderOpts.errHandler(renderOpts.Validate()); err != nil {
+				return
+			}
+			if err := renderOpts.errHandler(renderOpts.Complete()); err != nil {
+				return
 			}
 
-			must(renderOpts.Validate)
-			must(renderOpts.Complete)
-			must(renderOpts.Run)
+			if err := renderOpts.errHandler(renderOpts.Run()); err != nil {
+				return
+			}
 		},
 	}
 

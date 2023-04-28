@@ -1,7 +1,6 @@
 package render
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -62,20 +61,25 @@ status: {}
 )
 
 func runRender(args ...string) (*cobra.Command, error) {
-	errOut := &bytes.Buffer{}
-	c := NewRenderCommand(errOut)
+	var runErr error
+
+	// If an error happens during the command.Run,
+	// we capture it and return it to the caller.
+	errHandler := func(err error) error {
+		runErr = err
+
+		// Returning the error interrupts the command.Run
+		// so that no further processing occurs.
+		return err
+	}
+
+	c := NewRenderCommand(errHandler)
 	os.Args = append([]string{"render.test"}, args...)
 	if err := c.Execute(); err != nil {
 		panic(err)
 	}
-	errBytes, err := ioutil.ReadAll(errOut)
-	if err != nil {
-		panic(err)
-	}
-	if len(errBytes) == 0 {
-		return c, nil
-	}
-	return c, errors.New(string(errBytes))
+
+	return c, runErr
 }
 
 func setupAssetOutputDir(testName string) (teardown func(), outputDir string, err error) {
@@ -119,6 +123,11 @@ func TestRenderCommand(t *testing.T) {
 	assetsInputDir := filepath.Join("testdata", "tls")
 	templateDir := filepath.Join("..", "..", "..", "bindata", "bootkube")
 
+	defaultFGDir := filepath.Join("testdata", "rendered", "default-fg")
+	duplicateFGDir := filepath.Join("testdata", "rendered", "duplicate-fg")
+	mismatchedFGDir := filepath.Join("testdata", "rendered", "mismatched-fg")
+	customFGDir := filepath.Join("testdata", "rendered", "custom-fg")
+
 	tests := []struct {
 		name          string
 		args          []string
@@ -131,14 +140,81 @@ func TestRenderCommand(t *testing.T) {
 			name: "no-flags",
 			args: []string{
 				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + defaultFGDir,
+				"--payload-version=test",
 			},
-			expectedErr: errors.New("missing required flag: --asset-input-dirfailed loading assets from \"\": lstat : no such file or directory"),
+			expectedErr: errors.New("missing required flag: --asset-input-dir"),
 		},
 		{
 			name: "happy-path",
 			args: []string{
 				"--asset-input-dir=" + assetsInputDir,
 				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + defaultFGDir,
+				"--asset-output-dir=",
+				"--config-output-file=",
+				"--cpc-config-output-file=",
+				"--payload-version=test",
+			},
+			expectedErr: nil,
+			expectedFiles: []string{
+				"configs/config.yaml",
+				"configs/cpc-config.yaml",
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml",
+				"manifests/manifests/0000_00_namespace-openshift-infra.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrole.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrolebinding.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
+				"manifests/manifests/secret-csr-signer-signer.yaml",
+				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
+			},
+			expectedContents: map[string]map[string]interface{}{
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml": {
+					"spec.containers[0].args": []interface{}{
+						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
+						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--v=2",
+						"--allocate-node-cidrs=false",
+						"--authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--cert-dir=/var/run/kubernetes",
+						"--cluster-signing-cert-file=/etc/kubernetes/secrets/kubelet-signer.crt",
+						"--cluster-signing-duration=720h",
+						"--cluster-signing-key-file=/etc/kubernetes/secrets/kubelet-signer.key",
+						"--configure-cloud-routes=false",
+						"--controllers=*",
+						"--controllers=-bootstrapsigner",
+						"--controllers=-tokencleaner",
+						"--controllers=-ttl",
+						"--enable-dynamic-provisioning=true",
+						"--feature-gates=Bar=false",
+						"--feature-gates=Foo=true",
+						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
+						"--kube-api-burst=300",
+						"--kube-api-qps=150",
+						"--leader-elect-renew-deadline=12s",
+						"--leader-elect-resource-lock=leases",
+						"--leader-elect-retry-period=3s",
+						"--leader-elect=true",
+						"--pv-recycler-pod-template-filepath-hostpath=",
+						"--pv-recycler-pod-template-filepath-nfs=",
+						"--root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt",
+						"--secure-port=10257",
+						"--service-account-private-key-file=/etc/kubernetes/secrets/service-account.key",
+						"--use-service-account-credentials=true",
+					},
+				},
+			},
+		},
+		{
+			name: "no-payload-version",
+			args: []string{
+				"--asset-input-dir=" + assetsInputDir,
+				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + defaultFGDir,
 				"--asset-output-dir=",
 				"--config-output-file=",
 				"--cpc-config-output-file=",
@@ -195,6 +271,147 @@ func TestRenderCommand(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name: "duplicate-rendered-fg",
+			args: []string{
+				"--asset-input-dir=" + assetsInputDir,
+				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + duplicateFGDir,
+				"--asset-output-dir=",
+				"--config-output-file=",
+				"--cpc-config-output-file=",
+				"--payload-version=test",
+			},
+			expectedErr: nil,
+			expectedFiles: []string{
+				"configs/config.yaml",
+				"configs/cpc-config.yaml",
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml",
+				"manifests/manifests/0000_00_namespace-openshift-infra.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrole.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrolebinding.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
+				"manifests/manifests/secret-csr-signer-signer.yaml",
+				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
+			},
+			expectedContents: map[string]map[string]interface{}{
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml": {
+					"spec.containers[0].args": []interface{}{
+						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
+						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--v=2",
+						"--allocate-node-cidrs=false",
+						"--authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--cert-dir=/var/run/kubernetes",
+						"--cluster-signing-cert-file=/etc/kubernetes/secrets/kubelet-signer.crt",
+						"--cluster-signing-duration=720h",
+						"--cluster-signing-key-file=/etc/kubernetes/secrets/kubelet-signer.key",
+						"--configure-cloud-routes=false",
+						"--controllers=*",
+						"--controllers=-bootstrapsigner",
+						"--controllers=-tokencleaner",
+						"--controllers=-ttl",
+						"--enable-dynamic-provisioning=true",
+						"--feature-gates=Bar=false",
+						"--feature-gates=Foo=true",
+						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
+						"--kube-api-burst=300",
+						"--kube-api-qps=150",
+						"--leader-elect-renew-deadline=12s",
+						"--leader-elect-resource-lock=leases",
+						"--leader-elect-retry-period=3s",
+						"--leader-elect=true",
+						"--pv-recycler-pod-template-filepath-hostpath=",
+						"--pv-recycler-pod-template-filepath-nfs=",
+						"--root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt",
+						"--secure-port=10257",
+						"--service-account-private-key-file=/etc/kubernetes/secrets/service-account.key",
+						"--use-service-account-credentials=true",
+					},
+				},
+			},
+		},
+		{
+			name: "duplicate-rendered-fg",
+			args: []string{
+				"--asset-input-dir=" + assetsInputDir,
+				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + customFGDir,
+				"--asset-output-dir=",
+				"--config-output-file=",
+				"--cpc-config-output-file=",
+				"--payload-version=test",
+			},
+			expectedErr: nil,
+			expectedFiles: []string{
+				"configs/config.yaml",
+				"configs/cpc-config.yaml",
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml",
+				"manifests/manifests/0000_00_namespace-openshift-infra.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrole.yaml",
+				"manifests/manifests/00_namespace-security-allocation-controller-clusterrolebinding.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
+				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
+				"manifests/manifests/secret-csr-signer-signer.yaml",
+				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
+			},
+			expectedContents: map[string]map[string]interface{}{
+				"manifests/bootstrap-manifests/kube-controller-manager-pod.yaml": {
+					"spec.containers[0].args": []interface{}{
+						"--openshift-config=/etc/kubernetes/config/kube-controller-manager-config.yaml",
+						"--kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--v=2",
+						"--allocate-node-cidrs=false",
+						"--authentication-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--authorization-kubeconfig=/etc/kubernetes/secrets/kubeconfig",
+						"--cert-dir=/var/run/kubernetes",
+						"--cluster-signing-cert-file=/etc/kubernetes/secrets/kubelet-signer.crt",
+						"--cluster-signing-duration=720h",
+						"--cluster-signing-key-file=/etc/kubernetes/secrets/kubelet-signer.key",
+						"--configure-cloud-routes=false",
+						"--controllers=*",
+						"--controllers=-bootstrapsigner",
+						"--controllers=-tokencleaner",
+						"--controllers=-ttl",
+						"--enable-dynamic-provisioning=true",
+						"--feature-gates=AwesomeNewFeature=true",
+						"--feature-gates=BadFailingFeature=false",
+						"--flex-volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec",
+						"--kube-api-burst=300",
+						"--kube-api-qps=150",
+						"--leader-elect-renew-deadline=12s",
+						"--leader-elect-resource-lock=leases",
+						"--leader-elect-retry-period=3s",
+						"--leader-elect=true",
+						"--pv-recycler-pod-template-filepath-hostpath=",
+						"--pv-recycler-pod-template-filepath-nfs=",
+						"--root-ca-file=/etc/kubernetes/secrets/kube-apiserver-complete-server-ca-bundle.crt",
+						"--secure-port=10257",
+						"--service-account-private-key-file=/etc/kubernetes/secrets/service-account.key",
+						"--use-service-account-credentials=true",
+					},
+				},
+			},
+		},
+		{
+			name: "mismatched-fg",
+			args: []string{
+				"--asset-input-dir=" + assetsInputDir,
+				"--templates-input-dir=" + templateDir,
+				"--rendered-manifest-files=" + mismatchedFGDir,
+				"--asset-output-dir=",
+				"--config-output-file=",
+				"--cpc-config-output-file=",
+				"--payload-version=test",
+			},
+			expectedErr: errors.New("--rendered-manifest-files, are not consistent so results would be unpredictable depending on apply order: \"featuregate-custom.yaml\" and \"featuregate.yaml\" both set FeatureGate.config.openshift.io/cluster in ns/, but have different values"),
 		},
 	}
 
