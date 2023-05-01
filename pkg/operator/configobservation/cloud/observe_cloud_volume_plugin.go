@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -10,10 +11,20 @@ import (
 	"github.com/openshift/library-go/pkg/operator/events"
 )
 
+func NewObserveCloudVolumePluginFunc(featureGateAccessor featuregates.FeatureGateAccess) configobserver.ObserveConfigFunc {
+	return (&cloudVolumePlugin{
+		featureGateAccessor: featureGateAccessor,
+	}).ObserveCloudVolumePlugin
+}
+
+type cloudVolumePlugin struct {
+	featureGateAccessor featuregates.FeatureGateAccess
+}
+
 // ObserveCloudVOlumePlugin fills in the extendedArguments.external-cloud-volume-plugin with the value of the current
 // platform type, only when the cluster is running an external cloud provider and there is a supported in-tree volume
 // plugin.
-func ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder events.Recorder, existingConfig map[string]interface{}) (ret map[string]interface{}, errs []error) {
+func (o *cloudVolumePlugin) ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder events.Recorder, existingConfig map[string]interface{}) (ret map[string]interface{}, errs []error) {
 	volumePluginPath := []string{"extendedArguments", "external-cloud-volume-plugin"}
 	defer func() {
 		ret = configobserver.Pruned(ret, volumePluginPath)
@@ -32,7 +43,7 @@ func ObserveCloudVolumePlugin(genericListers configobserver.Listers, recorder ev
 		return existingConfig, append(errs, err)
 	}
 
-	external, err := cloudprovider.IsCloudProviderExternal(listers, infrastructure.Status.PlatformStatus)
+	external, err := cloudprovider.IsCloudProviderExternal(o.featureGateAccessor, infrastructure.Status.PlatformStatus)
 	if err != nil {
 		return existingConfig, append(errs, err)
 	}

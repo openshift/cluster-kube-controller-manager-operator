@@ -2,6 +2,7 @@ package featuregates
 
 import (
 	"context"
+	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 )
@@ -11,11 +12,11 @@ type hardcodedFeatureGateAccess struct {
 	disabled []configv1.FeatureGateName
 	readErr  error
 
-	initialFeatureGatesObserved               chan struct{}
-	featureGatesHaveChangedSinceFirstObserved chan struct{}
+	initialFeatureGatesObserved chan struct{}
 }
 
-// NewHardcodedFeatureGateAccess is useful for unit testing, potentially in other packages as well.
+// NewHardcodedFeatureGateAccess returns a FeatureGateAccess that is always initialized and always
+// returns the provided feature gates.
 func NewHardcodedFeatureGateAccess(enabled, disabled []configv1.FeatureGateName) FeatureGateAccess {
 	initialFeatureGatesObserved := make(chan struct{})
 	close(initialFeatureGatesObserved)
@@ -23,10 +24,20 @@ func NewHardcodedFeatureGateAccess(enabled, disabled []configv1.FeatureGateName)
 		enabled:                     enabled,
 		disabled:                    disabled,
 		initialFeatureGatesObserved: initialFeatureGatesObserved,
-		featureGatesHaveChangedSinceFirstObserved: make(chan struct{}),
 	}
 
 	return c
+}
+
+// NewHardcodedFeatureGateAccessForTesting returns a FeatureGateAccess that returns stub responses
+// using caller-supplied values.
+func NewHardcodedFeatureGateAccessForTesting(enabled, disabled []configv1.FeatureGateName, initialFeatureGatesObserved chan struct{}, readErr error) FeatureGateAccess {
+	return &hardcodedFeatureGateAccess{
+		enabled:                     enabled,
+		disabled:                    disabled,
+		initialFeatureGatesObserved: initialFeatureGatesObserved,
+		readErr:                     readErr,
+	}
 }
 
 func (c *hardcodedFeatureGateAccess) SetChangeHandler(featureGateChangeHandlerFn FeatureGateChangeHandlerFunc) {
@@ -37,12 +48,8 @@ func (c *hardcodedFeatureGateAccess) Run(ctx context.Context) {
 	// ignore
 }
 
-func (c *hardcodedFeatureGateAccess) InitialFeatureGatesObserved() chan struct{} {
+func (c *hardcodedFeatureGateAccess) InitialFeatureGatesObserved() <-chan struct{} {
 	return c.initialFeatureGatesObserved
-}
-
-func (c *hardcodedFeatureGateAccess) FeatureGatesHaveChangedSinceFirstObserved() chan struct{} {
-	return c.featureGatesHaveChangedSinceFirstObserved
 }
 
 func (c *hardcodedFeatureGateAccess) AreInitialFeatureGatesObserved() bool {
@@ -54,6 +61,18 @@ func (c *hardcodedFeatureGateAccess) AreInitialFeatureGatesObserved() bool {
 	}
 }
 
-func (c *hardcodedFeatureGateAccess) CurrentFeatureGates() ([]configv1.FeatureGateName, []configv1.FeatureGateName, error) {
-	return c.enabled, c.disabled, c.readErr
+func (c *hardcodedFeatureGateAccess) CurrentFeatureGates() (FeatureGate, error) {
+	return NewFeatureGate(c.enabled, c.disabled), c.readErr
+}
+
+// NewHardcodedFeatureGateAccessFromFeatureGate returns a FeatureGateAccess that is static and initialised from
+// a populated FeatureGate status.
+// If the desired version is missing, this will return an error.
+func NewHardcodedFeatureGateAccessFromFeatureGate(featureGate *configv1.FeatureGate, desiredVersion string) (FeatureGateAccess, error) {
+	features, err := featuresFromFeatureGate(featureGate, desiredVersion)
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine features: %w", err)
+	}
+
+	return NewHardcodedFeatureGateAccess(features.Enabled, features.Disabled), nil
 }
