@@ -12,6 +12,7 @@ import (
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	genericrender "github.com/openshift/library-go/pkg/operator/render"
 	genericrenderoptions "github.com/openshift/library-go/pkg/operator/render/options"
 	"github.com/spf13/cobra"
@@ -134,6 +135,23 @@ func setFeatureGates(renderConfig *TemplateData, opts *renderOpts) error {
 	return nil
 }
 
+func setFeatureGatesFromAccessor(renderConfig *TemplateData, featureGates featuregates.FeatureGateAccess) error {
+	currFeatureGates, err := featureGates.CurrentFeatureGates()
+	if err != nil {
+		return fmt.Errorf("unable to get FeatureGates: %w", err)
+	}
+	allGates := []string{}
+	for _, featureGateName := range currFeatureGates.KnownFeatures() {
+		if currFeatureGates.Enabled(featureGateName) {
+			allGates = append(allGates, fmt.Sprintf("%v=true", featureGateName))
+		} else {
+			allGates = append(allGates, fmt.Sprintf("%v=false", featureGateName))
+		}
+	}
+	renderConfig.FeatureGates = allGates
+	return nil
+}
+
 func discoverRestrictedCIDRs(clusterConfigFileData []byte, renderConfig *TemplateData) error {
 	if err := discoverRestrictedCIDRsFromNetwork(clusterConfigFileData, renderConfig); err != nil {
 		if err = discoverRestrictedCIDRsFromClusterAPI(clusterConfigFileData, renderConfig); err != nil {
@@ -228,9 +246,20 @@ func (r *renderOpts) Run() error {
 			return fmt.Errorf("unable to parse restricted CIDRs from config: %v", err)
 		}
 	}
-	if err := setFeatureGates(&renderConfig, r); err != nil {
-		return err
+
+	featureGates, err := r.generic.FeatureGates()
+	if err != nil {
+		klog.Warningf(fmt.Sprintf("error getting FeatureGates: %v", err))
+		if err := setFeatureGates(&renderConfig, r); err != nil {
+			return err
+		}
+
+	} else {
+		if err := setFeatureGatesFromAccessor(&renderConfig, featureGates); err != nil {
+			return err
+		}
 	}
+
 	if err := r.manifest.ApplyTo(&renderConfig.ManifestConfig); err != nil {
 		return err
 	}
