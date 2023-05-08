@@ -1,9 +1,11 @@
 package cloud
 
 import (
-	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"reflect"
 	"testing"
+
+	"github.com/openshift/library-go/pkg/cloudprovider"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -55,13 +57,47 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			configv1.AzurePlatformType,
 			featuregates.NewHardcodedFeatureGateAccess(
 				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
-				[]configv1.FeatureGateName{},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProviderAzure,
+					configv1.FeatureGateExternalCloudProviderGCP,
+				},
 			),
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
 					"external-cloud-volume-plugin": []interface{}{"azure"},
 				}},
+			false,
+		},
+		{
+			"With cloud specific FG, on Tech Preview platform (Azure)",
+			configv1.AzurePlatformType,
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeatureAzure},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProvider,
+					configv1.FeatureGateExternalCloudProviderGCP,
+				},
+			),
+			map[string]interface{}{},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"external-cloud-volume-plugin": []interface{}{"azure"},
+				}},
+			false,
+		},
+		{
+			"With wrong cloud specific FG, on Tech Preview platform (Azure)",
+			configv1.AzurePlatformType,
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeatureGCP},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProvider,
+					configv1.FeatureGateExternalCloudProviderAzure,
+				},
+			),
+			map[string]interface{}{},
+			map[string]interface{}{},
 			false,
 		},
 		{
@@ -88,13 +124,47 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			configv1.GCPPlatformType,
 			featuregates.NewHardcodedFeatureGateAccess(
 				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
-				[]configv1.FeatureGateName{},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProviderAzure,
+					configv1.FeatureGateExternalCloudProviderGCP,
+				},
 			),
 			map[string]interface{}{},
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
 					"external-cloud-volume-plugin": []interface{}{"gce"},
 				}},
+			false,
+		},
+		{
+			"With cloud specific FG, on Tech Preview platform (GCP)",
+			configv1.GCPPlatformType,
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeatureGCP},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProvider,
+					configv1.FeatureGateExternalCloudProviderAzure,
+				},
+			),
+			map[string]interface{}{},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"external-cloud-volume-plugin": []interface{}{"gce"},
+				}},
+			false,
+		},
+		{
+			"With wrong cloud specific FG, on Tech Preview platform (GCP)",
+			configv1.GCPPlatformType,
+			featuregates.NewHardcodedFeatureGateAccess(
+				[]configv1.FeatureGateName{cloudprovider.ExternalCloudProviderFeatureAzure},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProvider,
+					configv1.FeatureGateExternalCloudProviderGCP,
+				},
+			),
+			map[string]interface{}{},
+			map[string]interface{}{},
 			false,
 		},
 		{
@@ -113,7 +183,10 @@ func TestObserveCloudVolumePlugin(t *testing.T) {
 			configv1.LibvirtPlatformType,
 			featuregates.NewHardcodedFeatureGateAccess(
 				[]configv1.FeatureGateName{configv1.FeatureGateExternalCloudProvider},
-				[]configv1.FeatureGateName{},
+				[]configv1.FeatureGateName{
+					configv1.FeatureGateExternalCloudProviderAzure,
+					configv1.FeatureGateExternalCloudProviderGCP,
+				},
 			),
 			map[string]interface{}{},
 			map[string]interface{}{},

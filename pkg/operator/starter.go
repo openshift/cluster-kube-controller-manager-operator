@@ -3,7 +3,6 @@ package operator
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"os"
 	"time"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/certrotation"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/latencyprofilecontroller"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
