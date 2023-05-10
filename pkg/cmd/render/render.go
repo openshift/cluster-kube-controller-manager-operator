@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	configv1 "github.com/openshift/api/config/v1"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
@@ -130,22 +129,6 @@ type TemplateData struct {
 	ServiceClusterIPRange                 []string
 }
 
-func setFeatureGates(renderConfig *TemplateData, opts *renderOpts) error {
-	featureSet, ok := configv1.FeatureSets[configv1.FeatureSet(opts.generic.FeatureSet)]
-	if !ok {
-		return fmt.Errorf("featureSet %q not found", featureSet)
-	}
-	allGates := []string{}
-	for _, enabled := range featureSet.Enabled {
-		allGates = append(allGates, fmt.Sprintf("%v=true", enabled.FeatureGateAttributes.Name))
-	}
-	for _, disabled := range featureSet.Disabled {
-		allGates = append(allGates, fmt.Sprintf("%v=false", disabled.FeatureGateAttributes.Name))
-	}
-	renderConfig.FeatureGates = allGates
-	return nil
-}
-
 func setFeatureGatesFromAccessor(renderConfig *TemplateData, featureGates featuregates.FeatureGateAccess) error {
 	currFeatureGates, err := featureGates.CurrentFeatureGates()
 	if err != nil {
@@ -260,15 +243,10 @@ func (r *renderOpts) Run() error {
 
 	featureGates, err := r.generic.FeatureGates()
 	if err != nil {
-		klog.Warningf(fmt.Sprintf("error getting FeatureGates: %v", err))
-		if err := setFeatureGates(&renderConfig, r); err != nil {
-			return err
-		}
-
-	} else {
-		if err := setFeatureGatesFromAccessor(&renderConfig, featureGates); err != nil {
-			return err
-		}
+		return fmt.Errorf("error getting FeatureGates: %v", err)
+	}
+	if err := setFeatureGatesFromAccessor(&renderConfig, featureGates); err != nil {
+		return err
 	}
 
 	if err := r.manifest.ApplyTo(&renderConfig.ManifestConfig); err != nil {
