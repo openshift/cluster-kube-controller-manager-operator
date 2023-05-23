@@ -58,6 +58,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		operatorclient.OperatorNamespace,
 		operatorclient.TargetNamespace,
 		"kube-system",
+		"openshift-infra",
 	)
 
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(cc.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
