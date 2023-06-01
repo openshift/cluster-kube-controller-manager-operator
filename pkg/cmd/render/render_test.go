@@ -362,7 +362,7 @@ func TestRenderCommand(t *testing.T) {
 				"--cpc-config-output-file=",
 				"--payload-version=test",
 			},
-			expectedErr: errors.New("--rendered-manifest-files, are not consistent so results would be unpredictable depending on apply order: \"featuregate-custom.yaml\" and \"featuregate.yaml\" both set FeatureGate.config.openshift.io/cluster in ns/, but have different values"),
+			expectedErr: errors.New("--rendered-manifest-files, are not consistent so results would be unpredictable depending on apply order: \"testdata/rendered/mismatched-fg/featuregate-custom.yaml\" and \"testdata/rendered/mismatched-fg/featuregate.yaml\" both set FeatureGate.config.openshift.io/cluster in ns/, but have different values"),
 		},
 	}
 
