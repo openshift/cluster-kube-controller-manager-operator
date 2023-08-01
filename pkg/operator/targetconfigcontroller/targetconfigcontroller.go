@@ -25,11 +25,13 @@ import (
 	"k8s.io/client-go/util/cert"
 	"k8s.io/klog/v2"
 
+	configv1 "github.com/openshift/api/config/v1"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configv1informers "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
+	"github.com/openshift/library-go/pkg/config/leaderelection"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/condition"
@@ -202,7 +204,7 @@ func isRequiredConfigPresent(config []byte) error {
 func createTargetConfigController(ctx context.Context, syncCtx factory.SyncContext, c TargetConfigController, operatorSpec *operatorv1.StaticPodOperatorSpec, useSecureServiceCA bool) (bool, error) {
 	errors := []error{}
 
-	_, _, err := manageKubeControllerManagerConfig(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec)
+	_, _, err := manageKubeControllerManagerConfig(ctx, c.kubeClient.CoreV1(), c.infrastuctureLister, syncCtx.Recorder(), operatorSpec)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
@@ -383,9 +385,33 @@ func isConfiguredToOwnCloudController(cm *corev1.ConfigMap) (bool, error) {
 	return len(cloudProvider) != 1 || (cloudProvider[0] != "external" && cloudProvider[0] != ""), nil
 }
 
-func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.ConfigMapsGetter, infrastuctureLister configv1listers.InfrastructureLister, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
+	cluster, err := infrastuctureLister.Get("cluster")
+	if err != nil {
+		return nil, false, err
+	}
+	topology := cluster.Status.ControlPlaneTopology
+	var config = configv1.LeaderElection{}
+	if topology == configv1.SingleReplicaTopologyMode {
+		config = leaderelection.LeaderElectionSNOConfig(config)
+	} else {
+		config = leaderelection.LeaderElectionDefaulting(config, "", "")
+	}
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cm.yaml"))
+
 	defaultConfig := bindata.MustAsset("assets/config/defaultconfig.yaml")
+
+	kcmConfig := kubecontrolplanev1.KubeControllerManagerConfig{}
+	if err := yaml.Unmarshal(defaultConfig, &kcmConfig); err != nil {
+		return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
+	}
+	kcmConfig.ExtendedArguments["leader-elect-retry-period"] = append(kubecontrolplanev1.Arguments{}, config.RetryPeriod.Duration.String())
+	kcmConfig.ExtendedArguments["leader-elect-renew-deadline"] = append(kubecontrolplanev1.Arguments{}, config.RenewDeadline.Duration.String())
+	kcmConfig.ExtendedArguments["leader-elect-lease-duration"] = append(kubecontrolplanev1.Arguments{}, config.LeaseDuration.Duration.String())
+	defaultConfig, err = yaml.Marshal(&kcmConfig)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to marshal the kube-controller-manager config: %v", err)
+	}
 	requiredConfigMap, _, err := resourcemerge.MergePrunedConfigMap(
 		&kubecontrolplanev1.KubeControllerManagerConfig{},
 		configMap,
