@@ -3,7 +3,6 @@ package render
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -83,7 +82,7 @@ func runRender(args ...string) (*cobra.Command, error) {
 }
 
 func setupAssetOutputDir(testName string) (teardown func(), outputDir string, err error) {
-	outputDir, err = ioutil.TempDir("", testName)
+	outputDir, err = os.MkdirTemp("", testName)
 	if err != nil {
 		return nil, "", err
 	}
@@ -418,7 +417,7 @@ func TestRenderCommand(t *testing.T) {
 					t.Errorf("file %q: %v", f, err)
 				}
 				if file, ok := test.expectedContents[f]; ok {
-					data, err := ioutil.ReadFile(p)
+					data, err := os.ReadFile(p)
 					if err != nil {
 						t.Errorf("error reading file %s: %v", p, err)
 						continue
