@@ -3,7 +3,6 @@ package render
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -83,7 +82,7 @@ func runRender(args ...string) (*cobra.Command, error) {
 }
 
 func setupAssetOutputDir(testName string) (teardown func(), outputDir string, err error) {
-	outputDir, err = ioutil.TempDir("", testName)
+	outputDir, err = os.MkdirTemp("", testName)
 	if err != nil {
 		return nil, "", err
 	}
@@ -167,6 +166,8 @@ func TestRenderCommand(t *testing.T) {
 				"manifests/manifests/00_openshift-kube-controller-manager-ns.yaml",
 				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrolebinding.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
 				"manifests/manifests/secret-csr-signer-signer.yaml",
 				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
@@ -246,6 +247,8 @@ func TestRenderCommand(t *testing.T) {
 				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrolebinding.yaml",
 				"manifests/manifests/secret-csr-signer-signer.yaml",
 				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
 			},
@@ -310,6 +313,8 @@ func TestRenderCommand(t *testing.T) {
 				"manifests/manifests/00_openshift-kube-controller-manager-operator-ns.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrole.yaml",
 				"manifests/manifests/00_podsecurity-admission-label-syncer-controller-clusterrolebinding.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrole.yaml",
+				"manifests/manifests/00_podsecurity-admission-label-privileged-namespaces-syncer-controller-clusterrolebinding.yaml",
 				"manifests/manifests/secret-csr-signer-signer.yaml",
 				"manifests/manifests/secret-initial-kube-controller-manager-service-account-private-key.yaml",
 			},
@@ -412,7 +417,7 @@ func TestRenderCommand(t *testing.T) {
 					t.Errorf("file %q: %v", f, err)
 				}
 				if file, ok := test.expectedContents[f]; ok {
-					data, err := ioutil.ReadFile(p)
+					data, err := os.ReadFile(p)
 					if err != nil {
 						t.Errorf("error reading file %s: %v", p, err)
 						continue
