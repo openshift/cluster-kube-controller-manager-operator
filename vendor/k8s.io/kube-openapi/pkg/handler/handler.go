@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -99,6 +98,16 @@ func NewOpenAPIServiceLazy(swagger cached.Data[*spec.Swagger]) *OpenAPIService {
 	return o
 }
 
+func (o *OpenAPIService) getSwaggerBytes() (timedSpec, string, error) {
+	result := o.jsonCache.Get()
+	return result.Data, result.Etag, result.Err
+}
+
+func (o *OpenAPIService) getSwaggerPbBytes() (timedSpec, string, error) {
+	result := o.protoCache.Get()
+	return result.Data, result.Etag, result.Err
+}
+
 func (o *OpenAPIService) UpdateSpec(swagger *spec.Swagger) error {
 	o.UpdateSpecLazy(cached.NewResultOK(swagger, uuid.New().String()))
 	return nil
@@ -126,9 +135,6 @@ func RegisterOpenAPIVersionedService(spec *spec.Swagger, servePath string, handl
 
 // RegisterOpenAPIVersionedService registers a handler to provide access to provided swagger spec.
 func (o *OpenAPIService) RegisterOpenAPIVersionedService(servePath string, handler common.PathHandler) error {
-	// Mutex protects the cache chain
-	var mutex sync.Mutex
-
 	accepted := []struct {
 		Type                string
 		SubType             string
@@ -157,9 +163,7 @@ func (o *OpenAPIService) RegisterOpenAPIVersionedService(servePath string, handl
 						continue
 					}
 					// serve the first matching media type in the sorted clause list
-					mutex.Lock()
 					result := accepts.GetDataAndEtag.Get()
-					mutex.Unlock()
 					if result.Err != nil {
 						klog.Errorf("Error in OpenAPI handler: %s", result.Err)
 						// only return a 503 if we have no older cache data to serve

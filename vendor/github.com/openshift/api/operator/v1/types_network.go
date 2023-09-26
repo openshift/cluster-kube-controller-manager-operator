@@ -562,8 +562,7 @@ type PolicyAuditConfig struct {
 	MaxFileSize *uint32 `json:"maxFileSize,omitempty"`
 
 	// maxLogFiles specifies the maximum number of ACL_audit log files that can be present.
-	// +kubebuilder:default=5
-	// +kubebuilder:validation:Minimum=1
+	// Default: 5
 	// +optional
 	MaxLogFiles *int32 `json:"maxLogFiles,omitempty"`
 
