@@ -6,7 +6,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.5.9
-	github.com/openshift/api v0.0.0-20230915112357-693d4b64813c
+	github.com/openshift/api v0.0.0-20231010075512-1ccc6058c62d
 	github.com/openshift/build-machinery-go v0.0.0-20220913142420-e25cf57ea46d
 	github.com/openshift/client-go v0.0.0-20230926161409-848405da69e1
 	github.com/openshift/library-go v0.0.0-20230927113136-405c34317fa4
@@ -124,6 +124,7 @@ require (
 )
 
 replace (
+	github.com/openshift/library-go => github.com/soltysh/library-go v0.0.0-20231017163354-78bfe3ca4700
 	// To address CVE-2023-44487 until k8s 1.28.3 release is out
 	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20231014014128-db4ac26123a3
 	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20231014014128-db4ac26123a3

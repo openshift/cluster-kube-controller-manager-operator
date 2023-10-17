@@ -45,6 +45,9 @@ type ControllerCommandConfig struct {
 	// DisableServing disables serving metrics, debug and health checks and so on.
 	DisableServing bool
 
+	// Allow disabling HTTP2 to mitigate rapid reset http2 issue
+	DisableHTTP2 bool
+
 	// DisableLeaderElection allows leader election to be suspended
 	DisableLeaderElection bool
 
@@ -314,6 +317,9 @@ func (c *ControllerCommandConfig) StartController(ctx context.Context) error {
 
 	if !c.DisableServing {
 		builder = builder.WithServer(config.ServingInfo, config.Authentication, config.Authorization)
+		if c.DisableHTTP2 {
+			builder = builder.WithDisabledHTTP2()
+		}
 	}
 
 	return builder.Run(controllerCtx, unstructuredConfig)

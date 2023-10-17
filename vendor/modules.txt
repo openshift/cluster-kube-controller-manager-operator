@@ -195,7 +195,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20230915112357-693d4b64813c
+# github.com/openshift/api v0.0.0-20231010075512-1ccc6058c62d
 ## explicit; go 1.20
 github.com/openshift/api
 github.com/openshift/api/apiserver
@@ -300,7 +300,7 @@ github.com/openshift/client-go/route/applyconfigurations/route/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20230927113136-405c34317fa4
+# github.com/openshift/library-go v0.0.0-20230927113136-405c34317fa4 => github.com/soltysh/library-go v0.0.0-20231017163354-78bfe3ca4700
 ## explicit; go 1.20
 github.com/openshift/library-go/pkg/assets
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
@@ -1395,6 +1395,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/openshift/library-go => github.com/soltysh/library-go v0.0.0-20231017163354-78bfe3ca4700
 # k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20231014014128-db4ac26123a3
 # k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20231014014128-db4ac26123a3
 # k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20231014014128-db4ac26123a3
