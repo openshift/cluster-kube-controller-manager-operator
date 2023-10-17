@@ -9,9 +9,11 @@ import (
 )
 
 func NewOperator() *cobra.Command {
-	cmd := controllercmd.
-		NewControllerCommandConfig("kube-controller-manager-operator", version.Get(), operator.RunOperator).
-		NewCommand()
+	controllerCommandConfig := controllercmd.
+		NewControllerCommandConfig("kube-controller-manager-operator", version.Get(), operator.RunOperator)
+	// disable HTTP2 to mitigate rapid reset http2 issue
+	controllerCommandConfig.DisableHTTP2 = true
+	cmd := controllerCommandConfig.NewCommand()
 	cmd.Use = "operator"
 	cmd.Short = "Start the Cluster kube-controller-manager Operator"
 
