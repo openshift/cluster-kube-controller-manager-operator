@@ -247,8 +247,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8m
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+SVif2QVs3tOP0zanoHgBEVAwHxUSIzRqU=
 github.com/onsi/ginkgo/v2 v2.9.4 h1:xR7vG4IXt5RWx6FfIjyAtsoMAtnc3C/rFXBBd2AjZwE=
 github.com/onsi/gomega v1.27.6 h1:ENqfyGeS5AX/rlXDd/ETokDz93u0YufY1Pgxuy/PvWE=
-github.com/openshift/api v0.0.0-20231017161003-8f2e18642ccb h1:ez6Jrs2pSGMdPMR4l6znFIXfrNHJeXmg7baebSju7tk=
-github.com/openshift/api v0.0.0-20231017161003-8f2e18642ccb/go.mod h1:qNtV0315F+f8ld52TLtPvrfivZpdimOzTi3kn9IVbtU=
+github.com/openshift/api v0.0.0-20231121202920-a295b8c5f513 h1:MhDLQwLc0+eMLjkhU45n8BZ5fbIxjalUeIQp1w68d1c=
+github.com/openshift/api v0.0.0-20231121202920-a295b8c5f513/go.mod h1:qNtV0315F+f8ld52TLtPvrfivZpdimOzTi3kn9IVbtU=
 github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c h1:H5k87xq6hGgR1YCF/8hLv3j5jWd64Eh3ZhqF9WUJ15Q=
 github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20231005121823-e81400b97c46 h1:J7UsTNgyM1krYnfsmijowYqt5I4mDM1qxNAy4eEa0xc=
