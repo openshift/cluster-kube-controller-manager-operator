@@ -115,8 +115,8 @@ func newCertRotationController(
 			Client:        secretsGetter,
 			EventRecorder: eventRecorder,
 		},
-		operatorClient,
 		eventRecorder,
+		&certrotation.StaticPodConditionStatusReporter{OperatorClient: operatorClient},
 	)
 
 	ret.certRotators = append(ret.certRotators, certRotator)

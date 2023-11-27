@@ -32,11 +32,14 @@ import (
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 )
 
 func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
@@ -200,6 +203,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			"kube-controller-manager-operator",
 			"10257",
 			"healthz",
+			ptr.To(policyv1.AlwaysAllow),
 			func() (bool, bool, error) {
 				isSNO, precheckSucceeded, err := common.NewIsSingleNodePlatformFn(configInformers.Config().V1().Infrastructures())()
 				// create only when not a single node topology
