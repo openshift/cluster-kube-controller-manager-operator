@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/util/cert"
 	"k8s.io/klog/v2"
 
+	"github.com/openshift/api/annotations"
 	kubecontrolplanev1 "github.com/openshift/api/kubecontrolplane/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -707,6 +708,8 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
 		lister,
+		"kube-controller-manager",
+		"",
 		// include the ca bundle needed to recognize the server
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-apiserver-server-ca"},
 		// include the ca bundle needed to recognize default
@@ -723,6 +726,8 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 		lister,
+		"kube-controller-manager",
+		"",
 		// include the CA we use to sign CSRs
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
 		// include the CA we use to sign the cert key pairs from from csr-signer
@@ -772,7 +777,11 @@ func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, cli
 	}
 
 	csrSigner = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.TargetNamespace, Name: "csr-signer"},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   operatorclient.TargetNamespace,
+			Name:        "csr-signer",
+			Annotations: csrSigner.Annotations,
+		},
 		Data: map[string][]byte{
 			"tls.crt": certBytes,
 			"tls.key": signingKey,
@@ -839,8 +848,14 @@ func ManageCSRIntermediateCABundle(ctx context.Context, lister corev1listers.Sec
 	csrSignerCA, err := client.ConfigMaps(operatorclient.OperatorNamespace).Get(ctx, "csr-signer-ca", metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		csrSignerCA = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
-			Data:       map[string]string{},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: operatorclient.OperatorNamespace,
+				Name:      "csr-signer-ca",
+				Annotations: map[string]string{
+					annotations.OpenShiftComponent: "kube-controller-manager",
+				},
+			},
+			Data: map[string]string{},
 		}
 	} else if err != nil {
 		return nil, false, err
