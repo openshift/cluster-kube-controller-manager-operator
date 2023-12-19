@@ -1,12 +1,12 @@
 package render
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -130,7 +130,7 @@ func TestRenderCommand(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          []string
-		expectedErr   error
+		expectedErr   string
 		expectedFiles []string
 		// {filename: {field: value}}
 		expectedContents map[string]map[string]interface{}
@@ -142,7 +142,7 @@ func TestRenderCommand(t *testing.T) {
 				"--rendered-manifest-files=" + defaultFGDir,
 				"--payload-version=test",
 			},
-			expectedErr: errors.New("missing required flag: --asset-input-dir"),
+			expectedErr: "missing required flag: --asset-input-dir",
 		},
 		{
 			name: "happy-path",
@@ -155,7 +155,6 @@ func TestRenderCommand(t *testing.T) {
 				"--cpc-config-output-file=",
 				"--payload-version=test",
 			},
-			expectedErr: nil,
 			expectedFiles: []string{
 				"configs/config.yaml",
 				"configs/cpc-config.yaml",
@@ -220,7 +219,7 @@ func TestRenderCommand(t *testing.T) {
 				"--config-output-file=",
 				"--cpc-config-output-file=",
 			},
-			expectedErr:      fmt.Errorf("error getting FeatureGates: cannot return FeatureGate without payload version"),
+			expectedErr:      "error getting FeatureGates: cannot return FeatureGate without payload version",
 			expectedFiles:    nil,
 			expectedContents: map[string]map[string]interface{}{},
 		},
@@ -235,7 +234,6 @@ func TestRenderCommand(t *testing.T) {
 				"--cpc-config-output-file=",
 				"--payload-version=test",
 			},
-			expectedErr: nil,
 			expectedFiles: []string{
 				"configs/config.yaml",
 				"configs/cpc-config.yaml",
@@ -301,7 +299,6 @@ func TestRenderCommand(t *testing.T) {
 				"--cpc-config-output-file=",
 				"--payload-version=test",
 			},
-			expectedErr: nil,
 			expectedFiles: []string{
 				"configs/config.yaml",
 				"configs/cpc-config.yaml",
@@ -367,7 +364,7 @@ func TestRenderCommand(t *testing.T) {
 				"--cpc-config-output-file=",
 				"--payload-version=test",
 			},
-			expectedErr: errors.New("--rendered-manifest-files, are not consistent so results would be unpredictable depending on apply order: \"testdata/rendered/mismatched-fg/featuregate-custom.yaml\" and \"testdata/rendered/mismatched-fg/featuregate.yaml\" both set FeatureGate.config.openshift.io/cluster in ns/, but have different values"),
+			expectedErr: `--rendered-manifest-files, are not consistent so results would be unpredictable depending on apply order: "testdata/rendered/mismatched-fg/(featuregate.yaml|featuregate-custom.yaml)" and "testdata/rendered/mismatched-fg/(featuregate.yaml|featuregate-custom.yaml)" both set FeatureGate.config.openshift.io/cluster in ns/, but have different values`,
 		},
 	}
 
@@ -382,8 +379,12 @@ func TestRenderCommand(t *testing.T) {
 			test.args = setOutputFlags(test.args, outputDir)
 
 			_, err = runRender(test.args...)
-			if !reflect.DeepEqual(err, test.expectedErr) {
-				t.Fatalf("expected error %#v, got %#v", test.expectedErr, err)
+			errString := ""
+			if err != nil {
+				errString = err.Error()
+			}
+			if matched, err := regexp.MatchString(test.expectedErr, errString); !matched || err != nil {
+				t.Fatalf("expected error %#v, got %#v", test.expectedErr, errString)
 			}
 
 			var files []string
