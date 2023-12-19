@@ -117,6 +117,7 @@ func NewConfigObserver(
 			informers,
 			cloudprovider.NewCloudProviderObserver(
 				"openshift-kube-controller-manager",
+				false,
 				[]string{"extendedArguments", "cloud-provider"},
 				[]string{"extendedArguments", "cloud-config"},
 				featureGateAccessor,
