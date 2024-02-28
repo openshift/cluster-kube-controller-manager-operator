@@ -84,8 +84,10 @@ func newCertRotationController(
 		certrotation.RotatedSigningCASecret{
 			Namespace: operatorclient.OperatorNamespace,
 			// this is not a typo, this is the signer of the signer
-			Name:                   "csr-signer-signer",
-			JiraComponent:          "kube-controller-manager",
+			Name: "csr-signer-signer",
+			AdditionalAnnotations: certrotation.AdditionalAnnotations{
+				JiraComponent: "kube-controller-manager",
+			},
 			Validity:               60 * rotationDay,
 			Refresh:                30 * rotationDay,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
@@ -95,18 +97,22 @@ func newCertRotationController(
 			EventRecorder:          eventRecorder,
 		},
 		certrotation.CABundleConfigMap{
-			Namespace:     operatorclient.OperatorNamespace,
-			Name:          "csr-controller-signer-ca",
-			JiraComponent: "kube-controller-manager",
+			Namespace: operatorclient.OperatorNamespace,
+			Name:      "csr-controller-signer-ca",
+			AdditionalAnnotations: certrotation.AdditionalAnnotations{
+				JiraComponent: "kube-controller-manager",
+			},
 			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps(),
 			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister(),
 			Client:        configMapsGetter,
 			EventRecorder: eventRecorder,
 		},
 		certrotation.RotatedSelfSignedCertKeySecret{
-			Namespace:              operatorclient.OperatorNamespace,
-			Name:                   "csr-signer",
-			JiraComponent:          "kube-controller-manager",
+			Namespace: operatorclient.OperatorNamespace,
+			Name:      "csr-signer",
+			AdditionalAnnotations: certrotation.AdditionalAnnotations{
+				JiraComponent: "kube-controller-manager",
+			},
 			Validity:               30 * rotationDay,
 			Refresh:                15 * rotationDay,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
