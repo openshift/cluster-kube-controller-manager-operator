@@ -5,16 +5,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
+	"github.com/openshift/library-go/pkg/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
-	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
+	cloudproviderobserver "github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/events"
 )
 
-func NewObserveCloudVolumePluginFunc(featureGateAccessor featuregates.FeatureGateAccess) configobserver.ObserveConfigFunc {
-	return (&cloudVolumePlugin{
-		featureGateAccessor: featureGateAccessor,
-	}).ObserveCloudVolumePlugin
+func NewObserveCloudVolumePluginFunc() configobserver.ObserveConfigFunc {
+	return (&cloudVolumePlugin{}).ObserveCloudVolumePlugin
 }
 
 type cloudVolumePlugin struct {
@@ -43,13 +42,13 @@ func (o *cloudVolumePlugin) ObserveCloudVolumePlugin(genericListers configobserv
 		return existingConfig, append(errs, err)
 	}
 
-	external, err := cloudprovider.IsCloudProviderExternal(o.featureGateAccessor, infrastructure.Status.PlatformStatus)
+	external, err := cloudprovider.IsCloudProviderExternal(infrastructure.Status.PlatformStatus)
 	if err != nil {
 		return existingConfig, append(errs, err)
 	}
 
 	observedConfig := map[string]interface{}{}
-	cloudProvider := cloudprovider.GetPlatformName(infrastructure.Status.PlatformStatus.Type, recorder)
+	cloudProvider := cloudproviderobserver.GetPlatformName(infrastructure.Status.PlatformStatus.Type, recorder)
 
 	switch cloudProvider {
 	case "aws":

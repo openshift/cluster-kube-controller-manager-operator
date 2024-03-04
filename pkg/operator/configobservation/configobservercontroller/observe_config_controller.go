@@ -120,7 +120,6 @@ func NewConfigObserver(
 				false,
 				[]string{"extendedArguments", "cloud-provider"},
 				[]string{"extendedArguments", "cloud-config"},
-				featureGateAccessor,
 			),
 
 			// this is picked up by the kube-controller-manager container
@@ -155,7 +154,7 @@ func NewConfigObserver(
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
 			libgoapiserver.ObserveTLSSecurityProfile,
-			cloud.NewObserveCloudVolumePluginFunc(featureGateAccessor),
+			cloud.NewObserveCloudVolumePluginFunc(),
 		),
 	}
 
