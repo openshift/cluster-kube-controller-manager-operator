@@ -77,6 +77,8 @@ func newCertRotationController(
 		rotationDay = day
 		klog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
 		klog.Warningf("Certificate rotation base set to %q", rotationDay)
+	} else {
+		rotationDay = time.Minute
 	}
 
 	certRotator := certrotation.NewCertRotationController(
