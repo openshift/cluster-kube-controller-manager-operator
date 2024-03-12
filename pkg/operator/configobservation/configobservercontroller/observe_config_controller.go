@@ -19,7 +19,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation"
-	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/cloud"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/clustername"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/network"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/node"
@@ -118,8 +117,6 @@ func NewConfigObserver(
 			cloudprovider.NewCloudProviderObserver(
 				"openshift-kube-controller-manager",
 				false,
-				[]string{"extendedArguments", "cloud-provider"},
-				[]string{"extendedArguments", "cloud-config"},
 			),
 
 			// this is picked up by the kube-controller-manager container
@@ -154,7 +151,6 @@ func NewConfigObserver(
 			serviceca.ObserveServiceCA,
 			clustername.ObserveInfraID,
 			libgoapiserver.ObserveTLSSecurityProfile,
-			cloud.NewObserveCloudVolumePluginFunc(),
 		),
 	}
 
