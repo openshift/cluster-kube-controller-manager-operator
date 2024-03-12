@@ -151,6 +151,10 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+SVif2QVs3tOP0zanoHgBEVAwHxUSIzRqU=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
+github.com/nrb/library-go v0.0.0-20240312193121-4c6510d16cf1 h1:mH1Jhclg3BYiq4HiwiQhan19m3SwQhdH39kUvECuGjI=
+github.com/nrb/library-go v0.0.0-20240312193121-4c6510d16cf1/go.mod h1:ePlaOqUiPplRc++6aYdMe+2FmXb2xTNS9Nz5laG2YmI=
+github.com/nrb/library-go v0.0.0-20240326171036-6488b2bddbd5 h1:VJp6EIvfanmdKq53eBLzuwGYWlEaFM9aKfrFOqeK0ik=
+github.com/nrb/library-go v0.0.0-20240326171036-6488b2bddbd5/go.mod h1:ePlaOqUiPplRc++6aYdMe+2FmXb2xTNS9Nz5laG2YmI=
 github.com/onsi/ginkgo/v2 v2.13.0 h1:0jY9lJquiL8fcf3M4LAXN5aMlS/b2BV86HFFPCPMgE4=
 github.com/onsi/ginkgo/v2 v2.13.0/go.mod h1:TE309ZR8s5FsKKpuB1YAQYBzCaAfUgatB/xlT/ETL/o=
 github.com/onsi/gomega v1.29.0 h1:KIA/t2t5UBzoirT4H9tsML45GEbo3ouUnBHsCfD2tVg=
@@ -161,8 +165,6 @@ github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c h1:H5
 github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20231218140158-47f6d749b9d9 h1:kjgW3luAkf9NWu+8u+jqNNbexDG+CY82/INw8hGbG14=
 github.com/openshift/client-go v0.0.0-20231218140158-47f6d749b9d9/go.mod h1:kKmxYRXTMutfF7XzGppFdbLhNGX1brXkRsZx5ID8c7U=
-github.com/openshift/library-go v0.0.0-20240228143125-4602d24d27bc h1:HjWxaJz0Gre4cnBCovUBcdzbc97WvBst71Ox6PpkdmU=
-github.com/openshift/library-go v0.0.0-20240228143125-4602d24d27bc/go.mod h1:ePlaOqUiPplRc++6aYdMe+2FmXb2xTNS9Nz5laG2YmI=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
