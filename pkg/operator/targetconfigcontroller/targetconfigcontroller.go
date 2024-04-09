@@ -33,6 +33,7 @@ import (
 	configv1listers "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/crypto"
+	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/condition"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/management"
@@ -708,8 +709,9 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
 		lister,
-		"kube-controller-manager",
-		"",
+		certrotation.AdditionalAnnotations{
+			JiraComponent: "kube-controller-manager",
+		},
 		// include the ca bundle needed to recognize the server
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-apiserver-server-ca"},
 		// include the ca bundle needed to recognize default
@@ -726,8 +728,9 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
 		lister,
-		"kube-controller-manager",
-		"",
+		certrotation.AdditionalAnnotations{
+			JiraComponent: "kube-controller-manager",
+		},
 		// include the CA we use to sign CSRs
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
 		// include the CA we use to sign the cert key pairs from from csr-signer
