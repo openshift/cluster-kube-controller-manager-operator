@@ -95,6 +95,7 @@ func newCertRotationController(
 			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
 			Client:                 secretsGetter,
 			EventRecorder:          eventRecorder,
+			UseSecretUpdateOnly:    true,
 		},
 		certrotation.CABundleConfigMap{
 			Namespace: operatorclient.OperatorNamespace,
@@ -119,10 +120,11 @@ func newCertRotationController(
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},
-			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
-			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:        secretsGetter,
-			EventRecorder: eventRecorder,
+			Informer:            kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:              kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:              secretsGetter,
+			EventRecorder:       eventRecorder,
+			UseSecretUpdateOnly: true,
 		},
 		eventRecorder,
 		&certrotation.StaticPodConditionStatusReporter{OperatorClient: operatorClient},
