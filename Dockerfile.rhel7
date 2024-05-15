@@ -10,5 +10,5 @@ COPY --from=builder /go/src/github.com/openshift/cluster-kube-controller-manager
 COPY --from=builder /go/src/github.com/openshift/cluster-kube-controller-manager-operator/bindata/bootkube/manifests /usr/share/bootkube/manifests/manifests/
 COPY --from=builder /go/src/github.com/openshift/cluster-kube-controller-manager-operator/cluster-kube-controller-manager-operator /usr/bin/
 COPY manifests /manifests
-COPY vendor/github.com/openshift/api/operator/v1/0000_25_kube-controller-manager-operator_01_config.crd.yaml /manifests
+COPY vendor/github.com/openshift/api/operator/v1/zz_generated.crd-manifests/0000_25_kube-controller-manager_01_kubecontrollermanagers.crd.yaml /manifests
 LABEL io.openshift.release.operator true
