@@ -6,10 +6,10 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.6.0
-	github.com/openshift/api v0.0.0-20231218131639-7a5aa77cc72d
-	github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c
-	github.com/openshift/client-go v0.0.0-20231218140158-47f6d749b9d9
-	github.com/openshift/library-go v0.0.0-20240402180049-f5bf38712dca
+	github.com/openshift/api v0.0.0-20240517002838-931fa9860c01
+	github.com/openshift/build-machinery-go v0.0.0-20240419090851-af9c868bcf52
+	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
+	github.com/openshift/library-go v0.0.0-20240517135010-e93e442c2b18
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
 	github.com/spf13/cobra v1.7.0
