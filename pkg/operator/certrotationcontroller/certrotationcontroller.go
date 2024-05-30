@@ -31,45 +31,6 @@ func NewCertRotationController(
 	eventRecorder events.Recorder,
 	day time.Duration,
 ) (*CertRotationController, error) {
-	return newCertRotationController(
-		secretsGetter,
-		configMapsGetter,
-		operatorClient,
-		kubeInformersForNamespaces,
-		eventRecorder,
-		day,
-		false,
-	)
-}
-
-func NewCertRotationControllerOnlyWhenExpired(
-	secretsGetter corev1client.SecretsGetter,
-	configMapsGetter corev1client.ConfigMapsGetter,
-	operatorClient v1helpers.StaticPodOperatorClient,
-	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	eventRecorder events.Recorder,
-	day time.Duration,
-) (*CertRotationController, error) {
-	return newCertRotationController(
-		secretsGetter,
-		configMapsGetter,
-		operatorClient,
-		kubeInformersForNamespaces,
-		eventRecorder,
-		day,
-		true,
-	)
-}
-
-func newCertRotationController(
-	secretsGetter corev1client.SecretsGetter,
-	configMapsGetter corev1client.ConfigMapsGetter,
-	operatorClient v1helpers.StaticPodOperatorClient,
-	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	eventRecorder events.Recorder,
-	day time.Duration,
-	refreshOnlyWhenExpired bool,
-) (*CertRotationController, error) {
 	ret := &CertRotationController{}
 
 	rotationDay := defaultRotationDay
@@ -88,14 +49,13 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               60 * rotationDay,
-			Refresh:                30 * rotationDay,
-			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
-			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
-			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:                 secretsGetter,
-			EventRecorder:          eventRecorder,
-			UseSecretUpdateOnly:    true,
+			Validity:            60 * rotationDay,
+			Refresh:             30 * rotationDay,
+			Informer:            kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:              kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:              secretsGetter,
+			EventRecorder:       eventRecorder,
+			UseSecretUpdateOnly: true,
 		},
 		certrotation.CABundleConfigMap{
 			Namespace: operatorclient.OperatorNamespace,
@@ -114,9 +74,8 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               30 * rotationDay,
-			Refresh:                15 * rotationDay,
-			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Validity: 30 * rotationDay,
+			Refresh:  15 * rotationDay,
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},

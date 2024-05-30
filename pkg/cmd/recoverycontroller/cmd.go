@@ -89,7 +89,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	certRotationController, err := certrotationcontroller.NewCertRotationControllerOnlyWhenExpired(
+	certRotationController, err := certrotationcontroller.NewCertRotationController(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		operatorClient,
