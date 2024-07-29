@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/openshift/library-go/pkg/operator/certrotation"
@@ -21,6 +22,9 @@ const defaultRotationDay = 24 * time.Hour
 
 type CertRotationController struct {
 	certRotators []factory.Controller
+
+	controlledSecrets    []metav1.ObjectMeta
+	controlledConfigMaps []metav1.ObjectMeta
 }
 
 func NewCertRotationController(
@@ -31,45 +35,6 @@ func NewCertRotationController(
 	eventRecorder events.Recorder,
 	day time.Duration,
 ) (*CertRotationController, error) {
-	return newCertRotationController(
-		secretsGetter,
-		configMapsGetter,
-		operatorClient,
-		kubeInformersForNamespaces,
-		eventRecorder,
-		day,
-		false,
-	)
-}
-
-func NewCertRotationControllerOnlyWhenExpired(
-	secretsGetter corev1client.SecretsGetter,
-	configMapsGetter corev1client.ConfigMapsGetter,
-	operatorClient v1helpers.StaticPodOperatorClient,
-	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	eventRecorder events.Recorder,
-	day time.Duration,
-) (*CertRotationController, error) {
-	return newCertRotationController(
-		secretsGetter,
-		configMapsGetter,
-		operatorClient,
-		kubeInformersForNamespaces,
-		eventRecorder,
-		day,
-		true,
-	)
-}
-
-func newCertRotationController(
-	secretsGetter corev1client.SecretsGetter,
-	configMapsGetter corev1client.ConfigMapsGetter,
-	operatorClient v1helpers.StaticPodOperatorClient,
-	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
-	eventRecorder events.Recorder,
-	day time.Duration,
-	refreshOnlyWhenExpired bool,
-) (*CertRotationController, error) {
 	ret := &CertRotationController{}
 
 	rotationDay := defaultRotationDay
@@ -78,6 +43,9 @@ func newCertRotationController(
 		klog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
 		klog.Warningf("Certificate rotation base set to %q", rotationDay)
 	}
+
+	ret.controlledSecrets = []metav1.ObjectMeta{}
+	ret.controlledConfigMaps = []metav1.ObjectMeta{}
 
 	certRotator := certrotation.NewCertRotationController(
 		"CSRSigningCert",
@@ -88,14 +56,13 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               60 * rotationDay,
-			Refresh:                30 * rotationDay,
-			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
-			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
-			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
-			Client:                 secretsGetter,
-			EventRecorder:          eventRecorder,
-			UseSecretUpdateOnly:    true,
+			Validity:            60 * rotationDay,
+			Refresh:             30 * rotationDay,
+			Informer:            kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
+			Lister:              kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
+			Client:              secretsGetter,
+			EventRecorder:       eventRecorder,
+			UseSecretUpdateOnly: true,
 		},
 		certrotation.CABundleConfigMap{
 			Namespace: operatorclient.OperatorNamespace,
@@ -114,9 +81,8 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               30 * rotationDay,
-			Refresh:                15 * rotationDay,
-			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Validity: 30 * rotationDay,
+			Refresh:  15 * rotationDay,
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},
@@ -128,6 +94,7 @@ func newCertRotationController(
 		},
 		eventRecorder,
 		&certrotation.StaticPodConditionStatusReporter{OperatorClient: operatorClient},
+		&ret.controlledSecrets, &ret.controlledConfigMaps,
 	)
 
 	ret.certRotators = append(ret.certRotators, certRotator)
