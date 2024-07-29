@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/openshift/library-go/pkg/operator/certrotation"
@@ -21,6 +22,9 @@ const defaultRotationDay = 24 * time.Hour
 
 type CertRotationController struct {
 	certRotators []factory.Controller
+
+	controlledSecrets    []metav1.ObjectMeta
+	controlledConfigMaps []metav1.ObjectMeta
 }
 
 func NewCertRotationController(
@@ -39,6 +43,9 @@ func NewCertRotationController(
 		klog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
 		klog.Warningf("Certificate rotation base set to %q", rotationDay)
 	}
+
+	ret.controlledSecrets = []metav1.ObjectMeta{}
+	ret.controlledConfigMaps = []metav1.ObjectMeta{}
 
 	certRotator := certrotation.NewCertRotationController(
 		"CSRSigningCert",
@@ -87,6 +94,7 @@ func NewCertRotationController(
 		},
 		eventRecorder,
 		&certrotation.StaticPodConditionStatusReporter{OperatorClient: operatorClient},
+		&ret.controlledSecrets, &ret.controlledConfigMaps,
 	)
 
 	ret.certRotators = append(ret.certRotators, certRotator)
