@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
@@ -79,7 +80,13 @@ func (o *Options) Run(ctx context.Context) error {
 		operatorclient.TargetNamespace,
 	)
 
-	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(o.controllerContext.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
+	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
+		o.controllerContext.KubeConfig,
+		operatorv1.GroupVersion.WithResource("kubecontrollermanagers"),
+		operatorv1.GroupVersion.WithKind("KubeControllerManager"),
+		operator.ExtractStaticPodOperatorSpec,
+		operator.ExtractStaticPodOperatorStatus,
+	)
 	if err != nil {
 		return err
 	}
