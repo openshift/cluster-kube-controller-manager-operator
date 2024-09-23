@@ -6,7 +6,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
-	libgocloudprovider "github.com/openshift/library-go/pkg/cloudprovider"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	libgoapiserver "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
@@ -30,9 +29,7 @@ import (
 // OpenShift. Passing these to KCM causes it to log an error on startup.
 // This list is passed to the feature gate config observer as a blacklist,
 // excluding them from the feature gate output passed to KCM.
-var openShiftOnlyFeatureGates = sets.New[configv1.FeatureGateName](
-	libgocloudprovider.ExternalCloudProviderFeature,
-)
+var openShiftOnlyFeatureGates = sets.New[configv1.FeatureGateName]()
 
 type ConfigObserver struct {
 	factory.Controller
