@@ -11,6 +11,7 @@ import (
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configinformersv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
+	applyoperatorv1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
@@ -36,7 +37,9 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -64,7 +67,13 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		"openshift-infra",
 	)
 
-	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(cc.KubeConfig, operatorv1.GroupVersion.WithResource("kubecontrollermanagers"))
+	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
+		cc.KubeConfig,
+		operatorv1.GroupVersion.WithResource("kubecontrollermanagers"),
+		operatorv1.GroupVersion.WithKind("KubeControllerManager"),
+		ExtractStaticPodOperatorSpec,
+		ExtractStaticPodOperatorStatus,
+	)
 	if err != nil {
 		return err
 	}
@@ -374,4 +383,35 @@ func newPlatformMatcherFn(platform configv1.PlatformType, infraInformer configin
 
 		return infraData.Status.PlatformStatus.Type == platform, true, nil
 	}
+}
+
+func ExtractStaticPodOperatorSpec(obj *unstructured.Unstructured, fieldManager string) (*applyoperatorv1.StaticPodOperatorSpecApplyConfiguration, error) {
+	castObj := &operatorv1.KubeControllerManager{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, castObj); err != nil {
+		return nil, fmt.Errorf("unable to convert to KubeControllerManager: %w", err)
+	}
+	ret, err := applyoperatorv1.ExtractKubeControllerManager(castObj, fieldManager)
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract fields for %q: %w", fieldManager, err)
+	}
+	if ret.Spec == nil {
+		return nil, nil
+	}
+	return &ret.Spec.StaticPodOperatorSpecApplyConfiguration, nil
+}
+
+func ExtractStaticPodOperatorStatus(obj *unstructured.Unstructured, fieldManager string) (*applyoperatorv1.StaticPodOperatorStatusApplyConfiguration, error) {
+	castObj := &operatorv1.KubeControllerManager{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, castObj); err != nil {
+		return nil, fmt.Errorf("unable to convert to KubeControllerManager: %w", err)
+	}
+	ret, err := applyoperatorv1.ExtractKubeControllerManagerStatus(castObj, fieldManager)
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract fields for %q: %w", fieldManager, err)
+	}
+
+	if ret.Status == nil {
+		return nil, nil
+	}
+	return &ret.Status.StaticPodOperatorStatusApplyConfiguration, nil
 }

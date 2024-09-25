@@ -6,10 +6,10 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20170401004347-50b27dea7ebb
 	github.com/google/go-cmp v0.6.0
-	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
+	github.com/openshift/api v0.0.0-20240924155631-232984653385
 	github.com/openshift/build-machinery-go v0.0.0-20240419090851-af9c868bcf52
-	github.com/openshift/client-go v0.0.0-20240528061634-b054aa794d87
-	github.com/openshift/library-go v0.0.0-20240619120114-0c65da30ad30
+	github.com/openshift/client-go v0.0.0-20240918182115-6a8ead8397fd
+	github.com/openshift/library-go v0.0.0-20240924211342-f6478ea3357f
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
 	github.com/spf13/cobra v1.7.0
@@ -22,7 +22,7 @@ require (
 	k8s.io/client-go v0.30.1
 	k8s.io/component-base v0.30.1
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 )
 
 require (
@@ -35,7 +35,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
@@ -70,7 +70,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/profile v1.3.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
@@ -90,14 +90,14 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
