@@ -290,6 +290,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 	latencyProfileController := latencyprofilecontroller.NewLatencyProfileController(
+		"kube-controller-manager",
 		operatorClient,
 		operatorclient.TargetNamespace,
 		latencyProfileRejectionChecker,

@@ -78,6 +78,7 @@ func NewCSRController(
 	}
 
 	c.resourceSyncController = resourcesynccontroller.NewResourceSyncController(
+		"kube-controller-manager",
 		operatorClient,
 		kubeInformersForNamespaces,
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
