@@ -85,6 +85,7 @@ func NewConfigObserver(
 
 	c := &ConfigObserver{
 		Controller: configobserver.NewConfigObserver(
+			"kube-controller-manager",
 			operatorClient,
 			eventRecorder,
 			configobservation.Listers{

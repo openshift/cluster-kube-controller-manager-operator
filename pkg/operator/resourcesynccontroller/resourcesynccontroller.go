@@ -32,6 +32,7 @@ func NewResourceSyncController(
 	eventRecorder events.Recorder) (*resourcesynccontroller.ResourceSyncController, error) {
 
 	resourceSyncController := resourcesynccontroller.NewResourceSyncController(
+		"kube-controller-manager",
 		operatorConfigClient,
 		kubeInformersForNamespaces,
 		v1helpers.CachedSecretGetter(secretsGetter, kubeInformersForNamespaces),
