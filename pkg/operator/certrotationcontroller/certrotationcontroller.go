@@ -81,7 +81,7 @@ func newCertRotationController(
 	}
 
 	if featureGates.Enabled(features.FeatureShortCertRotation) {
-		monthPeriod = time.Hour
+		monthPeriod = 90 * time.Minute
 	}
 
 	certRotator := certrotation.NewCertRotationController(
