@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -429,7 +430,7 @@ func TestGarbageCollectorSync(t *testing.T) {
 			tc.gc.configMapClient = configMapGetter
 			clusterListers := configlisters.NewClusterOperatorLister(indexer)
 			tc.gc.clusterLister = clusterListers
-			eventRecorder := events.NewInMemoryRecorder("dummy")
+			eventRecorder := events.NewInMemoryRecorder("dummy", clock.RealClock{})
 			syncContext := factory.NewSyncContext(controllerName, eventRecorder)
 			syncContext.Queue().Add(invalidateAlertingRulesCacheKey)
 			err := tc.gc.sync(context.TODO(), syncContext)

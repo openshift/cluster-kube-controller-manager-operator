@@ -68,6 +68,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	)
 
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
+		cc.Clock,
 		cc.KubeConfig,
 		operatorv1.GroupVersion.WithResource("kubecontrollermanagers"),
 		operatorv1.GroupVersion.WithKind("KubeControllerManager"),
@@ -213,7 +214,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	}
 	versionRecorder.SetVersion("raw-internal", status.VersionForOperatorFromEnv())
 
-	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces, configInformers).
+	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces, configInformers, cc.Clock).
 		WithEvents(cc.EventRecorder).
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").

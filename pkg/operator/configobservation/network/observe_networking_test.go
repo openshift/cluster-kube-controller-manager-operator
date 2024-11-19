@@ -6,6 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -78,7 +79,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 			listers := configobservation.Listers{
 				NetworkLister: configlistersv1.NewNetworkLister(indexer),
 			}
-			result, errs := ObserveClusterCIDRs(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
+			result, errs := ObserveClusterCIDRs(listers, events.NewInMemoryRecorder("network", clock.RealClock{}), map[string]interface{}{})
 			if len(errs) > 0 && !test.expectedError {
 				t.Fatal(errs)
 			} else if len(errs) == 0 {
@@ -101,7 +102,7 @@ func TestObserveServiceClusterIPRanges(t *testing.T) {
 	listers := configobservation.Listers{
 		NetworkLister: configlistersv1.NewNetworkLister(indexer),
 	}
-	result, errs := ObserveServiceClusterIPRanges(listers, events.NewInMemoryRecorder("network"), map[string]interface{}{})
+	result, errs := ObserveServiceClusterIPRanges(listers, events.NewInMemoryRecorder("network", clock.RealClock{}), map[string]interface{}{})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}

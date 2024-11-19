@@ -6,6 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -97,7 +98,7 @@ func TestObserveInfraID(t *testing.T) {
 			listers := configobservation.Listers{
 				InfrastructureLister_: configlistersv1.NewInfrastructureLister(indexer),
 			}
-			result, errs := ObserveInfraID(listers, events.NewInMemoryRecorder("infraid"), test.input)
+			result, errs := ObserveInfraID(listers, events.NewInMemoryRecorder("infraid", clock.RealClock{}), test.input)
 			if len(errs) > 0 {
 				t.Fatal(errs)
 			} else {

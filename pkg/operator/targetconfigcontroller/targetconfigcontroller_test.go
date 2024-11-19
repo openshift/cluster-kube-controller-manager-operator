@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 )
 
 func TestIsRequiredConfigPresent(t *testing.T) {
@@ -305,7 +306,7 @@ func TestManageCSRSigner(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 			lister := corev1listers.NewSecretLister(indexer)
-			_, delay, changed, err := ManageCSRSigner(context.Background(), lister, client.CoreV1(), events.NewInMemoryRecorder("target-config-controller"))
+			_, delay, changed, err := ManageCSRSigner(context.Background(), lister, client.CoreV1(), events.NewInMemoryRecorder("target-config-controller", clock.RealClock{}))
 			// there's a 10s difference we need to account for to avoid flakes
 			offset := 10 * time.Second
 			if delay < test.expectedDelay-offset || delay > test.expectedDelay+offset {
