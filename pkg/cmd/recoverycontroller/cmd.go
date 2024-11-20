@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/clock"
 )
 
 type Options struct {
@@ -23,6 +24,7 @@ type Options struct {
 
 func NewCertRecoveryControllerCommand(ctx context.Context) *cobra.Command {
 	o := &Options{}
+	c := clock.RealClock{}
 
 	ccc := controllercmd.NewControllerCommandConfig("cert-recovery-controller", version.Get(), func(ctx context.Context, controllerContext *controllercmd.ControllerContext) error {
 		o.controllerContext = controllerContext
@@ -37,13 +39,13 @@ func NewCertRecoveryControllerCommand(ctx context.Context) *cobra.Command {
 			return err
 		}
 
-		err = o.Run(ctx)
+		err = o.Run(ctx, c)
 		if err != nil {
 			return err
 		}
 
 		return nil
-	})
+	}, c)
 
 	// Disable serving for recovery as it introduces a dependency on kube-system::extension-apiserver-authentication
 	// configmap which prevents it to start as the CA bundle is expired.
@@ -66,7 +68,7 @@ func (o *Options) Complete(ctx context.Context) error {
 	return nil
 }
 
-func (o *Options) Run(ctx context.Context) error {
+func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 	kubeClient, err := kubernetes.NewForConfig(o.controllerContext.ProtoKubeConfig)
 	if err != nil {
 		return fmt.Errorf("can't build kubernetes client: %w", err)
@@ -81,6 +83,7 @@ func (o *Options) Run(ctx context.Context) error {
 	)
 
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
+		clock,
 		o.controllerContext.KubeConfig,
 		operatorv1.GroupVersion.WithResource("kubecontrollermanagers"),
 		operatorv1.GroupVersion.WithKind("KubeControllerManager"),
