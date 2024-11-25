@@ -3,15 +3,19 @@ package recoverycontroller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	configeversionedclient "github.com/openshift/client-go/config/clientset/versioned"
+	configexternalinformers "github.com/openshift/client-go/config/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
-	"github.com/openshift/library-go/pkg/operator/certrotation"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
+	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -94,10 +98,20 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		return err
 	}
 
-	certRotationScale, err := certrotation.GetCertRotationScale(ctx, kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
+	configClient, err := configeversionedclient.NewForConfig(o.controllerContext.KubeConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create config client: %w", err)
 	}
+	configInformers := configexternalinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
+	desiredVersion := status.VersionForOperatorFromEnv()
+	missingVersion := "0.0.1-snapshot"
+	featureGateAccessor := featuregates.NewFeatureGateAccess(
+		desiredVersion, missingVersion,
+		configInformers.Config().V1().ClusterVersions(), configInformers.Config().V1().FeatureGates(),
+		o.controllerContext.EventRecorder,
+	)
+	go featureGateAccessor.Run(ctx)
+	go configInformers.Start(ctx.Done())
 
 	certRotationController, err := certrotationcontroller.NewCertRotationControllerOnlyWhenExpired(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
@@ -105,10 +119,7 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		operatorClient,
 		kubeInformersForNamespaces,
 		o.controllerContext.EventRecorder,
-		// this is weird, but when we turn down rotation in CI, we go fast enough that kubelets and kas are racing to observe the new signer before the signer is used.
-		// we need to establish some kind of delay or back pressure to prevent the rollout.  This ensures we don't trigger kas restart
-		// during e2e tests for now.
-		certRotationScale*8,
+		featureGateAccessor,
 	)
 	if err != nil {
 		return err
@@ -135,6 +146,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 
 	go func() {
 		csrController.Run(ctx)
+	}()
+
+	go func() {
+		featureGateAccessor.Run(ctx)
 	}()
 
 	<-ctx.Done()
