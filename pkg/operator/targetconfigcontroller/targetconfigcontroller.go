@@ -537,7 +537,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	case operatorv1.Trace:
 		logLevel = 6
 	case operatorv1.TraceAll:
-		logLevel = 8
+		logLevel = 10
 	default:
 		logLevel = 2
 	}
