@@ -46,6 +46,38 @@ spec:
   managementState: Managed
   ...
 ```
+The log level of individual kube-controller-manager instances can be increased by setting `.spec.logLevel` field:
+```
+$ oc explain KubeControllerManager.spec.logLevel
+KIND:     KubeControllerManager
+VERSION:  operator.openshift.io/v1
+FIELD:    logLevel <string>
+DESCRIPTION:
+     logLevel is an intent based logging for an overall component. It does not
+     give fine grained control, but it is a simple way to manage coarse grained
+     logging choices that operators have to interpret for their operands. Valid
+     values are: "Normal", "Debug", "Trace", "TraceAll". Defaults to "Normal".
+```
+For example:
+```yaml
+apiVersion: operator.openshift.io/v1
+kind: KubeControllerManager
+metadata:
+  name: cluster
+spec:
+  logLevel: Debug
+  ...
+```
+
+Currently the log levels correspond to:
+
+| logLevel | log level |
+| -------- | --------- |
+| Normal   | 2         |
+| Debug    | 4         |
+| Trace    | 6         |
+| TraceAll | 10        |
+
 ```
 $ oc explain kubecontrollermanager
 ```
