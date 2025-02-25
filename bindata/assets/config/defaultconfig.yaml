@@ -26,6 +26,7 @@ extendedArguments:
   - "-ttl" # TODO: this is excluded in kube-core, but not in #21092
   - "-bootstrapsigner"
   - "-tokencleaner"
+  - "selinux-warning-controller" # Most upstream clusters don't care about SELinux, therefore this controller is opt-in. OCP cares.
   cloud-provider:
     - "external"
   cluster-signing-duration:
