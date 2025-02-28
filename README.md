@@ -79,20 +79,7 @@ Currently the log levels correspond to:
 | TraceAll | 10        |
 
 
-The log level of cluster-kube-controller-manager-operator can be increased by setting `.spec.operatorLogLevel` field:
-```
-$ oc explain KubeControllerManager.spec.operatorLogLevel
-GROUP:      operator.openshift.io
-KIND:       KubeControllerManager
-VERSION:    v1
-FIELD: operatorLogLevel <string>
-DESCRIPTION:
-    operatorLogLevel is an intent based logging for the operator itself.  It
-    does not give fine grained control, but it is a simple way to manage coarse
-    grained logging choices that operators have to interpret for themselves. 
-     Valid values are: "Normal", "Debug", "Trace", "TraceAll". Defaults to
-    "Normal".
-```
+Similarly, the log level of cluster-kube-controller-manager-operator can be increased by setting the `.spec.operatorLogLevel` field:
 For example:
 ```yaml
 apiVersion: operator.openshift.io/v1
