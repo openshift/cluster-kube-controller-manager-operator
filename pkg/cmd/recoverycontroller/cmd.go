@@ -158,10 +158,6 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		csrController.Run(ctx)
 	}()
 
-	go func() {
-		featureGateAccessor.Run(ctx)
-	}()
-
 	<-ctx.Done()
 
 	return nil
