@@ -173,21 +173,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			return isVSphere
 		},
 		nil,
-	).WithConditionalResources(
-		bindata.Asset,
-		[]string{
-			"assets/kube-controller-manager/gce/cloud-provider-role.yaml",
-			"assets/kube-controller-manager/gce/cloud-provider-binding.yaml",
-		},
-		func() bool {
-			// We do not want to apply these resources, so must return false here
-			return false
-		},
-		func() bool {
-			// The resources above are required for the 4.14 -> 4.15 upgrade path.
-			// They are not required from 4.16, so can re removed.
-			return true
-		},
 	).AddKubeInformers(kubeInformersForNamespaces)
 
 	targetConfigController := targetconfigcontroller.NewTargetConfigController(
