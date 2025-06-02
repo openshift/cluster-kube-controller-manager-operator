@@ -330,7 +330,7 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 	// below code is copied from vendor/github.com/openshift/library-go/pkg/crypto/crypto.go
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	rootcaPublicKey := &privateKey.PublicKey
 	rootcaPrivateKey := privateKey
@@ -341,7 +341,7 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 		publicKeyHash = hash.Sum(nil)
 	}
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	rootcaTemplate := &x509.Certificate{
 		Subject:               pkix.Name{CommonName: fmt.Sprintf("kube_csr-signer_@%d", time.Now().Unix())},
@@ -358,14 +358,14 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, rootcaTemplate, rootcaTemplate, rootcaPublicKey, rootcaPrivateKey)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	certs, err := x509.ParseCertificates(derBytes)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	if len(certs) != 1 {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	rootcaCert := certs[0]
 	ca := &crypto.TLSCertificateConfig{
@@ -374,7 +374,7 @@ func makeCerts(t *testing.T, notAfter time.Time, duration time.Duration) map[str
 	}
 	cert, key, err := ca.GetPEMBytes()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	return map[string][]byte{"tls.crt": cert, "tls.key": key}
 }
