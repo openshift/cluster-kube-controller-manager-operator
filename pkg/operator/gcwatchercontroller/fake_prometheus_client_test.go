@@ -62,11 +62,11 @@ func (f fakePrometheusClient) Flags(ctx context.Context) (prometheusv1.FlagsResu
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]string, prometheusv1.Warnings, error) {
+func (f fakePrometheusClient) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, options ...prometheusv1.Option) ([]string, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time) (prometheusmodel.LabelValues, prometheusv1.Warnings, error) {
+func (f fakePrometheusClient) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time, options ...prometheusv1.Option) (prometheusmodel.LabelValues, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
 
@@ -86,7 +86,7 @@ func (f fakePrometheusClient) Runtimeinfo(ctx context.Context) (prometheusv1.Run
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]prometheusmodel.LabelSet, prometheusv1.Warnings, error) {
+func (f fakePrometheusClient) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, options ...prometheusv1.Option) ([]prometheusmodel.LabelSet, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
 
@@ -110,7 +110,7 @@ func (f fakePrometheusClient) Metadata(ctx context.Context, metric string, limit
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) TSDB(ctx context.Context) (prometheusv1.TSDBResult, error) {
+func (f fakePrometheusClient) TSDB(ctx context.Context, options ...prometheusv1.Option) (prometheusv1.TSDBResult, error) {
 	panic("implement me")
 }
 
