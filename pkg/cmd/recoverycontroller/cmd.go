@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	configv1 "github.com/openshift/api/config/v1"
-	features "github.com/openshift/api/features"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/certrotationcontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/version"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
-	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
+	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/spf13/cobra"
@@ -96,13 +94,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		return err
 	}
 
-	kubeInformersForNamespaces.Start(ctx.Done())
-	dynamicInformers.Start(ctx.Done())
-
-	// Create fake feature gate accessor - in refresh only when expired mode. There is no API server to fetch feature gates from.
-	emptyFeatureGates := []configv1.FeatureGateName{""}
-	disabledKnownFeatureGates := []configv1.FeatureGateName{features.FeatureShortCertRotation}
-	featureGateAccessor := featuregates.NewHardcodedFeatureGateAccess(emptyFeatureGates, disabledKnownFeatureGates)
+	certRotationScale, err := certrotation.GetCertRotationScale(ctx, kubeClient, operatorclient.GlobalUserSpecifiedConfigNamespace)
+	if err != nil {
+		return err
+	}
 
 	certRotationController, err := certrotationcontroller.NewCertRotationControllerOnlyWhenExpired(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
@@ -110,7 +105,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		operatorClient,
 		kubeInformersForNamespaces,
 		o.controllerContext.EventRecorder,
-		featureGateAccessor,
+		// this is weird, but when we turn down rotation in CI, we go fast enough that kubelets and kas are racing to observe the new signer before the signer is used.
+		// we need to establish some kind of delay or back pressure to prevent the rollout.  This ensures we don't trigger kas restart
+		// during e2e tests for now.
+		certRotationScale*8,
 	)
 	if err != nil {
 		return err
@@ -125,6 +123,9 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 	if err != nil {
 		return err
 	}
+
+	kubeInformersForNamespaces.Start(ctx.Done())
+	dynamicInformers.Start(ctx.Done())
 
 	// FIXME: These are missing a wait group to track goroutines and handle graceful termination
 	// (@deads2k wants time to think it through)
