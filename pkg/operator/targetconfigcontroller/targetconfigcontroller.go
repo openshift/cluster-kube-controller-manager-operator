@@ -56,6 +56,7 @@ type TargetConfigController struct {
 	operatorImagePullSpec           string
 	clusterPolicyControllerPullSpec string
 	toolsImagePullSpec              string
+	operatorImageVersion            string
 
 	operatorClient v1helpers.StaticPodOperatorClient
 	operatorLister cache.GenericLister
@@ -67,7 +68,7 @@ type TargetConfigController struct {
 }
 
 func NewTargetConfigController(
-	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, toolsImagePullSpec string,
+	targetImagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, toolsImagePullSpec, operatorImageVersion string,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	operatorClient v1helpers.StaticPodOperatorClient,
 	operatorLister cache.GenericLister,
@@ -80,6 +81,7 @@ func NewTargetConfigController(
 		operatorImagePullSpec:           operatorImagePullSpec,
 		clusterPolicyControllerPullSpec: clusterPolicyControllerPullSpec,
 		toolsImagePullSpec:              toolsImagePullSpec,
+		operatorImageVersion:            operatorImageVersion,
 
 		configMapLister:     kubeInformersForNamespaces.ConfigMapLister(),
 		secretLister:        kubeInformersForNamespaces.SecretLister(),
@@ -261,7 +263,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 		}
 	}
 
-	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, addServingServiceCAToTokenSecrets, useSecureServiceCA)
+	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, c.operatorImageVersion, addServingServiceCAToTokenSecrets, useSecureServiceCA)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
 	}
@@ -500,7 +502,7 @@ func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMap
 	return resourceapply.ApplyConfigMap(ctx, configMapsGetter, recorder, requiredCM)
 }
 
-func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec string, addServingServiceCAToTokenSecrets, useSecureServiceCA bool) (*corev1.ConfigMap, bool, error) {
+func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, operatorImageVersion string, addServingServiceCAToTokenSecrets, useSecureServiceCA bool) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(bindata.MustAsset("assets/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
 	images := map[string]string{
@@ -646,6 +648,17 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 				break
 			}
 		}
+	}
+
+	// Set operator image version
+	for i, container := range required.Spec.Containers {
+		if container.Name != "kube-controller-manager-recovery-controller" {
+			continue
+		}
+		required.Spec.Containers[i].Env = append(container.Env, corev1.EnvVar{
+			Name:  "OPERATOR_IMAGE_VERSION",
+			Value: operatorImageVersion,
+		})
 	}
 
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/pod-cm.yaml"))

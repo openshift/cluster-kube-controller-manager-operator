@@ -179,6 +179,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		os.Getenv("OPERATOR_IMAGE"),
 		os.Getenv("CLUSTER_POLICY_CONTROLLER_IMAGE"),
 		os.Getenv("TOOLS_IMAGE"),
+		os.Getenv("OPERATOR_IMAGE_VERSION"),
 		kubeInformersForNamespaces,
 		operatorClient,
 		operatorLister,
