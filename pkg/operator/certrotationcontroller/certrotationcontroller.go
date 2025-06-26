@@ -2,22 +2,21 @@ package certrotationcontroller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"k8s.io/klog/v2"
-
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/klog/v2"
 
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
+	features "github.com/openshift/api/features"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/controller/factory"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 )
-
-// defaultRotationDay is the default rotation base for all cert rotation operations.
-const defaultRotationDay = 24 * time.Hour
 
 type CertRotationController struct {
 	certRotators []factory.Controller
@@ -29,7 +28,7 @@ func NewCertRotationController(
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
-	day time.Duration,
+	featureGateAccessor featuregates.FeatureGateAccess,
 ) (*CertRotationController, error) {
 	return newCertRotationController(
 		secretsGetter,
@@ -37,7 +36,7 @@ func NewCertRotationController(
 		operatorClient,
 		kubeInformersForNamespaces,
 		eventRecorder,
-		day,
+		featureGateAccessor,
 		false,
 	)
 }
@@ -48,7 +47,7 @@ func NewCertRotationControllerOnlyWhenExpired(
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
-	day time.Duration,
+	featureGateAccessor featuregates.FeatureGateAccess,
 ) (*CertRotationController, error) {
 	return newCertRotationController(
 		secretsGetter,
@@ -56,7 +55,7 @@ func NewCertRotationControllerOnlyWhenExpired(
 		operatorClient,
 		kubeInformersForNamespaces,
 		eventRecorder,
-		day,
+		featureGateAccessor,
 		true,
 	)
 }
@@ -67,16 +66,22 @@ func newCertRotationController(
 	operatorClient v1helpers.StaticPodOperatorClient,
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
-	day time.Duration,
+	featureGateAccessor featuregates.FeatureGateAccess,
 	refreshOnlyWhenExpired bool,
 ) (*CertRotationController, error) {
 	ret := &CertRotationController{}
 
-	rotationDay := defaultRotationDay
-	if day != time.Duration(0) {
-		rotationDay = day
-		klog.Warningf("!!! UNSUPPORTED VALUE SET !!!")
-		klog.Warningf("Certificate rotation base set to %q", rotationDay)
+	refreshPeriod := time.Hour * 24 * 30
+
+	featureGates, err := featureGateAccessor.CurrentFeatureGates()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get FeatureGates: %w", err)
+	}
+
+	// This featuregate should be enabled on install time, we don't support enabling or disabling it after install.
+	if featureGates.Enabled(features.FeatureShortCertRotation) {
+		refreshPeriod = time.Hour * 2
+		klog.Infof("Setting refreshPeriod to %v", refreshPeriod)
 	}
 
 	certRotator := certrotation.NewCertRotationController(
@@ -88,8 +93,8 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               60 * rotationDay,
-			Refresh:                30 * rotationDay,
+			Validity:               refreshPeriod * 2,
+			Refresh:                refreshPeriod,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
 			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
 			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
@@ -113,8 +118,8 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Validity:               30 * rotationDay,
-			Refresh:                15 * rotationDay,
+			Validity:               refreshPeriod,
+			Refresh:                refreshPeriod / 2,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
