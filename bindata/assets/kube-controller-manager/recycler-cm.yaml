@@ -29,6 +29,7 @@ data:
               name: vol
           securityContext:
             runAsUser: 0
+            readOnlyRootFilesystem: true
           priorityClassName: openshift-user-critical
           resources:
             requests:
