@@ -17,6 +17,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/kubernetes"
 	policyclientv1 "k8s.io/client-go/kubernetes/typed/policy/v1"
+	"k8s.io/utils/ptr"
 
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
@@ -381,6 +382,7 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 								"ALL",
 							},
 						},
+						ReadOnlyRootFilesystem: ptr.To(true),
 					},
 				},
 			},
