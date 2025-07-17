@@ -42,6 +42,10 @@ spec:
       readOnly: true
     - mountPath: /var/log/bootstrap-control-plane
       name: logs
+    - mountPath: /tmp
+      name: tmp
+    securityContext:
+      readOnlyRootFilesystem: true
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -102,6 +106,10 @@ spec:
       readOnly: true
     - mountPath: /var/log/bootstrap-control-plane
       name: logs
+    - mountPath: /tmp
+      name: tmp
+    securityContext:
+      readOnlyRootFilesystem: true
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -139,3 +147,5 @@ spec:
   - hostPath:
       path: /var/log/bootstrap-control-plane
     name: logs
+  - emptyDir: {}
+    name: tmp
