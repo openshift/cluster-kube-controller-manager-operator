@@ -50,6 +50,8 @@ spec:
       name: cert-dir
     - mountPath: /tmp
       name: tmp-dir
+    - mountPath: /etc/pki/ca-trust/extracted/pem
+      name: ca-trust-dir
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -107,6 +109,8 @@ spec:
         name: cert-dir
       - mountPath: /tmp
         name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -159,6 +163,8 @@ spec:
         name: cert-dir
       - mountPath: /tmp
         name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
     securityContext:
       readOnlyRootFilesystem: true
   - name: kube-controller-manager-recovery-controller
@@ -187,6 +193,8 @@ spec:
         name: cert-dir
       - mountPath: /tmp
         name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
     securityContext:
       readOnlyRootFilesystem: true
   hostNetwork: true
@@ -202,3 +210,5 @@ spec:
     name: cert-dir
   - emptyDir: {}
     name: tmp-dir
+  - emptyDir: {}
+    name: ca-trust-dir
