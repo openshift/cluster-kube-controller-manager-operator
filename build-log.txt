@@ -1,0 +1,986 @@
+[36mINFO[0m[2025-07-19T17:25:29Z] ci-operator version v20250719-2bf60cc55      
+[36mINFO[0m[2025-07-19T17:25:29Z] Resolved source https://github.com/openshift/cluster-kube-controller-manager-operator to master@404585e8, merging: #846 09ddbe70 @system:serviceaccount:ci:ci-chat-bot 
+[36mINFO[0m[2025-07-19T17:25:29Z] Loading information from https://config.ci.openshift.org for integrated stream ocp/4.20 
+[36mINFO[0m[2025-07-19T17:25:29Z] Loading information from https://config.ci.openshift.org for integrated stream ocp/4.20 
+[36mINFO[0m[2025-07-19T17:25:29Z] Building release initial from a snapshot of ocp/4.20 
+[36mINFO[0m[2025-07-19T17:25:29Z] Using explicitly provided pull-spec for release latest (registry.ci.openshift.org/ocp/release:4.20.0-0.nightly-2025-07-18-165407) 
+[36mINFO[0m[2025-07-19T17:25:29Z] Using namespace https://console-openshift-console.apps.build11.ci.devcluster.openshift.com/k8s/cluster/projects/ci-ln-nzblk3k 
+[36mINFO[0m[2025-07-19T17:25:29Z] Running [release:latest]                     
+[36mINFO[0m[2025-07-19T17:25:29Z] Importing release image latest.              
+[36mINFO[0m[2025-07-19T17:34:21Z] Importing release 4.20.0-0.nightly-2025-07-18-165407 created at 2025-07-18 16:57:15 +0000 UTC with 189 images to tag release:latest ... 
+[36mINFO[0m[2025-07-19T17:35:56Z] Imported release 4.20.0-0.nightly-2025-07-18-165407 created at 2025-07-18 16:57:15 +0000 UTC with 189 images to tag release:latest 
+[36mINFO[0m[2025-07-19T17:35:56Z] Ran for 10m27s                               
+Starting 0:/home/prow/go/src/0/github.com/openshift/cluster-kube-controller-manager-operator ...
+[36mINFO[0m[2025-07-19T17:35:56Z] ci-operator version v20250719-2bf60cc55      
+[36mINFO[0m[2025-07-19T17:35:56Z] Resolved source https://github.com/openshift/cluster-kube-controller-manager-operator to master@404585e8, merging: #846 09ddbe70 @system:serviceaccount:ci:ci-chat-bot 
+[36mINFO[0m[2025-07-19T17:35:56Z] Building release initial from a snapshot of ci-ln-nzblk3k/stable 
+[36mINFO[0m[2025-07-19T17:35:56Z] Building release latest from a snapshot of ci-ln-nzblk3k/stable 
+[36mINFO[0m[2025-07-19T17:35:56Z] No images to promote to quay.io if the registry is overridden 
+[36mINFO[0m[2025-07-19T17:35:56Z] Using namespace https://console-openshift-console.apps.build11.ci.devcluster.openshift.com/k8s/cluster/projects/ci-ln-nzblk3k-0 
+[36mINFO[0m[2025-07-19T17:35:56Z] Setting arch for src                          [36march[0m=amd64 [36mreasons[0m=cluster-kube-controller-manager-operator
+[36mINFO[0m[2025-07-19T17:35:56Z] Running [input:root], [input:ocp_4.20_base-rhel9], [input:ocp_builder_rhel-9-golang-1.24-openshift-4.20], [release-inputs:initial], [release-inputs:latest], src, cluster-kube-controller-manager-operator, [output:stable:cluster-kube-controller-manager-operator], [images] 
+[36mINFO[0m[2025-07-19T17:35:57Z] Tagging openshift/release:rhel-9-release-golang-1.24-openshift-4.20 into pipeline:root. 
+[36mINFO[0m[2025-07-19T17:35:57Z] Tagging ocp/builder:rhel-9-golang-1.24-openshift-4.20 into pipeline:ocp_builder_rhel-9-golang-1.24-openshift-4.20. 
+[36mINFO[0m[2025-07-19T17:35:57Z] Tagging ocp/4.20:base-rhel9 into pipeline:ocp_4.20_base-rhel9. 
+[36mINFO[0m[2025-07-19T17:36:02Z] Building src                                 
+[36mINFO[0m[2025-07-19T17:36:02Z] Created build "src-amd64"                    
+[36mINFO[0m[2025-07-19T17:37:13Z] Waiting to import tags on imagestream (after taking snapshot) ci-ln-nzblk3k-0/stable-initial ... 
+[36mINFO[0m[2025-07-19T17:37:13Z] Imported tags on imagestream (after taking snapshot) ci-ln-nzblk3k-0/stable-initial 
+[36mINFO[0m[2025-07-19T17:37:13Z] Waiting to import tags on imagestream (after taking snapshot) ci-ln-nzblk3k-0/stable ... 
+[36mINFO[0m[2025-07-19T17:37:13Z] Imported tags on imagestream (after taking snapshot) ci-ln-nzblk3k-0/stable 
+[36mINFO[0m[2025-07-19T17:38:47Z] Build src-amd64 succeeded after 2m44s        
+[36mINFO[0m[2025-07-19T17:38:47Z] Retrieving digests of member images          
+[36mINFO[0m[2025-07-19T17:38:48Z] Image ci-ln-nzblk3k-0/pipeline:src created    [36mdigest[0m=sha256:55479bb6f4b1a29ff7099bc3168888e703cc66cee5d80db76ae9844a2506e6a0 [36mfor-build[0m=src
+[36mINFO[0m[2025-07-19T17:38:48Z] Building cluster-kube-controller-manager-operator 
+[36mINFO[0m[2025-07-19T17:38:48Z] Created build "cluster-kube-controller-manager-operator-amd64" 
+[36mINFO[0m[2025-07-19T17:42:42Z] Build cluster-kube-controller-manager-operator-amd64 succeeded after 3m54s 
+[36mINFO[0m[2025-07-19T17:42:42Z] Retrieving digests of member images          
+[36mINFO[0m[2025-07-19T17:42:43Z] Image ci-ln-nzblk3k-0/pipeline:cluster-kube-controller-manager-operator created  [36mdigest[0m=sha256:e20ded989525d765320f42df99f72ba50fb00d005dcb5f4c01a245002c2f049f [36mfor-build[0m=cluster-kube-controller-manager-operator
+[36mINFO[0m[2025-07-19T17:42:43Z] Tagging cluster-kube-controller-manager-operator into stable 
+[36mINFO[0m[2025-07-19T17:42:43Z] Promoting tags to registry.build11.ci.openshift.org/ci-ln-nzblk3k/stable:${component}: cluster-kube-controller-manager-operator  [36mname[0m=promotion
+[36mINFO[0m[2025-07-19T17:42:51Z] Ran for 6m55s                                
+[36mINFO[0m[2025-07-19T17:42:51Z] ci-operator version v20250719-2bf60cc55      
+[36mINFO[0m[2025-07-19T17:42:53Z] Resolved source https://github.com/openshift/cluster-kube-controller-manager-operator to master@404585e8, merging: #846 09ddbe70 @system:serviceaccount:ci:ci-chat-bot 
+[33mWARN[0m[2025-07-19T17:42:53Z] skipped directory "..2025_07_19_17_25_15.2838636750" when creating secret from directory "/usr/local/launch-cluster-profile" 
+[33mWARN[0m[2025-07-19T17:42:53Z] skipped directory "..2025_07_19_17_25_15.1502076983" when creating secret from directory "/usr/local/pull-secret" 
+[36mINFO[0m[2025-07-19T17:42:53Z] Building release initial from a snapshot of ci-ln-nzblk3k/pipeline 
+[36mINFO[0m[2025-07-19T17:42:53Z] Building release latest from a snapshot of ci-ln-nzblk3k/pipeline 
+[36mINFO[0m[2025-07-19T17:42:53Z] Using namespace https://console-openshift-console.apps.build11.ci.devcluster.openshift.com/k8s/cluster/projects/ci-ln-nzblk3k 
+[36mINFO[0m[2025-07-19T17:42:53Z] Running [input:origin-centos-8], [input:ocp-4.12-upi-installer], [input:ocp-4.14-upi-installer], [input:ocp-4.16-upi-installer], [release-inputs:initial], [release-inputs:latest], [images], [release:latest], launch 
+[36mINFO[0m[2025-07-19T17:42:53Z] Loading information from https://config.ci.openshift.org for cluster profile aws-2 
+[36mINFO[0m[2025-07-19T17:42:53Z] Tagging origin/centos:8 into pipeline:origin-centos-8. 
+[36mINFO[0m[2025-07-19T17:42:53Z] Tagging ocp/4.12:upi-installer into pipeline:ocp-4.12-upi-installer. 
+[36mINFO[0m[2025-07-19T17:42:53Z] Tagging ocp/4.14:upi-installer into pipeline:ocp-4.14-upi-installer. 
+[36mINFO[0m[2025-07-19T17:42:53Z] Tagging ocp/4.16:upi-installer into pipeline:ocp-4.16-upi-installer. 
+[36mINFO[0m[2025-07-19T17:42:53Z] Waiting to import tags on imagestream (after taking snapshot) ci-ln-nzblk3k/stable-initial ... 
+[36mINFO[0m[2025-07-19T17:42:53Z] Waiting to import tags on imagestream (after taking snapshot) ci-ln-nzblk3k/stable ... 
+[36mINFO[0m[2025-07-19T17:42:53Z] Imported tags on imagestream (after taking snapshot) ci-ln-nzblk3k/stable-initial 
+[36mINFO[0m[2025-07-19T17:42:53Z] Imported tags on imagestream (after taking snapshot) ci-ln-nzblk3k/stable 
+[36mINFO[0m[2025-07-19T17:42:53Z] Creating release image registry.build11.ci.openshift.org/ci-ln-nzblk3k/release:latest. 
+[36mINFO[0m[2025-07-19T17:44:03Z] Snapshot integration stream into release 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest to tag release:latest  
+[36mINFO[0m[2025-07-19T17:44:03Z] Acquiring leases for test launch: [aws-2-quota-slice] 
+[36mINFO[0m[2025-07-19T17:44:03Z] Acquired 1 lease(s) for aws-2-quota-slice: [us-east-2--aws-2-quota-slice-16] 
+[36mINFO[0m[2025-07-19T17:44:03Z] Running multi-stage test launch              
+[36mINFO[0m[2025-07-19T17:44:03Z] Running multi-stage phase pre                
+[36mINFO[0m[2025-07-19T17:44:03Z] Running step launch-ipi-conf.                
+[36mINFO[0m[2025-07-19T17:44:16Z] Step launch-ipi-conf succeeded after 12s.    
+[36mINFO[0m[2025-07-19T17:44:16Z] Running step launch-ipi-conf-telemetry.      
+[36mINFO[0m[2025-07-19T17:44:24Z] Step launch-ipi-conf-telemetry succeeded after 7s. 
+[36mINFO[0m[2025-07-19T17:44:24Z] Running step launch-ipi-conf-aws.            
+[36mINFO[0m[2025-07-19T17:44:37Z] Step launch-ipi-conf-aws succeeded after 13s. 
+[36mINFO[0m[2025-07-19T17:44:37Z] Running step launch-ipi-conf-aws-byo-ipv4-pool-public. 
+[36mINFO[0m[2025-07-19T17:44:46Z] Step launch-ipi-conf-aws-byo-ipv4-pool-public succeeded after 9s. 
+[36mINFO[0m[2025-07-19T17:44:46Z] Running step launch-ipi-install-monitoringpvc. 
+[36mINFO[0m[2025-07-19T17:44:54Z] Step launch-ipi-install-monitoringpvc succeeded after 8s. 
+[36mINFO[0m[2025-07-19T17:44:54Z] Running step launch-ipi-conf-aws-user-min-permissions. 
+[36mINFO[0m[2025-07-19T17:45:30Z] Step launch-ipi-conf-aws-user-min-permissions succeeded after 35s. 
+[36mINFO[0m[2025-07-19T17:45:30Z] Running step launch-aws-provision-iam-user.  
+[36mINFO[0m[2025-07-19T17:45:38Z] Step launch-aws-provision-iam-user succeeded after 8s. 
+[36mINFO[0m[2025-07-19T17:45:38Z] Running step launch-ipi-install-rbac.        
+[36mINFO[0m[2025-07-19T17:45:48Z] Step launch-ipi-install-rbac succeeded after 9s. 
+[36mINFO[0m[2025-07-19T17:45:48Z] Running step launch-openshift-cluster-bot-rbac. 
+[36mINFO[0m[2025-07-19T17:45:56Z] Step launch-openshift-cluster-bot-rbac succeeded after 8s. 
+[36mINFO[0m[2025-07-19T17:45:56Z] Running step launch-ipi-install-hosted-loki. 
+[36mINFO[0m[2025-07-19T17:46:04Z] Step launch-ipi-install-hosted-loki succeeded after 8s. 
+[36mINFO[0m[2025-07-19T17:46:04Z] Running step launch-ipi-install-install.     
+[36mINFO[0m[2025-07-19T18:43:40Z] Logs for container test in pod launch-ipi-install-install: 
+[36mINFO[0m[2025-07-19T18:43:40Z] Installing from release registry.build11.ci.openshift.org/ci-ln-nzblk3k/release@sha256:0895db20582cc6f95fc4b3ba5d550d553d6914ffd2b67fefc66225d34906d81e
+install-config.yaml
+-------------------
+apiVersion: v1
+metadata:
+  name: ci-ln-nzblk3k-76ef8
+
+sshKey: |
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+controlPlane:
+  platform:
+    aws:
+      zones:
+      - us-east-2b
+      - us-east-2a
+      type: m6a.xlarge
+  architecture: amd64
+  name: master
+  replicas: 3
+compute:
+- platform:
+    aws:
+      zones:
+      - us-east-2b
+      - us-east-2a
+      type: m6a.xlarge
+  architecture: amd64
+  name: worker
+  replicas: 3
+baseDomain: XXXXXXXXXXXXXXXXXXXXXX
+platform:
+  aws:
+    region: us-east-2
+    userTags:
+      expirationDate: 2025-07-20T01:44+00:00
+      clusterName: ci-ln-nzblk3k-76ef8
+      ci-nat-replace: "false"
+=============== openshift-install version ==============
+openshift-install v4.20.0
+built from commit 97030df02861425054b980db72d31d36de1fcb20
+release image registry.ci.openshift.org/origin/release:4.20
+level=warning msg=Found override for release image (registry.build11.ci.openshift.org/ci-ln-nzblk3k/release@sha256:0895db20582cc6f95fc4b3ba5d550d553d6914ffd2b67fefc66225d34906d81e). Release Image Architecture is unknown
+release architecture unknown
+default architecture amd64
+level=warning msg=Found override for release image (registry.build11.ci.openshift.org/ci-ln-nzblk3k/release@sha256:0895db20582cc6f95fc4b3ba5d550d553d6914ffd2b67fefc66225d34906d81e). Release Image Architecture is unknown
+level=info msg=Credentials loaded from the "default" profile in file "/var/run/secrets/ci.openshift.io/cluster-profile/.awscred"
+level=info msg=Consuming Install Config from target directory
+level=info msg=Successfully populated MCS CA cert information: root-ca 2035-07-17T17:46:13Z 2025-07-19T17:46:13Z
+level=info msg=Successfully populated MCS TLS cert information: root-ca 2035-07-17T17:46:13Z 2025-07-19T17:46:13Z
+level=info msg=Adding clusters...
+level=info msg=Manifests created in: /tmp/installer/cluster-api, /tmp/installer/manifests and /tmp/installer/openshift
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100 6113k  100 6113k    0     0  33.1M      0 --:--:-- --:--:-- --:--:-- 33.1M
+Using spot instances for MachineSet in /tmp/installer/openshift/99_openshift-cluster-api_worker-machineset-0.yaml
+Using spot instances for MachineSet in /tmp/installer/openshift/99_openshift-cluster-api_worker-machineset-1.yaml
+Enabled AWS Spot instances for workers
+Release payload version: 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest
+Payload architecture not found in .metadata.metadata["release.openshift.io/architecture"], using .config.architecture
+Release payload architecture: amd64
+Original channel from CVO manifest: stable-4.20
+Matching candidate channel: candidate-4.20
+Querying https://api.integration.openshift.com/api/upgrades_info/graph?channel=candidate-4.20&arch=amd64 for version 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest
+Version 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest is not available in candidate-4.20
+Cluster cannot query OpenShift Update Service (OSUS/Cincinnati)
+Clearing the channel
+Will include manifests:
+/tmp/secret/manifest_oauth_clusterrolebinding.yml
+/tmp/secret/manifest_eventexporter_sa.yml
+/tmp/secret/manifest_clusterrolebinding.yml
+/tmp/secret/manifest_metrics_role.yml
+/tmp/secret/manifest_promtail_cookie_secret.yml
+/tmp/secret/manifest_creds.yml
+/tmp/secret/manifest_ds.yml
+/tmp/secret/manifest_cm.yml
+/tmp/secret/manifest_01_ns.yml
+/tmp/secret/manifest_sa.yml
+/tmp/secret/manifest_clusterrole.yml
+/tmp/secret/manifest_promtail_service.yml
+/tmp/secret/manifest_cluster-monitoring-config.yaml
+/tmp/secret/manifest_oauth_role.yml
+/tmp/secret/manifest_eventexporter_crb.yml
+/tmp/secret/manifest_metrics.yml
+/tmp/secret/manifest_eventexporter_deployment.yml
+/tmp/secret/manifest_metrics_rb.yml
+/tmp/secret/manifest_eventexporter_config.yml
+'/tmp/installer' -> '/tmp/install-orig'
+'/tmp/installer/manifests' -> '/tmp/install-orig/manifests'
+'/tmp/installer/manifests/cloud-provider-config.yaml' -> '/tmp/install-orig/manifests/cloud-provider-config.yaml'
+'/tmp/installer/manifests/cluster-config.yaml' -> '/tmp/install-orig/manifests/cluster-config.yaml'
+'/tmp/installer/manifests/cluster-dns-02-config.yml' -> '/tmp/install-orig/manifests/cluster-dns-02-config.yml'
+'/tmp/installer/manifests/cluster-infrastructure-02-config.yml' -> '/tmp/install-orig/manifests/cluster-infrastructure-02-config.yml'
+'/tmp/installer/manifests/cluster-ingress-02-config.yml' -> '/tmp/install-orig/manifests/cluster-ingress-02-config.yml'
+'/tmp/installer/manifests/cluster-network-02-config.yml' -> '/tmp/install-orig/manifests/cluster-network-02-config.yml'
+'/tmp/installer/manifests/cluster-proxy-01-config.yaml' -> '/tmp/install-orig/manifests/cluster-proxy-01-config.yaml'
+'/tmp/installer/manifests/cluster-scheduler-02-config.yml' -> '/tmp/install-orig/manifests/cluster-scheduler-02-config.yml'
+'/tmp/installer/manifests/oauth_clusterrolebinding.yml' -> '/tmp/install-orig/manifests/oauth_clusterrolebinding.yml'
+'/tmp/installer/manifests/kube-cloud-config.yaml' -> '/tmp/install-orig/manifests/kube-cloud-config.yaml'
+'/tmp/installer/manifests/kube-system-configmap-root-ca.yaml' -> '/tmp/install-orig/manifests/kube-system-configmap-root-ca.yaml'
+'/tmp/installer/manifests/machine-config-server-ca-configmap.yaml' -> '/tmp/install-orig/manifests/machine-config-server-ca-configmap.yaml'
+'/tmp/installer/manifests/machine-config-server-ca-secret.yaml' -> '/tmp/install-orig/manifests/machine-config-server-ca-secret.yaml'
+'/tmp/installer/manifests/machine-config-server-tls-secret.yaml' -> '/tmp/install-orig/manifests/machine-config-server-tls-secret.yaml'
+'/tmp/installer/manifests/openshift-config-secret-pull-secret.yaml' -> '/tmp/install-orig/manifests/openshift-config-secret-pull-secret.yaml'
+'/tmp/installer/manifests/cvo-overrides.yaml' -> '/tmp/install-orig/manifests/cvo-overrides.yaml'
+'/tmp/installer/manifests/eventexporter_sa.yml' -> '/tmp/install-orig/manifests/eventexporter_sa.yml'
+'/tmp/installer/manifests/clusterrolebinding.yml' -> '/tmp/install-orig/manifests/clusterrolebinding.yml'
+'/tmp/installer/manifests/metrics_role.yml' -> '/tmp/install-orig/manifests/metrics_role.yml'
+'/tmp/installer/manifests/promtail_cookie_secret.yml' -> '/tmp/install-orig/manifests/promtail_cookie_secret.yml'
+'/tmp/installer/manifests/creds.yml' -> '/tmp/install-orig/manifests/creds.yml'
+'/tmp/installer/manifests/ds.yml' -> '/tmp/install-orig/manifests/ds.yml'
+'/tmp/installer/manifests/cm.yml' -> '/tmp/install-orig/manifests/cm.yml'
+'/tmp/installer/manifests/01_ns.yml' -> '/tmp/install-orig/manifests/01_ns.yml'
+'/tmp/installer/manifests/sa.yml' -> '/tmp/install-orig/manifests/sa.yml'
+'/tmp/installer/manifests/clusterrole.yml' -> '/tmp/install-orig/manifests/clusterrole.yml'
+'/tmp/installer/manifests/promtail_service.yml' -> '/tmp/install-orig/manifests/promtail_service.yml'
+'/tmp/installer/manifests/cluster-monitoring-config.yaml' -> '/tmp/install-orig/manifests/cluster-monitoring-config.yaml'
+'/tmp/installer/manifests/oauth_role.yml' -> '/tmp/install-orig/manifests/oauth_role.yml'
+'/tmp/installer/manifests/eventexporter_crb.yml' -> '/tmp/install-orig/manifests/eventexporter_crb.yml'
+'/tmp/installer/manifests/metrics.yml' -> '/tmp/install-orig/manifests/metrics.yml'
+'/tmp/installer/manifests/eventexporter_deployment.yml' -> '/tmp/install-orig/manifests/eventexporter_deployment.yml'
+'/tmp/installer/manifests/metrics_rb.yml' -> '/tmp/install-orig/manifests/metrics_rb.yml'
+'/tmp/installer/manifests/eventexporter_config.yml' -> '/tmp/install-orig/manifests/eventexporter_config.yml'
+'/tmp/installer/.openshift_install.log' -> '/tmp/install-orig/.openshift_install.log'
+'/tmp/installer/.openshift_install_state.json' -> '/tmp/install-orig/.openshift_install_state.json'
+'/tmp/installer/openshift' -> '/tmp/install-orig/openshift'
+'/tmp/installer/openshift/99_openshift-cluster-api_master-user-data-secret.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_master-user-data-secret.yaml'
+'/tmp/installer/openshift/99_openshift-machineconfig_99-master-ssh.yaml' -> '/tmp/install-orig/openshift/99_openshift-machineconfig_99-master-ssh.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_master-machines-0.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_master-machines-0.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_master-machines-1.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_master-machines-1.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_master-machines-2.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_master-machines-2.yaml'
+'/tmp/installer/openshift/99_openshift-machine-api_master-control-plane-machine-set.yaml' -> '/tmp/install-orig/openshift/99_openshift-machine-api_master-control-plane-machine-set.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_worker-user-data-secret.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_worker-user-data-secret.yaml'
+'/tmp/installer/openshift/99_openshift-machineconfig_99-worker-ssh.yaml' -> '/tmp/install-orig/openshift/99_openshift-machineconfig_99-worker-ssh.yaml'
+'/tmp/installer/openshift/99_cloud-creds-secret.yaml' -> '/tmp/install-orig/openshift/99_cloud-creds-secret.yaml'
+'/tmp/installer/openshift/99_feature-gate.yaml' -> '/tmp/install-orig/openshift/99_feature-gate.yaml'
+'/tmp/installer/openshift/99_kubeadmin-password-secret.yaml' -> '/tmp/install-orig/openshift/99_kubeadmin-password-secret.yaml'
+'/tmp/installer/openshift/99_role-cloud-creds-secret-reader.yaml' -> '/tmp/install-orig/openshift/99_role-cloud-creds-secret-reader.yaml'
+'/tmp/installer/openshift/openshift-install-manifests.yaml' -> '/tmp/install-orig/openshift/openshift-install-manifests.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_worker-machineset-0.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_worker-machineset-0.yaml'
+'/tmp/installer/openshift/99_openshift-cluster-api_worker-machineset-1.yaml' -> '/tmp/install-orig/openshift/99_openshift-cluster-api_worker-machineset-1.yaml'
+'/tmp/installer/tls' -> '/tmp/install-orig/tls'
+'/tmp/installer/cluster-api' -> '/tmp/install-orig/cluster-api'
+'/tmp/installer/cluster-api/000_capi-namespace.yaml' -> '/tmp/install-orig/cluster-api/000_capi-namespace.yaml'
+'/tmp/installer/cluster-api/01_aws-cluster-controller-identity-default.yaml' -> '/tmp/install-orig/cluster-api/01_aws-cluster-controller-identity-default.yaml'
+'/tmp/installer/cluster-api/01_capi-cluster-0.yaml' -> '/tmp/install-orig/cluster-api/01_capi-cluster-0.yaml'
+'/tmp/installer/cluster-api/02_infra-cluster.yaml' -> '/tmp/install-orig/cluster-api/02_infra-cluster.yaml'
+'/tmp/installer/cluster-api/machines' -> '/tmp/install-orig/cluster-api/machines'
+'/tmp/installer/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/tmp/install-orig/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml' -> '/tmp/install-orig/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml'
+'/tmp/installer/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml' -> '/tmp/install-orig/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml'
+'/tmp/installer/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml' -> '/tmp/install-orig/cluster-api/machines/10_inframachine_ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml'
+'/tmp/installer/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/tmp/install-orig/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml' -> '/tmp/install-orig/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml'
+'/tmp/installer/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml' -> '/tmp/install-orig/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml'
+'/tmp/installer/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml' -> '/tmp/install-orig/cluster-api/machines/10_machine_ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml'
+Install attempt 1 of 1
+waiting for /tmp/installer/auth/kubeconfig to exist
+level=warning msg=Found override for release image (registry.build11.ci.openshift.org/ci-ln-nzblk3k/release@sha256:0895db20582cc6f95fc4b3ba5d550d553d6914ffd2b67fefc66225d34906d81e). Please be warned, this is not advised
+level=info msg=Consuming Master Machines from target directory
+level=info msg=Consuming Common Manifests from target directory
+level=info msg=Consuming Openshift Manifests from target directory
+level=info msg=Consuming OpenShift Install (Manifests) from target directory
+level=info msg=Consuming Worker Machines from target directory
+level=info msg=Credentials loaded from the "default" profile in file "/var/run/secrets/ci.openshift.io/cluster-profile/.awscred"
+level=info msg=Creating infrastructure resources...
+level=info msg=Reconciling IAM roles for control-plane and compute nodes
+level=info msg=Creating IAM role for master
+level=info msg=Creating IAM role for worker
+kubeconfig received!
+waiting for api to be available
+level=info msg=Started local control plane with envtest
+level=info msg=Stored kubeconfig for envtest in: /tmp/installer/.clusterapi_output/envtest.kubeconfig
+level=info msg=Running process: Cluster API with args [-v=2 --diagnostics-address=0 --health-addr=127.0.0.1:37169 --webhook-port=46765 --webhook-cert-dir=/tmp/envtest-serving-certs-1474391345 --kubeconfig=/tmp/installer/.clusterapi_output/envtest.kubeconfig]
+level=info msg=Running process: aws infrastructure provider with args [-v=4 --diagnostics-address=0 --health-addr=127.0.0.1:41531 --webhook-port=38495 --webhook-cert-dir=/tmp/envtest-serving-certs-2949443059 --feature-gates=BootstrapFormatIgnition=true,ExternalResourceGC=true,TagUnmanagedNetworkResources=false,EKS=false --kubeconfig=/tmp/installer/.clusterapi_output/envtest.kubeconfig]
+level=info msg=Creating infra manifests...
+level=info msg=Created manifest *v1.Namespace, namespace= name=openshift-cluster-api-guests
+level=info msg=Created manifest *v1beta2.AWSClusterControllerIdentity, namespace= name=default
+level=info msg=Created manifest *v1beta1.Cluster, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b
+level=info msg=Created manifest *v1beta2.AWSCluster, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b
+level=info msg=Done creating infra manifests
+level=info msg=Creating kubeconfig entry for capi cluster ci-ln-nzblk3k-76ef8-jtx4b
+level=info msg=Waiting up to 15m0s (until 6:01PM UTC) for network infrastructure to become ready...
+level=info msg=Network infrastructure is ready
+level=info msg=Creating Route53 records for control plane load balancer
+level=info msg=Created private Hosted Zone
+level=info msg=Created manifest *v1beta2.AWSMachine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-bootstrap
+level=info msg=Created manifest *v1beta2.AWSMachine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-0
+level=info msg=Created manifest *v1beta2.AWSMachine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-1
+level=info msg=Created manifest *v1beta2.AWSMachine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-2
+level=info msg=Created manifest *v1beta1.Machine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-bootstrap
+level=info msg=Created manifest *v1beta1.Machine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-0
+level=info msg=Created manifest *v1beta1.Machine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-1
+level=info msg=Created manifest *v1beta1.Machine, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master-2
+level=info msg=Created manifest *v1.Secret, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-bootstrap
+level=info msg=Created manifest *v1.Secret, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-master
+level=info msg=Created manifest *v1.Secret, namespace=openshift-cluster-api-guests name=ci-ln-nzblk3k-76ef8-jtx4b-worker
+level=info msg=Waiting up to 15m0s (until 6:08PM UTC) for machines [ci-ln-nzblk3k-76ef8-jtx4b-bootstrap ci-ln-nzblk3k-76ef8-jtx4b-master-0 ci-ln-nzblk3k-76ef8-jtx4b-master-1 ci-ln-nzblk3k-76ef8-jtx4b-master-2] to provision...
+level=info msg=Control-plane machines are ready
+level=info msg=Cluster API resources have been created. Waiting for cluster to become ready...
+level=info msg=Consuming Cluster API Machine Manifests from target directory
+level=info msg=Consuming Cluster API Manifests from target directory
+level=info msg=Waiting up to 20m0s (until 6:14PM UTC) for the Kubernetes API at https://api.ci-ln-nzblk3k-76ef8.XXXXXXXXXXXXXXXXXXXXXX:6443...
+level=info msg=API v1.33.2 up
+level=info msg=Waiting up to 45m0s (until 6:42PM UTC) for bootstrapping to complete...
+api available
+waiting for bootstrap to complete
+level=info msg=Waiting up to 20m0s (until 6:18PM UTC) for the Kubernetes API at https://api.ci-ln-nzblk3k-76ef8.XXXXXXXXXXXXXXXXXXXXXX:6443...
+level=info msg=API v1.33.2 up
+level=info msg=Waiting up to 45m0s (until 6:43PM UTC) for bootstrapping to complete...
+level=error msg=Bootstrap failed to complete: timed out waiting for the condition
+level=error msg=Failed to wait for bootstrapping to complete. This error usually happens when there is a problem with control plane hosts that prevents the control plane operators from creating the control plane.
+level=info msg=Pulling Cluster API artifacts
+level=info msg=Pulling VM console logs
+level=info msg=Pulling debug logs from the bootstrap machine
+level=info msg=    root : PWD=/var/opt/openshift ; USER=root ; ENV=KUBECONFIG=/opt/openshift/auth/kubeconfigCOMMAND=/bin/oc --request-timeout=5s get rolebindings --all-namespaces -o json
+level=info msg=    root : PWD=/var/opt/openshift ; USER=root ; ENV=KUBECONFIG=/opt/openshift/auth/kubeconfigCOMMAND=/bin/oc --request-timeout=5s get roles --all-namespaces -o json
+level=info msg=    root : PWD=/var/opt/openshift ; USER=root ; ENV=KUBECONFIG=/opt/openshift/auth/kubeconfigCOMMAND=/bin/oc --request-timeout=5s get secrets --all-namespaces
+level=info msg=Bootstrap gather logs captured here "/tmp/installer/log-bundle-20250719184250.tar.gz"
+level=info msg=Shutting down local Cluster API controllers...
+level=info msg=Stopped controller: Cluster API
+level=info msg=Stopped controller: aws infrastructure provider
+level=info msg=Shutting down local Cluster API control plane...
+level=info msg=Local Cluster API system has completed operations
+Installer exit with code 5
+Tear down the backgroup process of copying kube config
+Kill the backgroup process - 244
+Setup phase finished, prepare env for next steps
+Copying log bundle...
+Removing REDACTED info from log...
+Unsupported cluster type 'aws' to collect machine IDs
+Copying Cluster API generated manifests...
+'/tmp/installer/.clusterapi_output/etcd.log' -> '/logs/artifacts/clusterapi_output-1752950586/etcd.log'
+'/tmp/installer/.clusterapi_output/kube-apiserver.log' -> '/logs/artifacts/clusterapi_output-1752950586/kube-apiserver.log'
+'/tmp/installer/.clusterapi_output/AWSCluster-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSCluster-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b.yaml'
+'/tmp/installer/.clusterapi_output/AWSClusterControllerIdentity--default.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSClusterControllerIdentity--default.yaml'
+'/tmp/installer/.clusterapi_output/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/.clusterapi_output/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml'
+'/tmp/installer/.clusterapi_output/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml'
+'/tmp/installer/.clusterapi_output/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/AWSMachine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml'
+'/tmp/installer/.clusterapi_output/Cluster-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Cluster-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b.yaml'
+'/tmp/installer/.clusterapi_output/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/.clusterapi_output/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-0.yaml'
+'/tmp/installer/.clusterapi_output/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml'
+'/tmp/installer/.clusterapi_output/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml'
+'/tmp/installer/.clusterapi_output/Namespace--openshift-cluster-api-guests.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Namespace--openshift-cluster-api-guests.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-worker.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-worker.yaml'
+Copying required artifacts to shared dir
+level=info msg=Use the following commands to gather logs from the cluster
+level=info msg=openshift-install gather bootstrap --help
+level=error msg=Bootstrap failed to complete: timed out waiting for the condition
+level=error msg=Failed to wait for bootstrapping to complete. This error usually happens when there is a problem with control plane hosts that prevents the control plane operators from creating the control plane.
+{"component":"entrypoint","error":"wrapped process failed: exit status 5","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:43:39Z"}
+error: failed to execute wrapped command: exit status 5 
+[36mINFO[0m[2025-07-19T18:43:40Z] Step launch-ipi-install-install failed after 57m35s. 
+[36mINFO[0m[2025-07-19T18:43:40Z] Step phase pre failed after 59m36s.          
+[36mINFO[0m[2025-07-19T18:43:40Z] Running multi-stage phase post               
+[36mINFO[0m[2025-07-19T18:43:40Z] Running step launch-gather-aws-console.      
+[36mINFO[0m[2025-07-19T18:43:51Z] Logs for container test in pod launch-gather-aws-console: 
+[36mINFO[0m[2025-07-19T18:43:51Z] aws-cli/2.27.27 Python/3.13.3 Linux/5.14.0-427.70.1.el9_4.x86_64 exe/x86_64.rhel.8
+Installed locales
+C
+C.utf8
+POSIX
+en_AG
+en_AU
+en_AU.utf8
+en_BW
+en_BW.utf8
+en_CA
+en_CA.utf8
+en_DK
+en_DK.utf8
+en_GB
+en_GB.iso885915
+en_GB.utf8
+en_HK
+en_HK.utf8
+en_IE
+en_IE.utf8
+en_IE@euro
+en_IL
+en_IN
+en_NG
+en_NZ
+en_NZ.utf8
+en_PH
+en_PH.utf8
+en_SC.utf8
+en_SG
+en_SG.utf8
+en_US
+en_US.iso885915
+en_US.utf8
+en_US.utf8@ampm
+en_US@ampm
+en_ZA
+en_ZA.utf8
+en_ZM
+en_ZW
+en_ZW.utf8
+{"component":"entrypoint","error":"wrapped process failed: exit status 1","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:43:50Z"}
+error: failed to execute wrapped command: exit status 1 
+[36mINFO[0m[2025-07-19T18:43:51Z] Step launch-gather-aws-console failed after 11s. 
+[36mINFO[0m[2025-07-19T18:43:51Z] Running step launch-gather-must-gather.      
+[36mINFO[0m[2025-07-19T18:44:12Z] Logs for container test in pod launch-gather-must-gather: 
+[36mINFO[0m[2025-07-19T18:44:12Z] + echo 'Running must-gather...'
+Running must-gather...
++ mkdir -p /logs/artifacts/must-gather
++ oc --insecure-skip-tls-verify adm must-gather --timeout=35m --dest-dir /logs/artifacts/must-gather
+
+
+Error running must-gather collection:
+    pods "must-gather-" is forbidden: error looking up service account openshift-must-gather-pm9q4/default: serviceaccount "default" not found
+
+Falling back to `oc adm inspect clusterversion.v1.config.openshift.io,clusteroperators.v1.config.openshift.io` to collect basic cluster types.
+W0719 18:44:00.929811      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:00.940690      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+W0719 18:44:01.082311      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:01.361066      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:01.366920      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:01.506145      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:01.662847      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:01.669370      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:01.803806      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:01.959871      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:01.968748      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:02.132706      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:02.462564      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:02.468307      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:02.601861      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:02.751337      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:02.759961      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:02.930728      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:03.233347      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:03.238089      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:03.377024      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:04.096394      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:04.102306      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:04.250964      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:04.443268      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:04.453704      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:04.591139      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:04.710075      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:04.717446      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:04.865171      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:04.979510      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:04.986831      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:05.109331      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:05.714878      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:05.721209      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:05.837357      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:06.606402      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:06.614215      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:06.757082      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:07.198745      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:07.204260      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:07.337661      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:07.446095      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:07.452599      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:07.577719      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:07.794571      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:07.801312      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:07.942885      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:08.061184      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:08.068183      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:08.208666      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:08.321142      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:08.328193      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:08.495474      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:08.701094      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:08.707204      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:08.841524      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:08.942508      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:08.949349      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:09.092419      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:09.286053      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:09.292661      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:09.435606      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:09.776845      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:09.782965      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:09.942347      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:10.097087      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:10.108313      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:10.255963      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:10.475670      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:10.482353      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:10.592205      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:10.811173      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:10.815039      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:10.885298      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:10.979462      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:10.982643      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:11.060348      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+W0719 18:44:11.172800      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:11.176220      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:11.260343      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+error completing cluster type inspection: error running backup collection: inspection completed with the errors occurred while gathering data:
+    [skipping gathering routes.route.openshift.io/oauth-openshift due to error: the server doesn't have a resource type "routes", skipping gathering services/oauth-openshift due to error: namespaces "openshift-authentication" not found, skipping gathering namespaces/openshift-authentication due to error: namespaces "openshift-authentication" not found, skipping gathering namespaces/openshift-ingress due to error: namespaces "openshift-ingress" not found, skipping gathering namespaces/openshift-oauth-apiserver due to error: namespaces "openshift-oauth-apiserver" not found, skipping gathering namespaces/openshift-ingress-canary due to error: namespaces "openshift-ingress-canary" not found, skipping gathering podnetworkconnectivitychecks.controlplane.operator.openshift.io due to error: the server doesn't have a resource type "podnetworkconnectivitychecks", skipping gathering namespaces/openshift-kube-storage-version-migrator due to error: namespaces "openshift-kube-storage-version-migrator" not found, skipping gathering configs.samples.operator.openshift.io/cluster due to error: configs.samples.operator.openshift.io "cluster" not found, skipping gathering templates.template.openshift.io due to error: the server doesn't have a resource type "templates", skipping gathering imagestreams.image.openshift.io due to error: the server doesn't have a resource type "imagestreams", skipping gathering clusterserviceversions.operators.coreos.com/packageserver due to error: clusterserviceversions.operators.coreos.com "packageserver" not found]
+Falling back to `oc adm inspect namespace/openshift-cluster-version` to collect basic cluster named resources.
+W0719 18:44:11.408170      38 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:11.412294      38 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:11.513411      38 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Error from server (Forbidden): pods "must-gather-" is forbidden: error looking up service account openshift-must-gather-pm9q4/default: serviceaccount "default" not found
+{"component":"entrypoint","error":"wrapped process failed: exit status 1","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:44:11Z"}
+error: failed to execute wrapped command: exit status 1 
+[36mINFO[0m[2025-07-19T18:44:12Z] Step launch-gather-must-gather failed after 20s. 
+[36mINFO[0m[2025-07-19T18:44:12Z] Pod launch-gather-must-gather is running in best-effort mode, ignoring the failure... 
+[36mINFO[0m[2025-07-19T18:44:12Z] Running step launch-gather-extra.            
+[36mINFO[0m[2025-07-19T18:44:28Z] Logs for container test in pod launch-gather-extra: 
+[36mINFO[0m[2025-07-19T18:44:28Z] Gathering artifacts ...
+Gathering data for ns/openshift-config...
+W0719 18:44:19.344821      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:19.346798      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+W0719 18:44:19.406798      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-config-managed...
+W0719 18:44:19.570637      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:19.573871      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:19.628090      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-authentication-operator...
+W0719 18:44:19.693285      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:19.695223      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:19.747955      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-machine-api...
+W0719 18:44:19.828338      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:19.830126      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:19.887310      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cloud-controller-manager...
+W0719 18:44:20.009646      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.011333      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.064087      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cloud-controller-manager-operator...
+W0719 18:44:20.126268      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.128574      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.183155      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cloud-credential-operator...
+W0719 18:44:20.318355      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.320182      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.378921      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-config-operator...
+W0719 18:44:20.658738      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.660764      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.710633      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-etcd-operator...
+W0719 18:44:20.808516      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.810326      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.863535      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-etcd...
+W0719 18:44:20.921291      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:20.923107      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:20.981109      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-ingress-operator...
+W0719 18:44:21.039533      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:21.041382      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:21.093153      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-monitoring...
+W0719 18:44:21.449642      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:21.451545      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:21.503560      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cluster-node-tuning-operator...
+W0719 18:44:21.930289      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:21.932295      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:21.982813      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-apiserver-operator...
+W0719 18:44:22.212031      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.214042      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.274164      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-apiserver...
+W0719 18:44:22.331269      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.333189      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.382372      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-controller-manager...
+W0719 18:44:22.474543      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.477674      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.530667      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-controller-manager-operator...
+W0719 18:44:22.591352      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.594460      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.648310      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/kube-system...
+W0719 18:44:22.706279      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.708142      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.786126      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-scheduler-operator...
+W0719 18:44:22.875379      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.877848      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:22.930356      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-scheduler...
+W0719 18:44:22.984325      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:22.986449      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.039699      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-kube-storage-version-migrator-operator...
+W0719 18:44:23.120502      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.123521      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.173372      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cluster-machine-approver...
+W0719 18:44:23.336059      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.338012      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.390950      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-machine-config-operator...
+W0719 18:44:23.470669      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.473040      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.530176      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-user-workload-monitoring...
+W0719 18:44:23.630818      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.632706      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.684305      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cluster-olm-operator...
+W0719 18:44:23.843006      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.845664      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:23.897620      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-cluster-samples-operator...
+W0719 18:44:23.966423      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:23.968267      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:24.017417      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Gathering data for ns/openshift-operator-lifecycle-manager...
+W0719 18:44:24.101004      97 util.go:118] the server doesn't have a resource type egressfirewalls, skipping the inspection
+W0719 18:44:24.103772      97 util.go:118] the server doesn't have a resource type egressqoses, skipping the inspection
+W0719 18:44:24.185765      97 util.go:118] the server doesn't have a resource type userdefinednetworks, skipping the inspection
+Wrote inspect data to /logs/artifacts/inspect.
+error: inspection completed with the errors occurred while gathering data:
+    [skipping gathering routes.route.openshift.io/oauth-openshift due to error: the server doesn't have a resource type "routes", skipping gathering services/oauth-openshift due to error: namespaces "openshift-authentication" not found, skipping gathering namespaces/openshift-authentication due to error: namespaces "openshift-authentication" not found, skipping gathering namespaces/openshift-ingress due to error: namespaces "openshift-ingress" not found, skipping gathering namespaces/openshift-oauth-apiserver due to error: namespaces "openshift-oauth-apiserver" not found, skipping gathering namespaces/openshift-ingress-canary due to error: namespaces "openshift-ingress-canary" not found, skipping gathering podnetworkconnectivitychecks.controlplane.operator.openshift.io due to error: the server doesn't have a resource type "podnetworkconnectivitychecks", skipping gathering namespaces/openshift-kube-storage-version-migrator due to error: namespaces "openshift-kube-storage-version-migrator" not found, skipping gathering configs.samples.operator.openshift.io/cluster due to error: configs.samples.operator.openshift.io "cluster" not found, skipping gathering templates.template.openshift.io due to error: the server doesn't have a resource type "templates", skipping gathering imagestreams.image.openshift.io due to error: the server doesn't have a resource type "imagestreams", skipping gathering clusterserviceversions.operators.coreos.com/packageserver due to error: clusterserviceversions.operators.coreos.com "packageserver" not found]
+oc --insecure-skip-tls-verify --request-timeout=5s get apiserver.config.openshift.io authentication.config.openshift.io build.config.openshift.io console.config.openshift.io dns.config.openshift.io featuregate.config.openshift.io image.config.openshift.io infrastructure.config.openshift.io ingress.config.openshift.io network.config.openshift.io oauth.config.openshift.io project.config.openshift.io scheduler.config.openshift.io -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get apiservices -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get apiservices
+oc --insecure-skip-tls-verify --request-timeout=5s get clusteroperators -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get clusteroperators
+oc --insecure-skip-tls-verify --request-timeout=5s get clusterversion -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get clusterversion
+oc --insecure-skip-tls-verify --request-timeout=5s get configmaps --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get configmaps --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get credentialsrequests --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get credentialsrequests --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get csr -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get endpoints --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get endpoints --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get deployments --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get deployments --all-namespaces -o wide
+oc --insecure-skip-tls-verify --request-timeout=5s get daemonsets --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get daemonsets --all-namespaces -o wide
+oc --insecure-skip-tls-verify --request-timeout=5s get jobs.batch --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get events --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get events --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get featuregate -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get featuregate
+oc --insecure-skip-tls-verify --request-timeout=5s get kubeapiserver -o json
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+oc --insecure-skip-tls-verify --request-timeout=5s get kubeapiserver
+oc --insecure-skip-tls-verify --request-timeout=5s get kubecontrollermanager -o json
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+oc --insecure-skip-tls-verify --request-timeout=5s get kubecontrollermanager
+oc --insecure-skip-tls-verify --request-timeout=5s get machineconfigpools -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get machineconfigpools
+oc --insecure-skip-tls-verify --request-timeout=5s get machineconfigs -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get machineconfigs
+oc --insecure-skip-tls-verify --request-timeout=5s get controlplanemachinesets -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get controlplanemachinesets -A
+oc --insecure-skip-tls-verify --request-timeout=5s get machinesets.machine.openshift.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get machinesets.machine.openshift.io -A
+oc --insecure-skip-tls-verify --request-timeout=5s get machinesets.cluster.x-k8s.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get machines.machine.openshift.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get machines.machine.openshift.io -A -o wide
+No resources found
+oc --insecure-skip-tls-verify --request-timeout=5s get machines.cluster.x-k8s.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get awsclusters.infrastructure.cluster.x-k8s.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get awsmachines.infrastructure.cluster.x-k8s.io -A -o json
+Error from server (NotFound): apiservers.config.openshift.io "authentication.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "build.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "console.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "dns.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "featuregate.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "image.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "infrastructure.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "ingress.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "network.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "oauth.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "project.config.openshift.io" not found
+Error from server (NotFound): apiservers.config.openshift.io "scheduler.config.openshift.io" not found
+oc --insecure-skip-tls-verify --request-timeout=5s get awsmachinetemplates.infrastructure.cluster.x-k8s.io -A -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get nodes -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get nodes -o wide
+oc --insecure-skip-tls-verify --request-timeout=5s get openshiftapiserver -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get openshiftapiserver
+oc --insecure-skip-tls-verify --request-timeout=5s get pods --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get pods --all-namespaces -o wide
+error: the server doesn't have a resource type "machinesets"
+oc --insecure-skip-tls-verify --request-timeout=5s get persistentvolumes --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get persistentvolumes --all-namespaces -o wide
+oc --insecure-skip-tls-verify --request-timeout=5s get persistentvolumeclaims --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get persistentvolumeclaims --all-namespaces -o wide
+error: the server doesn't have a resource type "awsclusters"
+error: the server doesn't have a resource type "machines"
+error: the server doesn't have a resource type "awsmachinetemplates"
+oc --insecure-skip-tls-verify --request-timeout=5s get replicasets --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get replicasets --all-namespaces -o wide
+oc --insecure-skip-tls-verify --request-timeout=5s get rolebindings --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get rolebindings --all-namespaces
+error: the server doesn't have a resource type "awsmachines"
+No resources found
+oc --insecure-skip-tls-verify --request-timeout=5s get roles --all-namespaces -o json
+No resources found
+oc --insecure-skip-tls-verify --request-timeout=5s get roles --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get services --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get services --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get statefulsets --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get statefulsets --all-namespaces
+No resources found
+oc --insecure-skip-tls-verify --request-timeout=5s get routes --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get routes --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get subscriptions --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get subscriptions --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s get clusterserviceversions --all-namespaces -o json
+No resources found
+No resources found
+oc --insecure-skip-tls-verify --request-timeout=5s get clusterserviceversions --all-namespaces
+oc --insecure-skip-tls-verify --request-timeout=5s adm release info -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get clusterrolebindings --all-namespaces -o json
+oc --insecure-skip-tls-verify --request-timeout=5s get --raw /openapi/v2
+INFO: gathering the audit logs for each master
+No resources found
+error: the server doesn't have a resource type "routes"
+No resources found
+error: the server doesn't have a resource type "routes"
+No resources found
+/logs/artifacts/network/multus_logs /
+[must-gather      ] OUT 2025-07-19T18:44:26.575462435Z the server could not find the requested resource (get imagestreams.image.openshift.io must-gather)
+[must-gather      ] OUT 2025-07-19T18:44:26.575477825Z 
+[must-gather      ] OUT 2025-07-19T18:44:26.575485345Z Using must-gather plug-in image: registry.redhat.io/openshift4/ose-must-gather:latest
+When opening a support case, bugzilla, or issue please include the following summary data along with any other requested information:
+ClusterID: 2c3c1152-cf7b-4b03-840a-c460b803b08b
+ClientVersion: 4.20.0-202507172323.p2.g68a8590.assembly.stream.el9-68a8590
+ClusterVersion: Installing "4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest" for 46 minutes: Unable to apply 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest: an unknown error has occurred: MultipleErrors
+ClusterOperators:
+	clusteroperator/authentication is not available (<missing>) because <missing>
+	clusteroperator/baremetal is not available (<missing>) because <missing>
+	clusteroperator/cloud-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/cluster-autoscaler is not available (<missing>) because <missing>
+	clusteroperator/config-operator is not available (<missing>) because <missing>
+	clusteroperator/console is not available (<missing>) because <missing>
+	clusteroperator/control-plane-machine-set is not available (<missing>) because <missing>
+	clusteroperator/csi-snapshot-controller is not available (<missing>) because <missing>
+	clusteroperator/dns is not available (<missing>) because <missing>
+	clusteroperator/etcd is not available (<missing>) because <missing>
+	clusteroperator/image-registry is not available (<missing>) because <missing>
+	clusteroperator/ingress is not available (<missing>) because <missing>
+	clusteroperator/insights is not available (<missing>) because <missing>
+	clusteroperator/kube-apiserver is not available (<missing>) because <missing>
+	clusteroperator/kube-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/kube-scheduler is not available (<missing>) because <missing>
+	clusteroperator/kube-storage-version-migrator is not available (<missing>) because <missing>
+	clusteroperator/machine-api is not available (<missing>) because <missing>
+	clusteroperator/machine-approver is not available (<missing>) because <missing>
+	clusteroperator/machine-config is not available (<missing>) because <missing>
+	clusteroperator/marketplace is not available (<missing>) because <missing>
+	clusteroperator/monitoring is not available (<missing>) because <missing>
+	clusteroperator/network is not available (<missing>) because <missing>
+	clusteroperator/node-tuning is not available (<missing>) because <missing>
+	clusteroperator/olm is not available (<missing>) because <missing>
+	clusteroperator/openshift-apiserver is not available (<missing>) because <missing>
+	clusteroperator/openshift-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/openshift-samples is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-catalog is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-packageserver is not available (<missing>) because <missing>
+	clusteroperator/service-ca is not available (<missing>) because <missing>
+	clusteroperator/storage is not available (<missing>) because <missing>
+
+
+[must-gather      ] OUT 2025-07-19T18:44:26.595663276Z namespace/openshift-must-gather-tlt27 created
+[must-gather      ] OUT 2025-07-19T18:44:26.600153206Z clusterrolebinding.rbac.authorization.k8s.io/must-gather-njn9n created
+[must-gather      ] OUT 2025-07-19T18:44:27.989286342Z namespace/openshift-must-gather-tlt27 deleted
+
+
+Reprinting Cluster State:
+When opening a support case, bugzilla, or issue please include the following summary data along with any other requested information:
+ClusterID: 2c3c1152-cf7b-4b03-840a-c460b803b08b
+ClientVersion: 4.20.0-202507172323.p2.g68a8590.assembly.stream.el9-68a8590
+ClusterVersion: Installing "4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest" for 46 minutes: Unable to apply 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest: an unknown error has occurred: MultipleErrors
+ClusterOperators:
+	clusteroperator/authentication is not available (<missing>) because <missing>
+	clusteroperator/baremetal is not available (<missing>) because <missing>
+	clusteroperator/cloud-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/cluster-autoscaler is not available (<missing>) because <missing>
+	clusteroperator/config-operator is not available (<missing>) because <missing>
+	clusteroperator/console is not available (<missing>) because <missing>
+	clusteroperator/control-plane-machine-set is not available (<missing>) because <missing>
+	clusteroperator/csi-snapshot-controller is not available (<missing>) because <missing>
+	clusteroperator/dns is not available (<missing>) because <missing>
+	clusteroperator/etcd is not available (<missing>) because <missing>
+	clusteroperator/image-registry is not available (<missing>) because <missing>
+	clusteroperator/ingress is not available (<missing>) because <missing>
+	clusteroperator/insights is not available (<missing>) because <missing>
+	clusteroperator/kube-apiserver is not available (<missing>) because <missing>
+	clusteroperator/kube-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/kube-scheduler is not available (<missing>) because <missing>
+	clusteroperator/kube-storage-version-migrator is not available (<missing>) because <missing>
+	clusteroperator/machine-api is not available (<missing>) because <missing>
+	clusteroperator/machine-approver is not available (<missing>) because <missing>
+	clusteroperator/machine-config is not available (<missing>) because <missing>
+	clusteroperator/marketplace is not available (<missing>) because <missing>
+	clusteroperator/monitoring is not available (<missing>) because <missing>
+	clusteroperator/network is not available (<missing>) because <missing>
+	clusteroperator/node-tuning is not available (<missing>) because <missing>
+	clusteroperator/olm is not available (<missing>) because <missing>
+	clusteroperator/openshift-apiserver is not available (<missing>) because <missing>
+	clusteroperator/openshift-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/openshift-samples is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-catalog is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-packageserver is not available (<missing>) because <missing>
+	clusteroperator/service-ca is not available (<missing>) because <missing>
+	clusteroperator/storage is not available (<missing>) because <missing>
+
+
+Error from server (Forbidden): pods "must-gather-" is forbidden: error looking up service account openshift-must-gather-tlt27/default: serviceaccount "default" not found
+{"component":"entrypoint","error":"wrapped process failed: exit status 123","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:44:28Z"}
+error: failed to execute wrapped command: exit status 123 
+[36mINFO[0m[2025-07-19T18:44:28Z] Step launch-gather-extra failed after 16s.   
+[36mINFO[0m[2025-07-19T18:44:28Z] Pod launch-gather-extra is running in best-effort mode, ignoring the failure... 
+[36mINFO[0m[2025-07-19T18:44:28Z] Running step launch-gather-audit-logs.       
+[36mINFO[0m[2025-07-19T18:44:36Z] Logs for container test in pod launch-gather-audit-logs: 
+[36mINFO[0m[2025-07-19T18:44:36Z] [must-gather      ] OUT 2025-07-19T18:44:35.109124812Z the server could not find the requested resource (get imagestreams.image.openshift.io must-gather)
+[must-gather      ] OUT 2025-07-19T18:44:35.109148812Z 
+[must-gather      ] OUT 2025-07-19T18:44:35.109155342Z Using must-gather plug-in image: registry.redhat.io/openshift4/ose-must-gather:latest
+When opening a support case, bugzilla, or issue please include the following summary data along with any other requested information:
+ClusterID: 2c3c1152-cf7b-4b03-840a-c460b803b08b
+ClientVersion: 4.20.0-202507172323.p2.g68a8590.assembly.stream.el9-68a8590
+ClusterVersion: Installing "4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest" for 46 minutes: Unable to apply 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest: an unknown error has occurred: MultipleErrors
+ClusterOperators:
+	clusteroperator/authentication is not available (<missing>) because <missing>
+	clusteroperator/baremetal is not available (<missing>) because <missing>
+	clusteroperator/cloud-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/cluster-autoscaler is not available (<missing>) because <missing>
+	clusteroperator/config-operator is not available (<missing>) because <missing>
+	clusteroperator/console is not available (<missing>) because <missing>
+	clusteroperator/control-plane-machine-set is not available (<missing>) because <missing>
+	clusteroperator/csi-snapshot-controller is not available (<missing>) because <missing>
+	clusteroperator/dns is not available (<missing>) because <missing>
+	clusteroperator/etcd is not available (<missing>) because <missing>
+	clusteroperator/image-registry is not available (<missing>) because <missing>
+	clusteroperator/ingress is not available (<missing>) because <missing>
+	clusteroperator/insights is not available (<missing>) because <missing>
+	clusteroperator/kube-apiserver is not available (<missing>) because <missing>
+	clusteroperator/kube-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/kube-scheduler is not available (<missing>) because <missing>
+	clusteroperator/kube-storage-version-migrator is not available (<missing>) because <missing>
+	clusteroperator/machine-api is not available (<missing>) because <missing>
+	clusteroperator/machine-approver is not available (<missing>) because <missing>
+	clusteroperator/machine-config is not available (<missing>) because <missing>
+	clusteroperator/marketplace is not available (<missing>) because <missing>
+	clusteroperator/monitoring is not available (<missing>) because <missing>
+	clusteroperator/network is not available (<missing>) because <missing>
+	clusteroperator/node-tuning is not available (<missing>) because <missing>
+	clusteroperator/olm is not available (<missing>) because <missing>
+	clusteroperator/openshift-apiserver is not available (<missing>) because <missing>
+	clusteroperator/openshift-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/openshift-samples is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-catalog is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-packageserver is not available (<missing>) because <missing>
+	clusteroperator/service-ca is not available (<missing>) because <missing>
+	clusteroperator/storage is not available (<missing>) because <missing>
+
+
+[must-gather      ] OUT 2025-07-19T18:44:35.123084582Z namespace/openshift-must-gather-nq4lb created
+[must-gather      ] OUT 2025-07-19T18:44:35.126071522Z clusterrolebinding.rbac.authorization.k8s.io/must-gather-2j84d created
+[must-gather      ] OUT 2025-07-19T18:44:36.125870089Z namespace/openshift-must-gather-nq4lb deleted
+
+
+Reprinting Cluster State:
+When opening a support case, bugzilla, or issue please include the following summary data along with any other requested information:
+ClusterID: 2c3c1152-cf7b-4b03-840a-c460b803b08b
+ClientVersion: 4.20.0-202507172323.p2.g68a8590.assembly.stream.el9-68a8590
+ClusterVersion: Installing "4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest" for 46 minutes: Unable to apply 4.20.0-0-2025-07-19-174253-test-ci-ln-nzblk3k-latest: an unknown error has occurred: MultipleErrors
+ClusterOperators:
+	clusteroperator/authentication is not available (<missing>) because <missing>
+	clusteroperator/baremetal is not available (<missing>) because <missing>
+	clusteroperator/cloud-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/cluster-autoscaler is not available (<missing>) because <missing>
+	clusteroperator/config-operator is not available (<missing>) because <missing>
+	clusteroperator/console is not available (<missing>) because <missing>
+	clusteroperator/control-plane-machine-set is not available (<missing>) because <missing>
+	clusteroperator/csi-snapshot-controller is not available (<missing>) because <missing>
+	clusteroperator/dns is not available (<missing>) because <missing>
+	clusteroperator/etcd is not available (<missing>) because <missing>
+	clusteroperator/image-registry is not available (<missing>) because <missing>
+	clusteroperator/ingress is not available (<missing>) because <missing>
+	clusteroperator/insights is not available (<missing>) because <missing>
+	clusteroperator/kube-apiserver is not available (<missing>) because <missing>
+	clusteroperator/kube-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/kube-scheduler is not available (<missing>) because <missing>
+	clusteroperator/kube-storage-version-migrator is not available (<missing>) because <missing>
+	clusteroperator/machine-api is not available (<missing>) because <missing>
+	clusteroperator/machine-approver is not available (<missing>) because <missing>
+	clusteroperator/machine-config is not available (<missing>) because <missing>
+	clusteroperator/marketplace is not available (<missing>) because <missing>
+	clusteroperator/monitoring is not available (<missing>) because <missing>
+	clusteroperator/network is not available (<missing>) because <missing>
+	clusteroperator/node-tuning is not available (<missing>) because <missing>
+	clusteroperator/olm is not available (<missing>) because <missing>
+	clusteroperator/openshift-apiserver is not available (<missing>) because <missing>
+	clusteroperator/openshift-controller-manager is not available (<missing>) because <missing>
+	clusteroperator/openshift-samples is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-catalog is not available (<missing>) because <missing>
+	clusteroperator/operator-lifecycle-manager-packageserver is not available (<missing>) because <missing>
+	clusteroperator/service-ca is not available (<missing>) because <missing>
+	clusteroperator/storage is not available (<missing>) because <missing>
+
+
+Error from server (Forbidden): pods "must-gather-" is forbidden: error looking up service account openshift-must-gather-nq4lb/default: serviceaccount "default" not found
+{"component":"entrypoint","error":"wrapped process failed: exit status 1","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:44:36Z"}
+error: failed to execute wrapped command: exit status 1 
+[36mINFO[0m[2025-07-19T18:44:36Z] Step launch-gather-audit-logs failed after 8s. 
+[36mINFO[0m[2025-07-19T18:44:36Z] Pod launch-gather-audit-logs is running in best-effort mode, ignoring the failure... 
+[36mINFO[0m[2025-07-19T18:44:36Z] Running step launch-ipi-deprovision-deprovision. 
+[36mINFO[0m[2025-07-19T18:50:17Z] Step launch-ipi-deprovision-deprovision succeeded after 5m40s. 
+[36mINFO[0m[2025-07-19T18:50:17Z] Running step launch-aws-deprovision-users-and-policies. 
+[36mINFO[0m[2025-07-19T18:50:25Z] Step launch-aws-deprovision-users-and-policies succeeded after 8s. 
+[36mINFO[0m[2025-07-19T18:50:25Z] Step phase post failed after 6m45s.          
+[36mINFO[0m[2025-07-19T18:50:25Z] Releasing leases for test launch             
+[36mINFO[0m[2025-07-19T18:50:25Z] Ran for 1h7m32s                              
+[31mERRO[0m[2025-07-19T18:50:25Z] Some steps failed:                           
+[31mERRO[0m[2025-07-19T18:50:25Z] 
+  * could not run steps: step launch failed: ["launch" pre steps failed: "launch" pod "launch-ipi-install-install" failed: could not watch pod: the pod ci-ln-nzblk3k/launch-ipi-install-install failed after 57m34s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 5, reason Error
+---
+acts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-1.yaml'
+'/tmp/installer/.clusterapi_output/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Machine-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master-2.yaml'
+'/tmp/installer/.clusterapi_output/Namespace--openshift-cluster-api-guests.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Namespace--openshift-cluster-api-guests.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-bootstrap.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-master.yaml'
+'/tmp/installer/.clusterapi_output/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-worker.yaml' -> '/logs/artifacts/clusterapi_output-1752950586/Secret-openshift-cluster-api-guests-ci-ln-nzblk3k-76ef8-jtx4b-worker.yaml'
+Copying required artifacts to shared dir
+level=info msg=Use the following commands to gather logs from the cluster
+level=info msg=openshift-install gather bootstrap --help
+level=error msg=Bootstrap failed to complete: timed out waiting for the condition
+level=error msg=Failed to wait for bootstrapping to complete. This error usually happens when there is a problem with control plane hosts that prevents the control plane operators from creating the control plane.
+{"component":"entrypoint","error":"wrapped process failed: exit status 5","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:43:39Z"}
+error: failed to execute wrapped command: exit status 5
+---
+Link to step on registry info site: https://steps.ci.openshift.org/reference/ipi-install-install
+Link to job on registry info site: https://steps.ci.openshift.org/job?org=&repo=&branch=&test=launch, "launch" post steps failed: "launch" pod "launch-gather-aws-console" failed: could not watch pod: the pod ci-ln-nzblk3k/launch-gather-aws-console failed after 7s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 1, reason Error
+---
+aws-cli/2.27.27 Python/3.13.3 Linux/5.14.0-427.70.1.el9_4.x86_64 exe/x86_64.rhel.8
+Installed locales
+C
+C.utf8
+POSIX
+en_AG
+en_AU
+en_AU.utf8
+en_BW
+en_BW.utf8
+en_CA
+en_CA.utf8
+en_DK
+en_DK.utf8
+en_GB
+en_GB.iso885915
+en_GB.utf8
+en_HK
+en_HK.utf8
+en_IE
+en_IE.utf8
+en_IE@euro
+en_IL
+en_IN
+en_NG
+en_NZ
+en_NZ.utf8
+en_PH
+en_PH.utf8
+en_SC.utf8
+en_SG
+en_SG.utf8
+en_US
+en_US.iso885915
+en_US.utf8
+en_US.utf8@ampm
+en_US@ampm
+en_ZA
+en_ZA.utf8
+en_ZM
+en_ZW
+en_ZW.utf8
+{"component":"entrypoint","error":"wrapped process failed: exit status 1","file":"sigs.k8s.io/prow/pkg/entrypoint/run.go:84","func":"sigs.k8s.io/prow/pkg/entrypoint.Options.internalRun","level":"error","msg":"Error executing test process","severity":"error","time":"2025-07-19T18:43:50Z"}
+error: failed to execute wrapped command: exit status 1
+---
+Link to step on registry info site: https://steps.ci.openshift.org/reference/gather-aws-console
+Link to job on registry info site: https://steps.ci.openshift.org/job?org=&repo=&branch=&test=launch] 

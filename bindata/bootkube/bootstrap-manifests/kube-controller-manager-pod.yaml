@@ -46,6 +46,8 @@ spec:
       name: tmp
     - mountPath: /etc/pki/ca-trust/extracted/pem
       name: ca-trust
+    - mountPath: /var/run/kubernetes
+      name: var-run-kubernetes
     securityContext:
       readOnlyRootFilesystem: true
     startupProbe:
@@ -112,6 +114,8 @@ spec:
       name: tmp
     - mountPath: /etc/pki/ca-trust/extracted/pem
       name: ca-trust
+    - mountPath: /var/run/kubernetes
+      name: var-run-kubernetes
     securityContext:
       readOnlyRootFilesystem: true
     startupProbe:
@@ -155,3 +159,5 @@ spec:
     name: tmp
   - emptyDir: {}
     name: ca-trust
+  - emptyDir: {}
+    name: var-run-kubernetes
