@@ -48,6 +48,12 @@ spec:
       name: resource-dir
     - mountPath: /etc/kubernetes/static-pod-certs
       name: cert-dir
+    - mountPath: /tmp
+      name: tmp-dir
+    - mountPath: /etc/pki/ca-trust/extracted/pem
+      name: ca-trust-dir
+    - mountPath: /var/run/kubernetes
+      name: var-run-kubernetes
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -69,6 +75,8 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
+    securityContext:
+      readOnlyRootFilesystem: true
   - name: cluster-policy-controller
     env:
       - name: POD_NAME
@@ -101,6 +109,12 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
+      - mountPath: /var/run/kubernetes
+        name: var-run-kubernetes
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -122,6 +136,8 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
+    securityContext:
+      readOnlyRootFilesystem: true
   - name: kube-controller-manager-cert-syncer
     env:
       - name: POD_NAME
@@ -149,6 +165,14 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
+      - mountPath: /var/run/kubernetes
+        name: var-run-kubernetes
+    securityContext:
+      readOnlyRootFilesystem: true
   - name: kube-controller-manager-recovery-controller
     env:
     - name: POD_NAMESPACE
@@ -173,6 +197,14 @@ spec:
         name: resource-dir
       - mountPath: /etc/kubernetes/static-pod-certs
         name: cert-dir
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /etc/pki/ca-trust/extracted/pem
+        name: ca-trust-dir
+      - mountPath: /var/run/kubernetes
+        name: var-run-kubernetes
+    securityContext:
+      readOnlyRootFilesystem: true
   hostNetwork: true
   priorityClassName: system-node-critical
   tolerations:
@@ -184,3 +216,9 @@ spec:
   - hostPath:
       path: /etc/kubernetes/static-pod-resources/kube-controller-manager-certs
     name: cert-dir
+  - emptyDir: {}
+    name: tmp-dir
+  - emptyDir: {}
+    name: ca-trust-dir
+  - emptyDir: {}
+    name: var-run-kubernetes
