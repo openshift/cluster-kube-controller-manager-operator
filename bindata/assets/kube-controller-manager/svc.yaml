@@ -14,3 +14,6 @@ spec:
   - name: https
     port: 443
     targetPort: 10257
+  - name: cluster-policy-https
+    port: 10357
+    targetPort: 10357
