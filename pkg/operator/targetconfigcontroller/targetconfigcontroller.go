@@ -710,6 +710,7 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		lister,
 		certrotation.AdditionalAnnotations{
 			JiraComponent: "kube-controller-manager",
+			Description:   "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
 		},
 		// include the CA we use to sign CSRs
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
