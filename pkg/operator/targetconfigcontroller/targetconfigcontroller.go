@@ -687,6 +687,8 @@ func GetKubeControllerManagerArgs(config map[string]interface{}) []string {
 }
 
 func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	klog.Infof("manageServiceAccountCABundle+")
+
 	additionalAnnotations := certrotation.AdditionalAnnotations{
 		JiraComponent: "kube-controller-manager",
 	}
@@ -706,8 +708,10 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 			},
 		}
 	case err != nil:
+		klog.Infof("manageServiceAccountCABundle-: get error: %v", err)
 		return nil, false, err
 	}
+	klog.Infof("manageServiceAccountCABundle: caBundleConfigMap %#v", caBundleConfigMap)
 
 	requiredConfigMap, updateRequired, err := resourcesynccontroller.CombineCABundleConfigMapsOptimistically(
 		caBundleConfigMap,
@@ -720,31 +724,40 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "default-ingress-cert"},
 	)
 	if err != nil {
+		klog.Infof("manageServiceAccountCABundle-: combine error: %v", err)
 		return nil, false, err
 	}
+
+	klog.Infof("manageServiceAccountCABundle: requiredConfigMap %#v", requiredConfigMap)
+	klog.Infof("manageServiceAccountCABundle: updateRequired %#v", updateRequired)
 
 	if creationRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.TargetNamespace).Create(ctx, requiredConfigMap, metav1.CreateOptions{})
 		resourcehelper.ReportCreateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
+			klog.Infof("manageServiceAccountCABundle-: create error: %v", err)
 			return nil, false, err
 		}
-		klog.V(2).Infof("Created serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("manageServiceAccountCABundle: Created serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
 		return caBundleConfigMap, true, nil
 	} else if updateRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.TargetNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
 		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
+			klog.Infof("manageServiceAccountCABundle-: update error: %v", err)
 			return nil, false, err
 		}
-		klog.V(2).Infof("Updated serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("manageServiceAccountCABundle: Updated serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
 		return caBundleConfigMap, true, nil
 	}
 
+	klog.Infof("manageServiceAccountCABundle-")
 	return caBundleConfigMap, false, nil
 }
 
 func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	klog.Infof("ManageCSRCABundle+")
+
 	additionalAnnotations := certrotation.AdditionalAnnotations{
 		JiraComponent: "kube-controller-manager",
 		Description:   "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
@@ -765,8 +778,11 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 			},
 		}
 	case err != nil:
+		klog.Infof("ManageCSRCABundle- get error %v", err)
 		return nil, false, err
 	}
+
+	klog.Infof("ManageCSRCABundle: caBundleConfigMap %#v", caBundleConfigMap)
 
 	requiredConfigMap, updateRequired, err := resourcesynccontroller.CombineCABundleConfigMapsOptimistically(
 		caBundleConfigMap,
@@ -778,26 +794,35 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-signer-ca"},
 	)
 	if err != nil {
+		klog.Infof("ManageCSRCABundle- combine error: %v", err)
 		return nil, false, err
 	}
+	klog.Infof("ManageCSRCABundle: requiredConfigMap %#v", requiredConfigMap)
+	klog.Infof("ManageCSRCABundle: updateRequired %#v", updateRequired)
+
 	if creationRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Create(ctx, requiredConfigMap, metav1.CreateOptions{})
 		resourcehelper.ReportCreateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
+			klog.Infof("ManageCSRCABundle- create error")
 			return nil, false, err
 		}
-		klog.V(2).Infof("Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("ManageCSRCABundle: Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("ManageCSRCABundle- created")
 		return caBundleConfigMap, true, nil
 	} else if updateRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
 		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
+			klog.Infof("ManageCSRCABundle- update error")
 			return nil, false, err
 		}
-		klog.V(2).Infof("Updated CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("ManageCSRCABundle: Updated CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("ManageCSRCABundle- updated")
 		return caBundleConfigMap, true, nil
 	}
 
+	klog.Infof("ManageCSRCABundle-")
 	return caBundleConfigMap, false, nil
 }
 
