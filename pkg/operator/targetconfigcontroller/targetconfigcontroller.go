@@ -37,6 +37,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
+	"github.com/openshift/library-go/pkg/operator/resource/resourcehelper"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
@@ -673,12 +674,32 @@ func GetKubeControllerManagerArgs(config map[string]interface{}) []string {
 }
 
 func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "serviceaccount-ca"},
+	additionalAnnotations := certrotation.AdditionalAnnotations{
+		JiraComponent: "kube-controller-manager",
+	}
+	caBundleConfigMapName := "serviceaccount-ca"
+
+	creationRequired := false
+	updateRequired := false
+
+	caBundleConfigMap, err := lister.ConfigMaps(operatorclient.TargetNamespace).Get(caBundleConfigMapName)
+	switch {
+	case apierrors.IsNotFound(err):
+		creationRequired = true
+		caBundleConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      caBundleConfigMapName,
+				Namespace: operatorclient.TargetNamespace,
+			},
+		}
+	case err != nil:
+		return nil, false, err
+	}
+
+	requiredConfigMap, updateRequired, err := resourcesynccontroller.CombineCABundleConfigMapsOptimistically(
+		caBundleConfigMap,
 		lister,
-		certrotation.AdditionalAnnotations{
-			JiraComponent: "kube-controller-manager",
-		},
+		additionalAnnotations,
 		// include the ca bundle needed to recognize the server
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-apiserver-server-ca"},
 		// include the ca bundle needed to recognize default
@@ -688,16 +709,56 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
+
+	if creationRequired {
+		caBundleConfigMap, err = client.ConfigMaps(operatorclient.TargetNamespace).Create(ctx, requiredConfigMap, metav1.CreateOptions{})
+		resourcehelper.ReportCreateEvent(recorder, caBundleConfigMap, err)
+		if err != nil {
+			return nil, false, err
+		}
+		klog.V(2).Infof("Created serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		return caBundleConfigMap, true, nil
+	} else if updateRequired {
+		caBundleConfigMap, err = client.ConfigMaps(operatorclient.TargetNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
+		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
+		if err != nil {
+			return nil, false, err
+		}
+		klog.V(2).Infof("Updated serviceaccount CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		return caBundleConfigMap, true, nil
+	}
+
+	return caBundleConfigMap, false, nil
 }
 
 func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	requiredConfigMap, err := resourcesynccontroller.CombineCABundleConfigMaps(
-		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
+	additionalAnnotations := certrotation.AdditionalAnnotations{
+		JiraComponent: "kube-controller-manager",
+		Description:   "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+	}
+	caBundleConfigMapName := "csr-controller-ca"
+
+	creationRequired := false
+	updateRequired := false
+
+	caBundleConfigMap, err := lister.ConfigMaps(operatorclient.OperatorNamespace).Get(caBundleConfigMapName)
+	switch {
+	case apierrors.IsNotFound(err):
+		creationRequired = true
+		caBundleConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      caBundleConfigMapName,
+				Namespace: operatorclient.OperatorNamespace,
+			},
+		}
+	case err != nil:
+		return nil, false, err
+	}
+
+	requiredConfigMap, updateRequired, err := resourcesynccontroller.CombineCABundleConfigMapsOptimistically(
+		caBundleConfigMap,
 		lister,
-		certrotation.AdditionalAnnotations{
-			JiraComponent: "kube-controller-manager",
-		},
+		additionalAnnotations,
 		// include the CA we use to sign CSRs
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-signer-ca"},
 		// include the CA we use to sign the cert key pairs from from csr-signer
@@ -706,7 +767,25 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
+	if creationRequired {
+		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Create(ctx, requiredConfigMap, metav1.CreateOptions{})
+		resourcehelper.ReportCreateEvent(recorder, caBundleConfigMap, err)
+		if err != nil {
+			return nil, false, err
+		}
+		klog.V(2).Infof("Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		return caBundleConfigMap, true, nil
+	} else if updateRequired {
+		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
+		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
+		if err != nil {
+			return nil, false, err
+		}
+		klog.V(2).Infof("Updated CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		return caBundleConfigMap, true, nil
+	}
+
+	return caBundleConfigMap, false, nil
 }
 
 func ManageCSRSigner(ctx context.Context, lister corev1listers.SecretLister, client corev1client.SecretsGetter, recorder events.Recorder) (*corev1.Secret, time.Duration, bool, error) {
