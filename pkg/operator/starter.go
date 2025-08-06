@@ -54,7 +54,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	if err != nil {
 		return err
 	}
-
+	clusterInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, "")
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
@@ -199,7 +199,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	}
 	versionRecorder.SetVersion("raw-internal", status.VersionForOperatorFromEnv())
 
-	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces, configInformers, cc.Clock).
+	staticPodControllers, err := staticpod.NewBuilder(operatorClient, kubeClient, kubeInformersForNamespaces, clusterInformers.InformersFor(""), configInformers, cc.Clock).
 		WithEvents(cc.EventRecorder).
 		WithInstaller([]string{"cluster-kube-controller-manager-operator", "installer"}).
 		WithPruning([]string{"cluster-kube-controller-manager-operator", "prune"}, "kube-controller-manager-pod").
@@ -287,6 +287,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	})
 
 	configInformers.Start(ctx.Done())
+	clusterInformers.Start(ctx.Done())
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
 
