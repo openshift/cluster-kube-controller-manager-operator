@@ -48,14 +48,6 @@ spec:
       name: resource-dir
     - mountPath: /etc/kubernetes/static-pod-certs
       name: cert-dir
-    - mountPath: /tmp
-      name: tmp-dir
-    - mountPath: /etc/pki/ca-trust/extracted/pem
-      name: ca-trust-dir
-    - mountPath: /var/run/kubernetes
-      name: var-run-kubernetes
-    - mountPath: /etc/kubernetes/kubelet-plugins
-      name: kubelet-plugins
     startupProbe:
       httpGet:
         scheme: HTTPS
@@ -77,8 +69,6 @@ spec:
         path: healthz
       initialDelaySeconds: 10
       timeoutSeconds: 10
-    securityContext:
-      readOnlyRootFilesystem: true
   - name: cluster-policy-controller
     env:
       - name: POD_NAME

@@ -42,14 +42,6 @@ spec:
       readOnly: true
     - mountPath: /var/log/bootstrap-control-plane
       name: logs
-    - mountPath: /tmp
-      name: tmp
-    - mountPath: /etc/pki/ca-trust/extracted/pem
-      name: ca-trust
-    - mountPath: /var/run/kubernetes
-      name: var-run-kubernetes
-    securityContext:
-      readOnlyRootFilesystem: true
     startupProbe:
       httpGet:
         scheme: HTTPS
