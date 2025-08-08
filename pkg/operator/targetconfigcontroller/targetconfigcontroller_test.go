@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -14,11 +15,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openshift/api/annotations"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -427,6 +431,647 @@ func TestReadKubeControllerManagerArgs(t *testing.T) {
 			output := GetKubeControllerManagerArgs(tc.input)
 			if !reflect.DeepEqual(output, tc.expected) {
 				t.Errorf("Unexpected difference between %s and %s", tc.expected, output)
+			}
+		})
+	}
+}
+
+type configMapLister struct {
+	client    *fake.Clientset
+	namespace string
+}
+
+var _ corev1listers.ConfigMapNamespaceLister = &configMapLister{}
+var _ corev1listers.ConfigMapLister = &configMapLister{}
+
+func (l *configMapLister) List(selector labels.Selector) (ret []*corev1.ConfigMap, err error) {
+	list, err := l.client.CoreV1().ConfigMaps(l.namespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+
+	var items []*corev1.ConfigMap
+	for i := range list.Items {
+		items = append(items, &list.Items[i])
+	}
+
+	return items, err
+}
+
+func (l *configMapLister) ConfigMaps(namespace string) corev1listers.ConfigMapNamespaceLister {
+	return &configMapLister{
+		client:    l.client,
+		namespace: namespace,
+	}
+}
+
+func (l *configMapLister) Get(name string) (*corev1.ConfigMap, error) {
+	return l.client.CoreV1().ConfigMaps(l.namespace).Get(context.Background(), name, metav1.GetOptions{})
+}
+
+// generateTemporaryCertificate creates a new temporary, self-signed x509 certificate
+// and a corresponding RSA private key. The certificate will be valid for 24 hours.
+// It returns the PEM-encoded private key and certificate.
+func generateTemporaryCertificate() (certPEM []byte, err error) {
+	// 1. Generate a new RSA private key
+	// We are using a 2048-bit key, which is a common and secure choice.
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Create a template for the certificate
+	// This template contains all the details about the certificate.
+	certTemplate := x509.Certificate{
+		// SerialNumber is a unique number for the certificate.
+		// We generate a large random number to ensure uniqueness.
+		SerialNumber: big.NewInt(time.Now().Unix()),
+
+		// Subject contains information about the owner of the certificate.
+		Subject: pkix.Name{
+			Organization: []string{"My Company, Inc."},
+			Country:      []string{"US"},
+			Province:     []string{"California"},
+			Locality:     []string{"San Francisco"},
+			CommonName:   "localhost", // Common Name (CN)
+		},
+
+		// NotBefore is the start time of the certificate's validity.
+		NotBefore: time.Now(),
+		// NotAfter is the end time. We set it to 24 hours from now.
+		NotAfter: time.Now().Add(24 * time.Hour),
+
+		// KeyUsage defines the purpose of the public key contained in the certificate.
+		KeyUsage: x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		// ExtKeyUsage indicates extended purposes (e.g., server/client authentication).
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+
+		// BasicConstraintsValid indicates if this is a CA certificate.
+		// Since this is a self-signed certificate, we set it to true.
+		BasicConstraintsValid: true,
+	}
+
+	// 3. Create the certificate
+	// x509.CreateCertificate creates a new certificate based on a template.
+	// Since this is a self-signed certificate, the parent certificate is the template itself.
+	// We use the public key from our generated private key.
+	// The final argument is the private key used to sign the certificate.
+	certBytes, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Encode the certificate to the PEM format
+	certPEM = pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
+
+	return certPEM, nil
+}
+
+func TestManageServiceAccountCABundle(t *testing.T) {
+	cert1, err := generateTemporaryCertificate()
+	require.NoError(t, err)
+
+	cert2, err := generateTemporaryCertificate()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		existingConfigMaps []*corev1.ConfigMap
+		expectedConfigMap  *corev1.ConfigMap
+		expectedChanged    bool
+	}{
+		{
+			name:               "create new serviceaccount-ca configmap when none exists",
+			existingConfigMaps: []*corev1.ConfigMap{},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "",
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "one source",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-server-ca",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "set annotations if missing",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "serviceaccount-ca",
+						Namespace:   operatorclient.TargetNamespace,
+						Annotations: map[string]string{},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-server-ca",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "annotations update",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "serviceaccount-ca",
+						Namespace: operatorclient.TargetNamespace,
+						Annotations: map[string]string{
+							"foo": "bar",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-server-ca",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+						"foo":                          "bar",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "update existing client-ca configmap when new source appears",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "serviceaccount-ca",
+						Namespace: operatorclient.TargetNamespace,
+						Annotations: map[string]string{
+							annotations.OpenShiftComponent: "kube-controller-manager",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-server-ca",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				// Add a new source that wasn't in the original bundle
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "default-ingress-cert",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert2),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1) + string(cert2),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "no changes required",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "serviceaccount-ca",
+						Namespace: operatorclient.TargetNamespace,
+						Annotations: map[string]string{
+							annotations.OpenShiftComponent: "kube-controller-manager",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-server-ca",
+						Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "serviceaccount-ca",
+					Namespace: operatorclient.TargetNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent: "kube-controller-manager",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := fake.NewSimpleClientset()
+
+			// Create existing configmaps
+			for _, cm := range test.existingConfigMaps {
+				_, err := client.CoreV1().ConfigMaps(cm.Namespace).Create(context.Background(), cm, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			lister := &configMapLister{
+				client:    client,
+				namespace: "",
+			}
+
+			recorder := events.NewInMemoryRecorder("test", clock.RealClock{})
+
+			// Call the function under test
+			resultConfigMap, changed, err := manageServiceAccountCABundle(context.Background(), lister, client.CoreV1(), recorder)
+
+			// Assert error expectations
+			require.NoError(t, err)
+
+			// Assert change expectations
+			require.Equal(t, test.expectedChanged, changed, "Expected changed=%v, got changed=%v", test.expectedChanged, changed)
+
+			// Compare with expected configmap
+			require.Equal(t, test.expectedConfigMap, resultConfigMap)
+
+			// Verify the configmap exists in the cluster
+			storedConfigMap, err := client.CoreV1().ConfigMaps(operatorclient.TargetNamespace).Get(context.Background(), "serviceaccount-ca", metav1.GetOptions{})
+			require.NoError(t, err)
+			require.NotNil(t, storedConfigMap)
+
+			// Ensure the returned configmap matches what's stored in the cluster
+			require.Equal(t, storedConfigMap, resultConfigMap, "returned configmap should match stored configmap")
+
+			// Verify events were recorded if changes were made
+			if test.expectedChanged {
+				events := recorder.Events()
+				require.NotEmpty(t, events)
+			}
+		})
+	}
+}
+
+func TestManageCSRCABundle(t *testing.T) {
+	cert1, err := generateTemporaryCertificate()
+	require.NoError(t, err)
+
+	cert2, err := generateTemporaryCertificate()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		existingConfigMaps []*corev1.ConfigMap
+		expectedConfigMap  *corev1.ConfigMap
+		expectedChanged    bool
+	}{
+		{
+			name:               "create new csr-controller-ca configmap when none exists",
+			existingConfigMaps: []*corev1.ConfigMap{},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "",
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "one source",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "set annotations if missing",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "csr-controller-ca",
+						Namespace:   operatorclient.OperatorNamespace,
+						Annotations: map[string]string{},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "annotations update",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-controller-ca",
+						Namespace: operatorclient.OperatorNamespace,
+						Annotations: map[string]string{
+							"foo": "bar",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+						"foo":                            "bar",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "update existing client-ca configmap when new source appears",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-controller-ca",
+						Namespace: operatorclient.OperatorNamespace,
+						Annotations: map[string]string{
+							annotations.OpenShiftComponent:   "kube-controller-manager",
+							annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				// Add a new source that wasn't in the original bundle
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-controller-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert2),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1) + string(cert2),
+				},
+			},
+			expectedChanged: true,
+		},
+		{
+			name: "no changes required",
+			existingConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-controller-ca",
+						Namespace: operatorclient.OperatorNamespace,
+						Annotations: map[string]string{
+							annotations.OpenShiftComponent:   "kube-controller-manager",
+							annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+						},
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csr-signer-ca",
+						Namespace: operatorclient.OperatorNamespace,
+					},
+					Data: map[string]string{
+						"ca-bundle.crt": string(cert1),
+					},
+				},
+			},
+			expectedConfigMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "csr-controller-ca",
+					Namespace: operatorclient.OperatorNamespace,
+					Annotations: map[string]string{
+						annotations.OpenShiftComponent:   "kube-controller-manager",
+						annotations.OpenShiftDescription: "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": string(cert1),
+				},
+			},
+			expectedChanged: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := fake.NewSimpleClientset()
+
+			// Create existing configmaps
+			for _, cm := range test.existingConfigMaps {
+				_, err := client.CoreV1().ConfigMaps(cm.Namespace).Create(context.Background(), cm, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			lister := &configMapLister{
+				client:    client,
+				namespace: "",
+			}
+
+			recorder := events.NewInMemoryRecorder("test", clock.RealClock{})
+
+			// Call the function under test
+			resultConfigMap, changed, err := ManageCSRCABundle(context.Background(), lister, client.CoreV1(), recorder)
+
+			// Assert error expectations
+			require.NoError(t, err)
+
+			// Assert change expectations
+			require.Equal(t, test.expectedChanged, changed, "Expected changed=%v, got changed=%v", test.expectedChanged, changed)
+
+			// Compare with expected configmap
+			require.Equal(t, test.expectedConfigMap, resultConfigMap)
+
+			// Verify the configmap exists in the cluster
+			storedConfigMap, err := client.CoreV1().ConfigMaps(operatorclient.OperatorNamespace).Get(context.Background(), "csr-controller-ca", metav1.GetOptions{})
+			require.NoError(t, err)
+			require.NotNil(t, storedConfigMap)
+
+			// Ensure the returned configmap matches what's stored in the cluster
+			require.Equal(t, storedConfigMap, resultConfigMap, "returned configmap should match stored configmap")
+
+			// Verify events were recorded if changes were made
+			if test.expectedChanged {
+				events := recorder.Events()
+				require.NotEmpty(t, events)
 			}
 		})
 	}
