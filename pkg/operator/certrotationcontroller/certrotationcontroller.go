@@ -107,10 +107,11 @@ func newCertRotationController(
 			AdditionalAnnotations: certrotation.AdditionalAnnotations{
 				JiraComponent: "kube-controller-manager",
 			},
-			Informer:      kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps(),
-			Lister:        kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister(),
-			Client:        configMapsGetter,
-			EventRecorder: eventRecorder,
+			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps(),
+			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister(),
+			Client:                 configMapsGetter,
+			EventRecorder:          eventRecorder,
 		},
 		certrotation.RotatedSelfSignedCertKeySecret{
 			Namespace: operatorclient.OperatorNamespace,
