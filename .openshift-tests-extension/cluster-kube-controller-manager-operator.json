@@ -1,0 +1,12 @@
+{
+  "component": "cluster-kube-controller-manager-operator",
+  "generated": "2025-08-18T12:00:00Z",
+  "removedTests": [],
+  "tests": [
+    {
+      "name": "[Jira:kube-controller-manager][sig-api-machinery] sanity test should always pass [Suite:openshift/cluster-kube-controller-manager-operator/conformance/parallel]",
+      "originalName": "",
+      "source": "openshift:payload:cluster-kube-controller-manager-operator"
+    }
+  ]
+}

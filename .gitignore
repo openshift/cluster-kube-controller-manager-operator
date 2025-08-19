@@ -1,4 +1,5 @@
 /cluster-kube-controller-manager-operator
+/cluster-kube-controller-manager-operator-tests-ext
 .idea/
 _output
 telepresence.log

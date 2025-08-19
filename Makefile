@@ -38,3 +38,13 @@ test-e2e-preferred-host: test-unit
 # See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
 export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
 export TP_CMD_PATH ?=./cmd/cluster-kube-controller-manager-operator
+
+# Build the openshift-tests-extension binary
+tests-ext-build:
+	GOOS=linux GOARCH=amd64 GO_COMPLIANCE_POLICY=exempt_all CGO_ENABLED=0 \
+	go build -o cluster-kube-controller-manager-operator-tests-ext \
+	-ldflags "-X 'main.CommitFromGit=$(shell git rev-parse --short HEAD)' \
+	-X 'main.BuildDate=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)' \
+	-X 'main.GitTreeState=$(shell if git diff-index --quiet HEAD --; then echo clean; else echo dirty; fi)'" \
+	./cmd/cluster-kube-controller-manager-operator-tests-ext
+.PHONY: tests-ext-build
