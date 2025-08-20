@@ -3,3 +3,4 @@
 .idea/
 _output
 telepresence.log
+.openshift-tests-extension/openshift_payload_*.json
