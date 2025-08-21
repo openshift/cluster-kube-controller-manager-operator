@@ -13,6 +13,7 @@ They use the framework: https://github.com/openshift-eng/openshift-tests-extensi
 | `./cluster-kube-controller-manager-operator-tests-ext list` | Lists all available test cases. |
 | `./cluster-kube-controller-manager-operator-tests-ext run-suite <suite-name>` | Runs a test suite. e.g., `openshift/cluster-kube-controller-manager-operator/conformance/parallel` |
 | `./cluster-kube-controller-manager-operator-tests-ext run-test <test-name>` | Runs one specific test. |
+| `./cluster-kube-controller-manager-operator-tests-ext info` | Shows extension metadata and available suites. |
 
 ## How to Run the Tests Locally
 
@@ -53,19 +54,41 @@ export KUBECONFIG=~/.kube/cluster-bot.kubeconfig
 To generate JUnit XML reports for CI integration:
 
 ```shell
-./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/conformance/parallel --junit-path junit.xml
+# Single suite with JUnit output
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/conformance/parallel --junit-path $(ARTIFACT_DIR)/junit_$(shell date +%Y%m%d-%H%M%S).xml
+
+# All tests with JUnit and JSON output
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all --junit-path $(ARTIFACT_DIR)/junit_$(shell date +%Y%m%d-%H%M%S).xml --output json
+
+# Parallel execution with concurrency control
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all --junit-path $(ARTIFACT_DIR)/junit_$(shell date +%Y%m%d-%H%M%S).xml --max-concurrency 4
 ```
 
-This generates both OTE framework and Ginkgo JUnit XML reports that can be integrated into CI systems.
+This generates both OTE framework and Ginkgo JUnit XML reports that can be integrated into CI systems. The JUnit XML format is compatible with Jenkins, GitLab CI, GitHub Actions, and other CI/CD platforms.
 
 ## Available Test Suites
 
-| Suite Name | Description |
-|------------|-------------|
-| `openshift/cluster-kube-controller-manager-operator/conformance/parallel` | Parallel conformance tests |
-| `openshift/cluster-kube-controller-manager-operator/conformance/serial` | Serial conformance tests |
-| `openshift/cluster-kube-controller-manager-operator/optional/slow` | Optional slow tests |
-| `openshift/cluster-kube-controller-manager-operator/all` | All tests |
+| Suite Name | Description | Test Count | Execution Type |
+|------------|-------------|------------|----------------|
+| `openshift/cluster-kube-controller-manager-operator/conformance/parallel` | Parallel conformance tests | 1 | Parallel |
+| `openshift/cluster-kube-controller-manager-operator/conformance/serial` | Serial conformance tests | 2 | Serial |
+| `openshift/cluster-kube-controller-manager-operator/optional/slow` | Optional slow tests | 1 | Serial |
+| `openshift/cluster-kube-controller-manager-operator/all` | All tests | 4 | Mixed |
+
+### Test Examples
+
+Run individual suites to verify specific functionality:
+
+```shell
+# Quick parallel test
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/conformance/parallel
+
+# Serial tests (including disruptive)
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/conformance/serial
+
+# All tests with comprehensive output
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all --junit-path $(ARTIFACT_DIR)/junit_report.xml
+```
 
 ## CI/CD Integration
 
@@ -79,7 +102,9 @@ The CI configuration runs the OTE binary and generates JUnit reports for test re
     echo "Build binary cluster-kube-controller-manager-operator-tests-ext"
     make tests-ext-build
     echo "Running ./cluster-kube-controller-manager-operator-tests-ext with sanity test"
-    ./cluster-kube-controller-manager-operator-tests-ext run-suite "openshift/cluster-kube-controller-manager-operator/conformance/parallel" --junit-path junit.xml
+    ./cluster-kube-controller-manager-operator-tests-ext run-suite \
+      "openshift/cluster-kube-controller-manager-operator/conformance/parallel" \
+      --junit-path ${ARTIFACT_DIR}/junit_report.xml
   from: src
   resources:
     requests:
@@ -140,8 +165,11 @@ For help with the OpenShift Tests Extension (OTE), you can reach out on the #wg-
 The OTE implementation uses the registry-based approach from the `openshift-tests-extension` framework:
 
 - **Registry Pattern**: Uses `extension.NewRegistry()` and `extension.NewExtension()` for clean, maintainable code
+- **Dynamic Test Discovery**: Uses `g.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite()` for automatic test discovery
 - **JUnit Integration**: Generates both OTE framework and Ginkgo JUnit XML reports
 - **Test Discovery**: Automatically discovers and registers Ginkgo tests from the `test/extended` package
+- **Parallel Execution**: Supports parallel test execution without "Rerunning Suite" errors
+- **Suite Filtering**: Supports test categorization (Parallel, Serial, Slow, Disruptive)
 - **CI Ready**: Includes proper JUnit reporter configuration for CI integration
 
 ## Architecture

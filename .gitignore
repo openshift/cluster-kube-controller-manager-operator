@@ -4,5 +4,4 @@
 _output
 telepresence.log
 .openshift-tests-extension/openshift_payload_*.json
-report.json
-junit.xml
+

@@ -1,174 +1,105 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
 	"github.com/openshift-eng/openshift-tests-extension/pkg/cmd"
-	"github.com/openshift-eng/openshift-tests-extension/pkg/dbtime"
-	"github.com/openshift-eng/openshift-tests-extension/pkg/extension"
-	"github.com/openshift-eng/openshift-tests-extension/pkg/extension/extensiontests"
+	e "github.com/openshift-eng/openshift-tests-extension/pkg/extension"
+	et "github.com/openshift-eng/openshift-tests-extension/pkg/extension/extensiontests"
+	g "github.com/openshift-eng/openshift-tests-extension/pkg/ginkgo"
 
 	"github.com/spf13/cobra"
 
+	// The import below is necessary to ensure that the kube controller manager operator tests are registered with the extension.
 	_ "github.com/openshift/cluster-kube-controller-manager-operator/test/extended"
 )
 
-var (
-	CommitFromGit string
-	BuildDate     string
-	GitTreeState  string
-)
-
-// GinkgoTestingT implements the minimal TestingT interface needed by Ginkgo
-type GinkgoTestingT struct{}
-
-func (GinkgoTestingT) Errorf(format string, args ...interface{}) {}
-func (GinkgoTestingT) Fail()                                     {}
-func (GinkgoTestingT) FailNow()                                  { os.Exit(1) }
-
-// NewGinkgoTestingT creates a new testing.T compatible instance for Ginkgo
-func NewGinkgoTestingT() *GinkgoTestingT {
-	return &GinkgoTestingT{}
-}
-
-// escapeRegexChars escapes special regex characters in test names for Ginkgo focus
-func escapeRegexChars(s string) string {
-	// Only escape the problematic characters that cause regex parsing issues
-	// We need to escape [ and ] which are treated as character classes
-	s = strings.ReplaceAll(s, "[", "\\[")
-	s = strings.ReplaceAll(s, "]", "\\]")
-	return s
-}
-
-// createTestSpec creates a test spec with proper execution functions
-func createTestSpec(name, source string, codeLocations []string) *extensiontests.ExtensionTestSpec {
-	return &extensiontests.ExtensionTestSpec{
-		Name:          name,
-		Source:        source,
-		CodeLocations: codeLocations,
-		Lifecycle:     extensiontests.LifecycleBlocking,
-		Resources: extensiontests.Resources{
-			Isolation: extensiontests.Isolation{},
-		},
-		EnvironmentSelector: extensiontests.EnvironmentSelector{},
-		Run: func(ctx context.Context) *extensiontests.ExtensionTestResult {
-			return runGinkgoTest(ctx, name)
-		},
-		RunParallel: func(ctx context.Context) *extensiontests.ExtensionTestResult {
-			return runGinkgoTest(ctx, name)
-		},
-	}
-}
-
-// runGinkgoTest runs a Ginkgo test in-process
-func runGinkgoTest(ctx context.Context, testName string) *extensiontests.ExtensionTestResult {
-	startTime := time.Now()
-
-	// Configure Ginkgo to run specific test
-	gomega.RegisterFailHandler(ginkgo.Fail)
-
-	// Run the test suite with focus on specific test
-	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	suiteConfig.FocusStrings = []string{escapeRegexChars(testName)}
-	
-	// Configure JUnit reporter for CI integration
-	reporterConfig.JUnitReport = "junit.xml"
-	reporterConfig.JSONReport = "report.json"
-
-	passed := ginkgo.RunSpecs(NewGinkgoTestingT(), "OpenShift Kube Controller Manager Operator Test Suite", suiteConfig, reporterConfig)
-
-	endTime := time.Now()
-	duration := endTime.Sub(startTime)
-
-	result := extensiontests.ResultPassed
-	if !passed {
-		result = extensiontests.ResultFailed
-	}
-
-	return &extensiontests.ExtensionTestResult{
-		Name:      testName,
-		Result:    result,
-		StartTime: dbtime.Ptr(startTime),
-		EndTime:   dbtime.Ptr(endTime),
-		Duration:  int64(duration.Seconds()),
-		Output:    "",
-	}
-}
-
 func main() {
-	// Create a new registry
-	registry := extension.NewRegistry()
+	registry := e.NewRegistry()
+	ext := e.NewExtension("openshift", "payload", "cluster-kube-controller-manager-operator")
 
-	// Create extension for this component
-	ext := extension.NewExtension("openshift", "payload", "cluster-kube-controller-manager-operator")
+	// Suite: conformance/parallel (fast, parallel-safe)
+	ext.AddSuite(e.Suite{
+		Name:    "openshift/cluster-kube-controller-manager-operator/conformance/parallel",
+		Parents: []string{"openshift/conformance/parallel"},
+		Qualifiers: []string{
+			`!(name.contains("[Serial]") || name.contains("[Slow]"))`,
+		},
+	})
 
-	// Set source information
-	ext.Source = extension.Source{
-		Commit:       CommitFromGit,
-		BuildDate:    BuildDate,
-		GitTreeState: GitTreeState,
+	// Suite: conformance/serial (explicitly serial tests)
+	ext.AddSuite(e.Suite{
+		Name:    "openshift/cluster-kube-controller-manager-operator/conformance/serial",
+		Parents: []string{"openshift/conformance/serial"},
+		Qualifiers: []string{
+			`name.contains("[Serial]")`,
+		},
+	})
+
+	// Suite: optional/slow (long-running tests)
+	ext.AddSuite(e.Suite{
+		Name:    "openshift/cluster-kube-controller-manager-operator/optional/slow",
+		Parents: []string{"openshift/optional/slow"},
+		Qualifiers: []string{
+			`name.contains("[Slow]")`,
+		},
+	})
+
+	// Suite: all (includes everything)
+	ext.AddSuite(e.Suite{
+		Name: "openshift/cluster-kube-controller-manager-operator/all",
+	})
+
+	specs, err := g.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite()
+	if err != nil {
+		panic(fmt.Sprintf("couldn't build extension test specs from ginkgo: %+v", err.Error()))
 	}
 
-	// Add test suites
-	ext.AddGlobalSuite(extension.Suite{
-		Name:        "openshift/cluster-kube-controller-manager-operator/conformance/parallel",
-		Description: "",
-		Parents:     []string{"openshift/conformance/parallel"},
-		Qualifiers:  []string{"(source == \"openshift:payload:cluster-kube-controller-manager-operator\") && (!(name.contains(\"[Serial]\") || name.contains(\"[Slow]\")))"},
+	// Ensure [Disruptive] tests are also [Serial] (for any future tests that might need this)
+	specs = specs.Walk(func(spec *et.ExtensionTestSpec) {
+		if strings.Contains(spec.Name, "[Disruptive]") && !strings.Contains(spec.Name, "[Serial]") {
+			spec.Name = strings.ReplaceAll(
+				spec.Name,
+				"[Disruptive]",
+				"[Serial][Disruptive]",
+			)
+		}
 	})
 
-	ext.AddGlobalSuite(extension.Suite{
-		Name:        "openshift/cluster-kube-controller-manager-operator/conformance/serial",
-		Description: "",
-		Parents:     []string{"openshift/conformance/serial"},
-		Qualifiers:  []string{"(source == \"openshift:payload:cluster-kube-controller-manager-operator\") && (name.contains(\"[Serial]\"))"},
+	// Preserve original-name labels for renamed tests
+	specs = specs.Walk(func(spec *et.ExtensionTestSpec) {
+		for label := range spec.Labels {
+			if strings.HasPrefix(label, "original-name:") {
+				parts := strings.SplitN(label, "original-name:", 2)
+				if len(parts) > 1 {
+					spec.OriginalName = parts[1]
+				}
+			}
+		}
 	})
 
-	ext.AddGlobalSuite(extension.Suite{
-		Name:        "openshift/cluster-kube-controller-manager-operator/optional/slow",
-		Description: "",
-		Parents:     []string{"openshift/optional/slow"},
-		Qualifiers:  []string{"(source == \"openshift:payload:cluster-kube-controller-manager-operator\") && (name.contains(\"[Slow]\"))"},
+	// Ignore obsolete tests
+	ext.IgnoreObsoleteTests(
+	// "[sig-kube-controller-manager] <test name here>",
+	)
+
+	// Initialize environment before running any tests
+	specs.AddBeforeAll(func() {
+		// do stuff
 	})
 
-	ext.AddGlobalSuite(extension.Suite{
-		Name:        "openshift/cluster-kube-controller-manager-operator/all",
-		Description: "",
-		Qualifiers:  []string{"source == \"openshift:payload:cluster-kube-controller-manager-operator\""},
-	})
-
-	// Add test specs with proper execution functions
-	testSpecs := extensiontests.ExtensionTestSpecs{
-		createTestSpec(
-			"[Jira:kube-controller-manager][sig-api-machinery] sanity test should always pass [Suite:openshift/cluster-kube-controller-manager-operator/conformance/parallel]",
-			"openshift:payload:cluster-kube-controller-manager-operator",
-			[]string{
-				"/test/extended/main.go:8",
-				"/test/extended/main.go:9",
-			},
-		),
-	}
-	ext.AddSpecs(testSpecs)
-
-	// Register the extension
+	ext.AddSpecs(specs)
 	registry.Register(ext)
 
-	// Create root command with default extension commands
-	rootCmd := &cobra.Command{
-		Use:   "cluster-kube-controller-manager-operator-tests-ext",
-		Short: "OpenShift kube-controller-manager operator tests extension",
+	root := &cobra.Command{
+		Long: "Cluster Kube Controller Manager Operator Tests Extension",
 	}
 
-	// Add all the default extension commands (info, list, run-test, run-suite, update)
-	rootCmd.AddCommand(cmd.DefaultExtensionCommands(registry)...)
+	root.AddCommand(cmd.DefaultExtensionCommands(registry)...)
 
-	// Execute the command
-	if err := rootCmd.Execute(); err != nil {
+	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
