@@ -75,6 +75,10 @@ func runGinkgoTest(ctx context.Context, testName string) *extensiontests.Extensi
 	// Run the test suite with focus on specific test
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
 	suiteConfig.FocusStrings = []string{escapeRegexChars(testName)}
+	
+	// Configure JUnit reporter for CI integration
+	reporterConfig.JUnitReport = "junit.xml"
+	reporterConfig.JSONReport = "report.json"
 
 	passed := ginkgo.RunSpecs(NewGinkgoTestingT(), "OpenShift Kube Controller Manager Operator Test Suite", suiteConfig, reporterConfig)
 
