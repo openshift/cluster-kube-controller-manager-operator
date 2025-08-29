@@ -106,6 +106,7 @@ spec:
         scheme: HTTPS
         port: 10357
         path: healthz
+        host: localhost
       initialDelaySeconds: 0
       timeoutSeconds: 3
     livenessProbe:
@@ -113,6 +114,7 @@ spec:
         scheme: HTTPS
         port: 10357
         path: healthz
+        host: localhost
       initialDelaySeconds: 45
       timeoutSeconds: 10
     readinessProbe:
@@ -120,6 +122,7 @@ spec:
         scheme: HTTPS
         port: 10357
         path: healthz
+        host: localhost
       initialDelaySeconds: 10
       timeoutSeconds: 10
   - name: kube-controller-manager-cert-syncer
