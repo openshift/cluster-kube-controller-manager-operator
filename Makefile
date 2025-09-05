@@ -39,12 +39,36 @@ test-e2e-preferred-host: test-unit
 export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
 export TP_CMD_PATH ?=./cmd/cluster-kube-controller-manager-operator
 
-# Build the openshift-tests-extension binary
-tests-ext-build:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) GO_COMPLIANCE_POLICY=exempt_all CGO_ENABLED=0 \
-	go build -o cluster-kube-controller-manager-operator-tests-ext \
-	-ldflags "-X 'main.CommitFromGit=$(shell git rev-parse --short HEAD)' \
-	-X 'main.BuildDate=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)' \
-	-X 'main.GitTreeState=$(shell if git diff-index --quiet HEAD --; then echo clean; else echo dirty; fi)'" \
-	./cmd/cluster-kube-controller-manager-operator-tests-ext
+# -------------------------------------------------------------------
+# OpenShift Tests Extension (Cluster Kube Controller Manager Operator)
+# -------------------------------------------------------------------
+TESTS_EXT_BINARY := cluster-kube-controller-manager-operator-tests-ext
+TESTS_EXT_DIR := ./test/extended/tests-extension
+
+# -------------------------------------------------------------------
+# Build the test extension binary
+# -------------------------------------------------------------------
 .PHONY: tests-ext-build
+tests-ext-build:
+	$(MAKE) -C $(TESTS_EXT_DIR) build
+
+# -------------------------------------------------------------------
+# Run "update" and strip env-specific metadata
+# -------------------------------------------------------------------
+.PHONY: tests-ext-update
+tests-ext-update:
+	$(MAKE) -C $(TESTS_EXT_DIR) build-update
+
+# -------------------------------------------------------------------
+# Clean test extension binaries
+# -------------------------------------------------------------------
+.PHONY: tests-ext-clean
+tests-ext-clean:
+	$(MAKE) -C $(TESTS_EXT_DIR) clean
+
+# -------------------------------------------------------------------
+# Run test suite
+# -------------------------------------------------------------------
+.PHONY: run-suite
+run-suite:
+	$(MAKE) -C $(TESTS_EXT_DIR) run-suite SUITE=$(SUITE) JUNIT_DIR=$(JUNIT_DIR)
