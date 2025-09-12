@@ -121,3 +121,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/openshift/library-go => github.com/openshift-cherrypick-robot/library-go v0.0.0-20250912134350-65142f98d552 //cherry-pick-1936-to-release-4.19
