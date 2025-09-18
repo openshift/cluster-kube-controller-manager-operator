@@ -786,7 +786,7 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		if err != nil {
 			return nil, false, err
 		}
-		klog.V(2).Infof("Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
 		return caBundleConfigMap, true, nil
 	} else if updateRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
@@ -794,7 +794,7 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		if err != nil {
 			return nil, false, err
 		}
-		klog.V(2).Infof("Updated CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
+		klog.Infof("Updated CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
 		return caBundleConfigMap, true, nil
 	}
 
