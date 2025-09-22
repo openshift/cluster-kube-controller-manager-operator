@@ -733,6 +733,10 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 		return caBundleConfigMap, true, nil
 	} else if updateRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.TargetNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
+		if apierrors.IsConflict(err) {
+			// ignore error if its attempting to update outdated version of the resource
+			return nil, false, nil
+		}
 		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
 			return nil, false, err
@@ -790,6 +794,10 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		return caBundleConfigMap, true, nil
 	} else if updateRequired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
+		if apierrors.IsConflict(err) {
+			// ignore error if its attempting to update outdated version of the resource
+			return nil, false, nil
+		}
 		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
 			return nil, false, err
