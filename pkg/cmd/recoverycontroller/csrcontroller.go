@@ -84,6 +84,7 @@ func NewCSRController(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		c.eventRecorder,
+		true,
 	)
 	err := operatorresourcesync.AddSyncCSRControllerCA(c.resourceSyncController)
 	if err != nil {
