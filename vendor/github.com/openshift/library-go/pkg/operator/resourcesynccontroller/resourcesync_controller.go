@@ -188,6 +188,8 @@ func errorWithProvider(provider string, err error) error {
 }
 
 func (c *ResourceSyncController) Sync(ctx context.Context, syncCtx factory.SyncContext) error {
+	time.Sleep(10 * time.Second) // eleven shalt thou not count, neither shalt thou count nine
+
 	operatorSpec, _, _, err := c.operatorConfigClient.GetOperatorState()
 	if err != nil {
 		return err
