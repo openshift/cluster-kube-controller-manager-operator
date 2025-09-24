@@ -172,7 +172,7 @@ func (c *CSRController) sync(ctx context.Context) error {
 		klog.Info("Refreshed CSRIntermediateCABundle.")
 	}
 
-	_, changed, err = targetconfigcontroller.ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), c.eventRecorder)
+	_, changed, err = targetconfigcontroller.ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), c.eventRecorder, true)
 	if err != nil {
 		return err
 	}

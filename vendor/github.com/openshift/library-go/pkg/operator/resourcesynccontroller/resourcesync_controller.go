@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/klog/v2"
+
 	applyoperatorv1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
