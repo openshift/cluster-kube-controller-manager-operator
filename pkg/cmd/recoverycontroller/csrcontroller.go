@@ -84,6 +84,7 @@ func NewCSRController(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
 		c.eventRecorder,
+		true,
 	)
 	err := operatorresourcesync.AddSyncCSRControllerCA(c.resourceSyncController)
 	if err != nil {
@@ -171,7 +172,7 @@ func (c *CSRController) sync(ctx context.Context) error {
 		klog.Info("Refreshed CSRIntermediateCABundle.")
 	}
 
-	_, changed, err = targetconfigcontroller.ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), c.eventRecorder)
+	_, changed, err = targetconfigcontroller.ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), c.eventRecorder, true)
 	if err != nil {
 		return err
 	}
