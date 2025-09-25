@@ -31,7 +31,7 @@ func NewResourceSyncController(
 	configMapsGetter corev1client.ConfigMapsGetter,
 	eventRecorder events.Recorder) (*resourcesynccontroller.ResourceSyncController, error) {
 
-	resourceSyncController := resourcesynccontroller.NewResourceSyncController(
+	resourceSyncController := resourcesynccontroller.NewResourceSyncControllerWithArtificialDelay(
 		"kube-controller-manager",
 		operatorConfigClient,
 		kubeInformersForNamespaces,

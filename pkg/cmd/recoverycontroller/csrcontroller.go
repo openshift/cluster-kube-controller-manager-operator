@@ -77,7 +77,7 @@ func NewCSRController(
 		c.cachesToSync = append(c.cachesToSync, informers.Core().V1().Secrets().Informer().HasSynced)
 	}
 
-	c.resourceSyncController = resourcesynccontroller.NewResourceSyncController(
+	c.resourceSyncController = resourcesynccontroller.NewResourceSyncControllerWithArtificialDelay(
 		"kube-controller-manager",
 		operatorClient,
 		kubeInformersForNamespaces,
