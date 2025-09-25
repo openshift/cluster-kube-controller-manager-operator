@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	applyoperatorv1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/klog/v2"
+
+	applyoperatorv1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +22,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/openshift/library-go/pkg/controller/factory"
+	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/condition"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/management"
@@ -36,9 +40,10 @@ type ResourceSyncController struct {
 	configMapSyncRules syncRules
 	// secretSyncRules is a map from destination location to source location
 	secretSyncRules syncRules
-
 	// knownNamespaces is the list of namespaces we are watching.
 	knownNamespaces sets.Set[string]
+	// RefreshOnlyWhenExpired is a flag that indicates whether the controller should only refresh resources when they expire.
+	refreshWhenExpiredOnly bool
 
 	configMapGetter            corev1client.ConfigMapsGetter
 	secretGetter               corev1client.SecretsGetter
@@ -60,6 +65,7 @@ func NewResourceSyncController(
 	secretsGetter corev1client.SecretsGetter,
 	configMapsGetter corev1client.ConfigMapsGetter,
 	eventRecorder events.Recorder,
+	refreshWhenExpiredOnly bool,
 ) *ResourceSyncController {
 	c := &ResourceSyncController{
 		controllerInstanceName: factory.ControllerInstanceName(instanceName, "ResourceSync"),
@@ -69,6 +75,7 @@ func NewResourceSyncController(
 		secretSyncRules:            syncRules{},
 		kubeInformersForNamespaces: kubeInformersForNamespaces,
 		knownNamespaces:            kubeInformersForNamespaces.Namespaces(),
+		refreshWhenExpiredOnly:     refreshWhenExpiredOnly,
 
 		configMapGetter: v1helpers.CachedConfigMapGetter(configMapsGetter, kubeInformersForNamespaces),
 		secretGetter:    v1helpers.CachedSecretGetter(secretsGetter, kubeInformersForNamespaces),
@@ -225,6 +232,15 @@ func (c *ResourceSyncController) Sync(ctx context.Context, syncCtx factory.SyncC
 			continue
 		}
 
+		// Don't run the sync if the destination secret is not expired in RefreshWhenExpiredOnly mode
+		if c.refreshWhenExpiredOnly {
+			cm, err := c.configMapGetter.ConfigMaps(destination.Namespace).Get(ctx, destination.Name, metav1.GetOptions{})
+			if err == nil && !isExpired(&cm.ObjectMeta) {
+				klog.V(2).Infof("DEBUG Skipping sync of configmap %s/%s because it is not expired", destination.Namespace, destination.Name)
+				continue
+			}
+		}
+
 		_, _, err := resourceapply.SyncPartialConfigMap(ctx, c.configMapGetter, syncCtx.Recorder(), source.Namespace, source.Name, destination.Namespace, destination.Name, source.syncedKeys, []metav1.OwnerReference{})
 		if err != nil {
 			errors = append(errors, errorWithProvider(source.Provider, err))
@@ -251,6 +267,14 @@ func (c *ResourceSyncController) Sync(ctx context.Context, syncCtx factory.SyncC
 				errors = append(errors, err)
 			}
 			continue
+		}
+
+		// Don't run the sync if the destination secret is not expired in RefreshOnlyWhenExpired mode
+		if c.refreshWhenExpiredOnly {
+			secret, err := c.secretGetter.Secrets(destination.Namespace).Get(ctx, destination.Name, metav1.GetOptions{})
+			if err == nil && !isExpired(&secret.ObjectMeta) {
+				continue
+			}
 		}
 
 		_, _, err := resourceapply.SyncPartialSecret(ctx, c.secretGetter, syncCtx.Recorder(), source.Namespace, source.Name, destination.Namespace, destination.Name, source.syncedKeys, []metav1.OwnerReference{})
@@ -282,6 +306,21 @@ func (c *ResourceSyncController) Sync(ctx context.Context, syncCtx factory.SyncC
 		return updateErr
 	}
 	return nil
+}
+
+func isExpired(object *metav1.ObjectMeta) bool {
+	if object == nil {
+		return false
+	}
+	expirationTime := object.Annotations[certrotation.CertificateNotAfterAnnotation]
+	if expirationTime == "" {
+		return false
+	}
+	expiration, err := time.Parse(time.RFC3339, expirationTime)
+	if err != nil {
+		return false
+	}
+	return time.Now().After(expiration)
 }
 
 func NewDebugHandler(controller *ResourceSyncController) http.Handler {
