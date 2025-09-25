@@ -746,7 +746,7 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 
 func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder, refreshOnlyWhenExpired bool) (*corev1.ConfigMap, bool, error) {
 	additionalAnnotations := certrotation.AdditionalAnnotations{
-		JiraComponent: "kube-controller-manager",
+		JiraComponent: "kube-controller-manager-foobar",
 		Description:   "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
 	}
 	caBundleConfigMapName := "csr-controller-ca"
