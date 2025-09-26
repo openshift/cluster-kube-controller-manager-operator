@@ -1,6 +1,8 @@
 package resourcesynccontroller
 
 import (
+	"time"
+
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/openshift/library-go/pkg/operator/events"
@@ -11,16 +13,24 @@ import (
 )
 
 func AddSyncCSRControllerCA(resourceSyncController *resourcesynccontroller.ResourceSyncController) error {
-	return resourceSyncController.SyncConfigMap(
+	return resourceSyncController.SyncConfigMapConditionally(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "csr-controller-ca"},
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.OperatorNamespace, Name: "csr-controller-ca"},
+		func() (bool, error) {
+			time.Sleep(6 * time.Second)
+			return true, nil
+		},
 	)
 }
 
 func AddSyncClientCertKeySecret(resourceSyncController *resourcesynccontroller.ResourceSyncController) error {
-	return resourceSyncController.SyncSecret(
+	return resourceSyncController.SyncSecretConditionally(
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.TargetNamespace, Name: "kube-controller-manager-client-cert-key"},
 		resourcesynccontroller.ResourceLocation{Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace, Name: "kube-controller-manager-client-cert-key"},
+		func() (bool, error) {
+			time.Sleep(6 * time.Second)
+			return true, nil
+		},
 	)
 }
 
