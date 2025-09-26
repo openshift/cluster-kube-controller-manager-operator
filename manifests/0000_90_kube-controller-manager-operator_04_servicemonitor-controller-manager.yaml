@@ -51,8 +51,7 @@ metadata:
     include.release.openshift.io/single-node-developer: "true"
 spec:
   endpoints:
-  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    interval: 30s
+  - interval: 30s
     metricRelabelings:
     - action: drop
       regex: etcd_(debugging|disk|request|server).*
@@ -69,13 +68,8 @@ spec:
     port: https
     scheme: https
     tlsConfig:
-      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
       serverName: kube-controller-manager.openshift-kube-controller-manager.svc
-      certFile: /etc/prometheus/secrets/metrics-client-certs/tls.crt
-      keyFile: /etc/prometheus/secrets/metrics-client-certs/tls.key
-  namespaceSelector:
-    matchNames:
-    - openshift-kube-controller-manager
+  scrapeClass: tls-client-certificate-auth
   selector:
     matchLabels:
       prometheus: kube-controller-manager
