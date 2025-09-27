@@ -222,7 +222,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
 	}
-	_, _, err = ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), syncCtx.Recorder())
+	_, _, err = ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), syncCtx.Recorder(), false)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
 	}
@@ -744,7 +744,7 @@ func manageServiceAccountCABundle(ctx context.Context, lister corev1listers.Conf
 	return caBundleConfigMap, false, nil
 }
 
-func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister, client corev1client.ConfigMapsGetter, recorder events.Recorder, refreshOnlyWhenExpired bool) (*corev1.ConfigMap, bool, error) {
 	additionalAnnotations := certrotation.AdditionalAnnotations{
 		JiraComponent: "kube-controller-manager",
 		Description:   "CA to recognize the CSRs (both serving and client) signed by the kube-controller-manager.",
@@ -788,7 +788,7 @@ func ManageCSRCABundle(ctx context.Context, lister corev1listers.ConfigMapLister
 		}
 		klog.V(2).Infof("Created CSR CA bundle configmap %s/%s", caBundleConfigMap.Namespace, caBundleConfigMap.Name)
 		return caBundleConfigMap, true, nil
-	} else if updateRequired {
+	} else if updateRequired && !refreshOnlyWhenExpired {
 		caBundleConfigMap, err = client.ConfigMaps(operatorclient.OperatorNamespace).Update(ctx, requiredConfigMap, metav1.UpdateOptions{})
 		resourcehelper.ReportUpdateEvent(recorder, caBundleConfigMap, err)
 		if err != nil {
