@@ -21,12 +21,15 @@ spec:
       name: kube-controller-manager-operator
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+        openshift.io/required-scc: restricted-v3
       labels:
         app: kube-controller-manager-operator
     spec:
+      hostUsers: false
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false
