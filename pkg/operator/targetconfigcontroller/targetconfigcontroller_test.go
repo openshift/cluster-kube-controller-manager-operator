@@ -1049,7 +1049,7 @@ func TestManageCSRCABundle(t *testing.T) {
 			recorder := events.NewInMemoryRecorder("test", clock.RealClock{})
 
 			// Call the function under test
-			resultConfigMap, changed, err := ManageCSRCABundle(context.Background(), lister, client.CoreV1(), recorder)
+			resultConfigMap, changed, err := ManageCSRCABundle(context.Background(), lister, client.CoreV1(), recorder, false)
 
 			// Assert error expectations
 			require.NoError(t, err)

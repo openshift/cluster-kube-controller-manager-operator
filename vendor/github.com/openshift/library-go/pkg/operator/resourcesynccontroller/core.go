@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -78,6 +79,7 @@ func CombineCABundleConfigMapsOptimistically(destinationConfigMap *corev1.Config
 	} else {
 		cm = destinationConfigMap.DeepCopy()
 	}
+
 	certificates := []*x509.Certificate{}
 	for _, input := range inputConfigMaps {
 		inputConfigMap, err := lister.ConfigMaps(input.Namespace).Get(input.Name)
@@ -120,6 +122,20 @@ func CombineCABundleConfigMapsOptimistically(destinationConfigMap *corev1.Config
 	if err != nil {
 		return nil, false, err
 	}
+
+	// Set NotBefore/NotAfter annotations, marking the time range when the certificates are valid
+	oldestNotAfter := time.Time{}
+	youngestNotBefore := time.Time{}
+	for _, cert := range finalCertificates {
+		if cert.NotAfter.After(oldestNotAfter) {
+			oldestNotAfter = cert.NotAfter
+		}
+		if cert.NotBefore.Before(youngestNotBefore) || youngestNotBefore.IsZero() {
+			youngestNotBefore = cert.NotBefore
+		}
+	}
+	additionalAnnotations.NotAfter = oldestNotAfter.Format(time.RFC3339)
+	additionalAnnotations.NotBefore = youngestNotBefore.Format(time.RFC3339)
 
 	modified := additionalAnnotations.EnsureTLSMetadataUpdate(&cm.ObjectMeta)
 	newCMData := map[string]string{
