@@ -1,0 +1,10 @@
+reviewers:
+  - atiratree
+  - deads2k
+  - ingvagabund
+approvers:
+  - atiratree
+  - deads2k
+  - ingvagabund
+component: "kube-controller-manager"
+

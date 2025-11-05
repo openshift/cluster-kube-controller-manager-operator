@@ -164,3 +164,42 @@ $ docker push <user>/origin-release:latest
 $ cd ../installer
 $ OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=docker.io/<user>/origin-release:latest bin/openshift-install cluster ...
 ```
+
+## Tests
+
+This repository uses the [OpenShift Tests Extension (OTE)](https://github.com/openshift-eng/openshift-tests-extension) framework for extended tests.
+
+### Building the Test Extension Binary
+
+From the repository root:
+```bash
+make build
+```
+
+The test extension binary `cluster-kube-controller-manager-operator-tests-ext` will be built as part of the standard build process.
+
+### Running Tests
+
+The test extension binary provides several commands:
+
+| Command | Description |
+|---------|-------------|
+| `./cluster-kube-controller-manager-operator-tests-ext list` | Lists all available test cases |
+| `./cluster-kube-controller-manager-operator-tests-ext run-suite <suite-name>` | Runs a test suite (e.g., `openshift/cluster-kube-controller-manager-operator/conformance/parallel`) |
+| `./cluster-kube-controller-manager-operator-tests-ext run-test <test-name>` | Runs a specific test |
+
+### Available Test Suites
+
+- `openshift/cluster-kube-controller-manager-operator/conformance/parallel` - Fast, parallel-safe tests
+- `openshift/cluster-kube-controller-manager-operator/conformance/serial` - Serial tests
+- `openshift/cluster-kube-controller-manager-operator/optional/slow` - Long-running tests
+- `openshift/cluster-kube-controller-manager-operator/all` - All tests
+
+### Running Tests Locally
+
+To run tests against a local OpenShift cluster:
+
+```bash
+export KUBECONFIG=path/to/kubeconfig
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all
+```

@@ -9,8 +9,10 @@ include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	targets/openshift/operator/telepresence.mk \
 )
 
+GO_BUILD_PACKAGES :=./cmd/cluster-kube-controller-manager-operator ./cmd/cluster-kube-controller-manager-operator-tests-ext
+
 # Exclude e2e tests from unit testing
-GO_TEST_PACKAGES :=./pkg/... ./cmd/...
+GO_TEST_PACKAGES :=./pkg/... ./cmd/cluster-kube-controller-manager-operator
 
 IMAGE_REGISTRY :=registry.svc.ci.openshift.org
 
@@ -38,37 +40,3 @@ test-e2e-preferred-host: test-unit
 # See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
 export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
 export TP_CMD_PATH ?=./cmd/cluster-kube-controller-manager-operator
-
-# -------------------------------------------------------------------
-# OpenShift Tests Extension (Cluster Kube Controller Manager Operator)
-# -------------------------------------------------------------------
-TESTS_EXT_BINARY := cluster-kube-controller-manager-operator-tests-ext
-TESTS_EXT_DIR := ./test/extended/tests-extension
-
-# -------------------------------------------------------------------
-# Build the test extension binary
-# -------------------------------------------------------------------
-.PHONY: tests-ext-build
-tests-ext-build:
-	$(MAKE) -C $(TESTS_EXT_DIR) build
-
-# -------------------------------------------------------------------
-# Run "update" and strip env-specific metadata
-# -------------------------------------------------------------------
-.PHONY: tests-ext-update
-tests-ext-update:
-	$(MAKE) -C $(TESTS_EXT_DIR) build-update
-
-# -------------------------------------------------------------------
-# Clean test extension binaries
-# -------------------------------------------------------------------
-.PHONY: tests-ext-clean
-tests-ext-clean:
-	$(MAKE) -C $(TESTS_EXT_DIR) clean
-
-# -------------------------------------------------------------------
-# Run test suite
-# -------------------------------------------------------------------
-.PHONY: run-suite
-run-suite:
-	$(MAKE) -C $(TESTS_EXT_DIR) run-suite SUITE=$(SUITE) JUNIT_DIR=$(JUNIT_DIR)
