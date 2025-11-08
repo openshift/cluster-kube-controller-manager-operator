@@ -48,6 +48,7 @@ func NewResourceSyncController(
 		v1helpers.CachedSecretGetter(secretsGetter, kubeInformersForNamespaces),
 		v1helpers.CachedConfigMapGetter(configMapsGetter, kubeInformersForNamespaces),
 		eventRecorder,
+		false,
 	)
 	if err := AddSyncCSRControllerCA(resourceSyncController); err != nil {
 		return nil, err
