@@ -38,3 +38,6 @@ status:
       resource: nodes
     - group: "certificates.k8s.io"
       resource: "certificatesigningrequests"
+    - group: "rbac.authorization.k8s.io"
+      name: "system:openshift:operator:kube-controller-manager-operator"
+      resource: "clusterrolebindings"
