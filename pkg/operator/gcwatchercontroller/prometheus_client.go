@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	prometheusapi "github.com/prometheus/client_golang/api"
@@ -23,7 +23,7 @@ import (
 func newPrometheusClient(ctx context.Context, configMapClient corev1client.ConfigMapsGetter) (prometheusv1.API, *http.Transport, error) {
 	host := "thanos-querier.openshift-monitoring.svc"
 
-	saToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	saToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading service account token: %w", err)
 	}
