@@ -167,39 +167,32 @@ $ OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=docker.io/<user>/origin-release:lates
 
 ## Tests
 
-This repository uses the [OpenShift Tests Extension (OTE)](https://github.com/openshift-eng/openshift-tests-extension) framework for extended tests.
+The repository is compatible with the "OpenShift Tests Extension (OTE)" framework.
 
-### Building the Test Extension Binary
-
-From the repository root:
+### Building the test binary
 ```bash
 make build
 ```
 
-The test extension binary `cluster-kube-controller-manager-operator-tests-ext` will be built as part of the standard build process.
-
-### Running Tests
-
-The test extension binary provides several commands:
-
-| Command | Description |
-|---------|-------------|
-| `./cluster-kube-controller-manager-operator-tests-ext list` | Lists all available test cases |
-| `./cluster-kube-controller-manager-operator-tests-ext run-suite <suite-name>` | Runs a test suite (e.g., `openshift/cluster-kube-controller-manager-operator/conformance/parallel`) |
-| `./cluster-kube-controller-manager-operator-tests-ext run-test <test-name>` | Runs a specific test |
-
-### Available Test Suites
-
-- `openshift/cluster-kube-controller-manager-operator/conformance/parallel` - Fast, parallel-safe tests
-- `openshift/cluster-kube-controller-manager-operator/conformance/serial` - Serial tests
-- `openshift/cluster-kube-controller-manager-operator/optional/slow` - Long-running tests
-- `openshift/cluster-kube-controller-manager-operator/all` - All tests
-
-### Running Tests Locally
-
-To run tests against a local OpenShift cluster:
-
+### Running test suites and tests
 ```bash
-export KUBECONFIG=path/to/kubeconfig
+# Run a specific test suite or test
 ./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all
+./cluster-kube-controller-manager-operator-tests-ext run-test "test-name"
+
+# Run with JUnit output
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all --junit-path=/tmp/junit-results/junit.xml
+./cluster-kube-controller-manager-operator-tests-ext run-test "test-name" --junit-path=/tmp/junit-results/junit.xml
+```
+
+### Listing available tests and suites
+```bash
+# List all test suites
+./cluster-kube-controller-manager-operator-tests-ext list suites
+
+# List tests in a suite
+./cluster-kube-controller-manager-operator-tests-ext list tests --suite=openshift/cluster-kube-controller-manager-operator/all
+
+#for concurrency
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all -c 1
 ```

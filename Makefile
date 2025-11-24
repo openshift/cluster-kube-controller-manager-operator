@@ -9,10 +9,8 @@ include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	targets/openshift/operator/telepresence.mk \
 )
 
-GO_BUILD_PACKAGES :=./cmd/cluster-kube-controller-manager-operator ./cmd/cluster-kube-controller-manager-operator-tests-ext
-
 # Exclude e2e tests from unit testing
-GO_TEST_PACKAGES :=./pkg/... ./cmd/cluster-kube-controller-manager-operator
+GO_TEST_PACKAGES :=./pkg/... ./cmd/...
 
 IMAGE_REGISTRY :=registry.svc.ci.openshift.org
 
