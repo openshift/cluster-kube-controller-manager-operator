@@ -3,7 +3,7 @@ package render
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -231,7 +231,7 @@ func discoverRestrictedCIDRsFromNetwork(clusterConfigFileData []byte, renderConf
 func (r *renderOpts) Run() error {
 	renderConfig := TemplateData{}
 	if len(r.clusterConfigFile) > 0 {
-		clusterConfigFileData, err := ioutil.ReadFile(r.clusterConfigFile)
+		clusterConfigFileData, err := os.ReadFile(r.clusterConfigFile)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func (r *renderOpts) Run() error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(
+	if err := os.WriteFile(
 		r.clusterPolicyControllerConfigOutputFile,
 		renderConfig.ClusterPolicyControllerFileConfig.BootstrapConfig,
 		0644,
@@ -312,11 +312,11 @@ func (r *renderOpts) Run() error {
 }
 
 func (r *renderOpts) readBootstrapSecretsKubeconfig() ([]byte, error) {
-	return ioutil.ReadFile(filepath.Join(r.generic.AssetInputDir, "..", "auth", "kubeconfig"))
+	return os.ReadFile(filepath.Join(r.generic.AssetInputDir, "..", "auth", "kubeconfig"))
 }
 
 func mustReadTemplateFile(fname string) genericrenderoptions.Template {
-	bs, err := ioutil.ReadFile(fname)
+	bs, err := os.ReadFile(fname)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load %q: %v", fname, err))
 	}
