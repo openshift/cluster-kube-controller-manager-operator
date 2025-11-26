@@ -238,6 +238,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 			// TODO move to a more appropriate operator. One that creates and manages these.
 			{Resource: "nodes"},
 			{Group: "config.openshift.io", Resource: "nodes", Name: "cluster"},
+			{Group: "rbac.authorization.k8s.io", Resource: "clusterrolebindings", Name: "system:openshift:operator:kube-controller-manager-operator"},
 		},
 		configClient.ConfigV1(),
 		configInformers.Config().V1().ClusterOperators(),
