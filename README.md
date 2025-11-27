@@ -164,3 +164,35 @@ $ docker push <user>/origin-release:latest
 $ cd ../installer
 $ OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=docker.io/<user>/origin-release:latest bin/openshift-install cluster ...
 ```
+
+## Tests
+
+The repository is compatible with the "OpenShift Tests Extension (OTE)" framework.
+
+### Building the test binary
+```bash
+make build
+```
+
+### Running test suites and tests
+```bash
+# Run a specific test suite or test
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all
+./cluster-kube-controller-manager-operator-tests-ext run-test "test-name"
+
+# Run with JUnit output
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all --junit-path=/tmp/junit-results/junit.xml
+./cluster-kube-controller-manager-operator-tests-ext run-test "test-name" --junit-path=/tmp/junit-results/junit.xml
+```
+
+### Listing available tests and suites
+```bash
+# List all test suites
+./cluster-kube-controller-manager-operator-tests-ext list suites
+
+# List tests in a suite
+./cluster-kube-controller-manager-operator-tests-ext list tests --suite=openshift/cluster-kube-controller-manager-operator/all
+
+#for concurrency
+./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/all -c 1
+```

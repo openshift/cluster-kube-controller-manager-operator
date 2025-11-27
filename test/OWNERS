@@ -1,0 +1,14 @@
+reviewers:
+  - atiratree
+  - deads2k
+  - ingvagabund
+  - gangwgr
+  - zhouying7780
+approvers:
+  - atiratree
+  - deads2k
+  - ingvagabund
+  - gangwgr
+  - zhouying7780
+component: "kube-controller-manager"
+
