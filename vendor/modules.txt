@@ -405,6 +405,8 @@ github.com/openshift/library-go/test/library
 github.com/openshift/library-go/test/library/metrics
 # github.com/openshift/multi-operator-manager v0.0.0-20250930141021-05cb0b9abdb4
 ## explicit; go 1.24.0
+github.com/openshift/multi-operator-manager/pkg/flagtypes
+github.com/openshift/multi-operator-manager/pkg/library/libraryapplyconfiguration
 github.com/openshift/multi-operator-manager/pkg/library/libraryinputresources
 github.com/openshift/multi-operator-manager/pkg/library/libraryoutputresources
 # github.com/pkg/errors v0.9.1
@@ -1508,6 +1510,7 @@ k8s.io/kube-openapi/pkg/validation/strfmt/bson
 ## explicit; go 1.18
 k8s.io/utils/buffer
 k8s.io/utils/clock
+k8s.io/utils/clock/testing
 k8s.io/utils/internal/third_party/forked/golang/golang-lru
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/lru
