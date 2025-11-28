@@ -17,7 +17,33 @@ func runInputResources(ctx context.Context) (*libraryinputresources.InputResourc
 	return &libraryinputresources.InputResources{
 		ApplyConfigurationResources: libraryinputresources.ResourceList{
 			ExactResources: []libraryinputresources.ExactResourceID{
-				// TODO: Fill in discovered resources
+				// Operator CR
+				libraryinputresources.ExactLowLevelOperator("kubecontrollermanagers"),
+
+				// Config resources
+				libraryinputresources.ExactConfigResource("infrastructures"),
+				libraryinputresources.ExactConfigResource("networks"),
+				libraryinputresources.ExactConfigResource("featuregates"),
+				libraryinputresources.ExactConfigResource("nodes"),
+				libraryinputresources.ExactConfigResource("proxies"),
+				libraryinputresources.ExactConfigResource("apiservers"),
+				libraryinputresources.ExactConfigResource("clusterversions"),
+
+				// Namespaces
+				libraryinputresources.ExactNamespace("openshift-config"),
+				libraryinputresources.ExactNamespace("openshift-config-managed"),
+				libraryinputresources.ExactNamespace("openshift-kube-controller-manager"),
+				libraryinputresources.ExactNamespace("openshift-kube-controller-manager-operator"),
+				libraryinputresources.ExactNamespace("kube-system"),
+				libraryinputresources.ExactNamespace("openshift-infra"),
+
+				// ConfigMaps that may be synced or referenced
+				libraryinputresources.ExactConfigMap("openshift-config", "cloud-provider-config"),
+				libraryinputresources.ExactConfigMap("openshift-config-managed", "kube-controller-cert-syncer-kubeconfig"),
+				libraryinputresources.ExactConfigMap("kube-system", "cluster-config-v1"),
+
+				// Secrets that may be synced or referenced
+				libraryinputresources.ExactSecret("openshift-config", "cloud-credentials"),
 			},
 		},
 	}, nil
