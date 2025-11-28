@@ -47,6 +47,7 @@ func NewSSCSCommand(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(certsyncpod.NewCertSyncControllerCommand(operator.CertConfigMaps, operator.CertSecrets))
 	cmd.AddCommand(recoverycontroller.NewCertRecoveryControllerCommand(ctx))
 	cmd.AddCommand(mom.NewInputResourcesCommand(ioStreams))
+	cmd.AddCommand(mom.NewOutputResourcesCommand(ioStreams))
 
 	return cmd
 }
