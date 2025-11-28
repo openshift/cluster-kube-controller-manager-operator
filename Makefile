@@ -7,6 +7,7 @@ include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	targets/openshift/images.mk \
 	targets/openshift/deps.mk \
 	targets/openshift/operator/telepresence.mk \
+	targets/openshift/operator/mom.mk \
 )
 
 # Exclude e2e tests from unit testing

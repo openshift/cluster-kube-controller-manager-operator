@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/component-base/cli"
 
 	"github.com/openshift/library-go/pkg/operator/staticpod/certsyncpod"
@@ -16,6 +17,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/recoverycontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/render"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/resourcegraph"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/cmd/mom"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator"
 )
 
@@ -35,6 +37,8 @@ func NewSSCSCommand(ctx context.Context) *cobra.Command {
 		},
 	}
 
+	ioStreams := genericiooptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr}
+
 	cmd.AddCommand(operatorcmd.NewOperator())
 	cmd.AddCommand(render.NewRenderCommand(nil))
 	cmd.AddCommand(installerpod.NewInstaller(ctx))
@@ -42,6 +46,9 @@ func NewSSCSCommand(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(resourcegraph.NewResourceChainCommand())
 	cmd.AddCommand(certsyncpod.NewCertSyncControllerCommand(operator.CertConfigMaps, operator.CertSecrets))
 	cmd.AddCommand(recoverycontroller.NewCertRecoveryControllerCommand(ctx))
+	cmd.AddCommand(mom.NewInputResourcesCommand(ioStreams))
+	cmd.AddCommand(mom.NewOutputResourcesCommand(ioStreams))
+	cmd.AddCommand(mom.NewApplyConfigurationCommand(ioStreams))
 
 	return cmd
 }
