@@ -50,17 +50,89 @@ func runInputResources(ctx context.Context) (*libraryinputresources.InputResourc
 }
 
 // runOutputResources is defined here to support the input-resources command
-// The actual implementation will be in output_resources_command.go
+// This is shared with output_resources_command.go
 func runOutputResources(ctx context.Context) (*libraryoutputresources.OutputResources, error) {
 	return &libraryoutputresources.OutputResources{
 		ConfigurationResources: libraryoutputresources.ResourceList{
 			ExactResources: []libraryoutputresources.ExactResourceID{},
 		},
 		ManagementResources: libraryoutputresources.ResourceList{
-			ExactResources: []libraryoutputresources.ExactResourceID{},
+			ExactResources: []libraryoutputresources.ExactResourceID{
+				// ClusterOperator status
+				libraryoutputresources.ExactClusterOperator("kube-controller-manager"),
+
+				// Namespaces managed by the operator
+				libraryoutputresources.ExactNamespace("openshift-kube-controller-manager"),
+				libraryoutputresources.ExactNamespace("openshift-kube-controller-manager-operator"),
+				libraryoutputresources.ExactNamespace("openshift-infra"),
+
+				// Operator deployment and service
+				libraryoutputresources.ExactDeployment("openshift-kube-controller-manager-operator", "kube-controller-manager-operator"),
+				libraryoutputresources.ExactService("openshift-kube-controller-manager-operator", "kube-controller-manager-operator"),
+				libraryoutputresources.ExactServiceAccount("openshift-kube-controller-manager-operator", "kube-controller-manager-operator"),
+
+				// Static pod resources in target namespace
+				libraryoutputresources.ExactService("openshift-kube-controller-manager", "kube-controller-manager"),
+				libraryoutputresources.ExactServiceAccount("openshift-kube-controller-manager", "kube-controller-manager"),
+				libraryoutputresources.ExactServiceAccount("openshift-kube-controller-manager", "localhost-recovery-client"),
+				libraryoutputresources.ExactServiceAccount("openshift-kube-controller-manager", "kube-controller-manager-sa"),
+
+				// ConfigMaps
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "config"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "kube-controller-manager-pod"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "cluster-policy-controller-config"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "controller-manager-kubeconfig"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "kube-controller-cert-syncer-kubeconfig"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "serviceaccount-ca"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "service-ca"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "recycler-config"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "trusted-ca-bundle"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "aggregator-client-ca"),
+				libraryoutputresources.ExactConfigMap("openshift-kube-controller-manager", "client-ca"),
+
+				// Secrets
+				libraryoutputresources.ExactSecret("openshift-kube-controller-manager", "service-account-private-key"),
+				libraryoutputresources.ExactSecret("openshift-kube-controller-manager", "serving-cert"),
+				libraryoutputresources.ExactSecret("openshift-kube-controller-manager", "localhost-recovery-client-token"),
+				libraryoutputresources.ExactSecret("openshift-kube-controller-manager", "kube-controller-manager-client-cert-key"),
+				libraryoutputresources.ExactSecret("openshift-kube-controller-manager", "csr-signer"),
+
+				// Roles and RoleBindings in target namespace
+				libraryoutputresources.ExactRole("kube-system", "system:openshift:controller:cluster-policy-controller"),
+				libraryoutputresources.ExactRoleBinding("kube-system", "system:openshift:controller:cluster-policy-controller"),
+
+				// PodDisruptionBudget
+				libraryoutputresources.ExactPDB("openshift-kube-controller-manager-operator", "kube-controller-manager-operator"),
+			},
+			EventingNamespaces: []string{
+				"openshift-kube-controller-manager",
+				"openshift-kube-controller-manager-operator",
+			},
 		},
 		UserWorkloadResources: libraryoutputresources.ResourceList{
-			ExactResources: []libraryoutputresources.ExactResourceID{},
+			ExactResources: []libraryoutputresources.ExactResourceID{
+				// CSR-related resources
+				libraryoutputresources.ExactClusterRole("system:openshift:controller:cluster-csr-approver"),
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:controller:cluster-csr-approver"),
+
+				// Namespace security allocation controller
+				libraryoutputresources.ExactClusterRole("system:openshift:controller:namespace-security-allocation-controller"),
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:controller:namespace-security-allocation-controller"),
+
+				// PodSecurity admission label syncer controller
+				libraryoutputresources.ExactClusterRole("system:openshift:controller:podsecurity-admission-label-syncer-controller"),
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:controller:podsecurity-admission-label-syncer-controller"),
+
+				// PodSecurity admission label privileged namespaces syncer controller
+				libraryoutputresources.ExactClusterRole("system:openshift:controller:podsecurity-admission-label-privileged-namespaces-syncer-controller"),
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:controller:podsecurity-admission-label-privileged-namespaces-syncer-controller"),
+
+				// Localhost recovery
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:operator:kube-controller-manager-recovery"),
+
+				// Operator RBAC
+				libraryoutputresources.ExactClusterRoleBinding("system:openshift:operator:kube-controller-manager-operator"),
+			},
 		},
 	}, nil
 }
