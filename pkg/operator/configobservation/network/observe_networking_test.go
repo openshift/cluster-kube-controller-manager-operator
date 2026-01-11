@@ -26,6 +26,22 @@ func TestObserveClusterCIDRs(t *testing.T) {
 	}
 	tests := []Test{
 		{
+			"single cluster network",
+			&configv1.Network{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status: configv1.NetworkStatus{ClusterNetwork: []configv1.ClusterNetworkEntry{
+					{CIDR: "podCIDR"},
+				}},
+			},
+			map[string]interface{}{},
+			map[string]interface{}{
+				"extendedArguments": map[string]interface{}{
+					"cluster-cidr": []interface{}{"podCIDR"},
+				},
+			},
+			false,
+		},
+		{
 			"clusterNetworks",
 			&configv1.Network{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -37,7 +53,7 @@ func TestObserveClusterCIDRs(t *testing.T) {
 			map[string]interface{}{
 				"extendedArguments": map[string]interface{}{
 					"cluster-cidr": []interface{}{
-						"podCIDR1", "podCIDR2",
+						"podCIDR1,podCIDR2",
 					},
 				},
 			},
