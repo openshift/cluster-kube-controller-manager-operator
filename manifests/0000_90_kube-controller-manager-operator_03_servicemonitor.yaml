@@ -25,3 +25,4 @@ spec:
   selector:
     matchLabels:
       app: kube-controller-manager-operator
+  serviceDiscoveryRole: EndpointSlice
