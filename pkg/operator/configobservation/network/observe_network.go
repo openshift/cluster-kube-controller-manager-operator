@@ -36,7 +36,8 @@ func ObserveClusterCIDRs(genericListers configobserver.Listers, recorder events.
 	}
 
 	if len(clusterCIDRs) > 0 {
-		if err := unstructured.SetNestedStringSlice(observedConfig, clusterCIDRs, clusterCIDRsPath...); err != nil {
+		clusterIPRange := strings.Join(clusterCIDRs, ",")
+		if err := unstructured.SetNestedStringSlice(observedConfig, []string{clusterIPRange}, clusterCIDRsPath...); err != nil {
 			errs = append(errs, err)
 		}
 	}
