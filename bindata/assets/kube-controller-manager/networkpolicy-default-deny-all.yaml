@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: openshift-kube-controller-manager
+  # NOTE: The kube-controller-manager static pod uses hostNetwork: true,
+  # which means NetworkPolicies do not apply to it. These policies are
+  # provided for documentation, consistency, and for any future pods
+  # in this namespace that do not use hostNetwork.
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: []
+  egress: []
