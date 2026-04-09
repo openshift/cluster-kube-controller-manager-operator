@@ -7,10 +7,10 @@ require (
 	github.com/gonum/graph v0.0.0-20190426092945-678096d81a4b
 	github.com/google/go-cmp v0.7.0
 	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
-	github.com/openshift/api v0.0.0-20260302174620-dcac36b908db
+	github.com/openshift/api v0.0.0-20260408160412-464776f95207
 	github.com/openshift/build-machinery-go v0.0.0-20250530140348-dc5b2804eeee
-	github.com/openshift/client-go v0.0.0-20260302182750-20813ce71ca6
-	github.com/openshift/library-go v0.0.0-20260304110309-c56f4c30de58
+	github.com/openshift/client-go v0.0.0-20260330134249-7e1499aaacd7
+	github.com/openshift/library-go v0.0.0-20260409165127-c57da2bf5720
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.66.1
 	github.com/spf13/cobra v1.10.0
