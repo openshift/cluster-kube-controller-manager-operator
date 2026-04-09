@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow
+  namespace: openshift-kube-controller-manager
+  # NOTE: The kube-controller-manager static pod uses hostNetwork: true,
+  # which means NetworkPolicies do not apply to it. These policies are
+  # provided for documentation, consistency, and for any future pods
+  # in this namespace that do not use hostNetwork.
+spec:
+  podSelector:
+    matchLabels:
+      kube-controller-manager: "true"
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress for metrics scraping on all controller ports
+  - ports:
+    # kube-controller-manager metrics port
+    - protocol: TCP
+      port: 10257
+    # cluster-policy-controller metrics port
+    - protocol: TCP
+      port: 10357
+    # cert-recovery-controller port
+    - protocol: TCP
+      port: 9443
+  egress:
+  # Allow all egress traffic
+  # required for egress to kube-apiserver pods
+  - {}
+  # Allow DNS resolution
+  # this rule overlaps with the generic egress rule but exists for documentation purposes
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+      podSelector:
+        matchLabels:
+          dns.operator.openshift.io/daemonset-dns: default
+    ports:
+    - protocol: TCP
+      port: 5353
+    - protocol: UDP
+      port: 5353

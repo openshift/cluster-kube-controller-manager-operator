@@ -36,5 +36,5 @@ test-e2e-preferred-host: test-unit
 
 # Configure the 'telepresence' target
 # See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
-export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_06_deployment.yaml
+export TP_DEPLOYMENT_YAML ?=./manifests/0000_25_kube-controller-manager-operator_08_deployment.yaml
 export TP_CMD_PATH ?=./cmd/cluster-kube-controller-manager-operator
