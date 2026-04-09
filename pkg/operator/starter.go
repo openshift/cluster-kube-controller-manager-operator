@@ -255,6 +255,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		kubeInformersForNamespaces,
 		cc.EventRecorder,
 		featureGateAccessor,
+		configInformers,
 	)
 	if err != nil {
 		return err

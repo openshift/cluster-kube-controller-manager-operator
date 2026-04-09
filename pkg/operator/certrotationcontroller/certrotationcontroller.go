@@ -6,13 +6,16 @@ import (
 	"time"
 
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
 	"github.com/openshift/library-go/pkg/operator/certrotation"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+	"github.com/openshift/library-go/pkg/pki"
 
 	features "github.com/openshift/api/features"
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
@@ -20,6 +23,7 @@ import (
 
 type CertRotationController struct {
 	certRotators []factory.Controller
+	cachesToSync []cache.InformerSynced
 }
 
 func NewCertRotationController(
@@ -29,6 +33,7 @@ func NewCertRotationController(
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
 	featureGateAccessor featuregates.FeatureGateAccess,
+	configInformers configinformers.SharedInformerFactory,
 ) (*CertRotationController, error) {
 	return newCertRotationController(
 		secretsGetter,
@@ -37,6 +42,7 @@ func NewCertRotationController(
 		kubeInformersForNamespaces,
 		eventRecorder,
 		featureGateAccessor,
+		configInformers,
 		false,
 	)
 }
@@ -48,6 +54,7 @@ func NewCertRotationControllerOnlyWhenExpired(
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
 	featureGateAccessor featuregates.FeatureGateAccess,
+	configInformers configinformers.SharedInformerFactory,
 ) (*CertRotationController, error) {
 	return newCertRotationController(
 		secretsGetter,
@@ -56,6 +63,7 @@ func NewCertRotationControllerOnlyWhenExpired(
 		kubeInformersForNamespaces,
 		eventRecorder,
 		featureGateAccessor,
+		configInformers,
 		true,
 	)
 }
@@ -67,6 +75,7 @@ func newCertRotationController(
 	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	eventRecorder events.Recorder,
 	featureGateAccessor featuregates.FeatureGateAccess,
+	configInformers configinformers.SharedInformerFactory,
 	refreshOnlyWhenExpired bool,
 ) (*CertRotationController, error) {
 	ret := &CertRotationController{}
@@ -84,6 +93,15 @@ func newCertRotationController(
 		klog.Infof("Setting refreshPeriod to %v", refreshPeriod)
 	}
 
+	var pkiProfileProvider pki.PKIProfileProvider
+	if featureGates.Enabled(features.FeatureGateConfigurablePKI) {
+		if configInformers == nil {
+			return nil, fmt.Errorf("config informer is required when %q is enabled", features.FeatureGateConfigurablePKI)
+		}
+		ret.cachesToSync = append(ret.cachesToSync, configInformers.Config().V1alpha1().PKIs().Informer().HasSynced)
+		pkiProfileProvider = pki.NewClusterPKIProfileProvider(configInformers.Config().V1alpha1().PKIs().Lister())
+	}
+
 	certRotator := certrotation.NewCertRotationController(
 		"CSRSigningCert",
 		certrotation.RotatedSigningCASecret{
@@ -96,6 +114,8 @@ func newCertRotationController(
 			Validity:               refreshPeriod * 2,
 			Refresh:                refreshPeriod,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			CertificateName:        "kube-controller-manager.csr-signer-signer",
+			PKIProfileProvider:     pkiProfileProvider,
 			Informer:               kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets(),
 			Lister:                 kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().Secrets().Lister(),
 			Client:                 secretsGetter,
@@ -122,6 +142,8 @@ func newCertRotationController(
 			Validity:               refreshPeriod,
 			Refresh:                refreshPeriod / 2,
 			RefreshOnlyWhenExpired: refreshOnlyWhenExpired,
+			CertificateName:        "kube-controller-manager.csr-signer",
+			PKIProfileProvider:     pkiProfileProvider,
 			CertCreator: &certrotation.SignerRotation{
 				SignerName: "kube-csr-signer",
 			},
@@ -140,6 +162,9 @@ func newCertRotationController(
 }
 
 func (c *CertRotationController) Run(ctx context.Context, workers int) {
+	if !cache.WaitForNamedCacheSyncWithContext(ctx, c.cachesToSync...) {
+		return
+	}
 	syncCtx := context.WithValue(ctx, certrotation.RunOnceContextKey, false)
 	for _, certRotator := range c.certRotators {
 		go certRotator.Run(syncCtx, workers)
