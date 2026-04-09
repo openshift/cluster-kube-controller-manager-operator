@@ -37,18 +37,6 @@ spec:
       port: 5353
     - protocol: UDP
       port: 5353
-  # Allow access to oauth-apiserver
-  # this rule overlaps with the generic egress rule but exists for documentation purposes
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: openshift-oauth-apiserver
-      podSelector:
-        matchLabels:
-          app: openshift-oauth-apiserver
-    ports:
-    - protocol: TCP
-      port: 8443
   # Allow access to kube-controller-manager namespace for managing operands
   # this rule overlaps with the generic egress rule but exists for documentation purposes
   - to:
