@@ -132,6 +132,7 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		kubeInformersForNamespaces,
 		o.controllerContext.EventRecorder,
 		featureGateAccessor,
+		configInformers,
 	)
 	if err != nil {
 		return err
