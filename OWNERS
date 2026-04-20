@@ -1,9 +1,5 @@
 reviewers:
-  - atiratree
-  - deads2k
-  - ingvagabund
+  - control-plane-approvers
 approvers:
-  - atiratree
-  - deads2k
-  - ingvagabund
+  - control-plane-approvers
 component: "kube-controller-manager"
