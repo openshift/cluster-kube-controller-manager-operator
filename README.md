@@ -16,6 +16,7 @@ The metrics are collected from following components:
 
 * Kubernetes Controller Manager operator
 
+## New
 
 ## Configuration
 
