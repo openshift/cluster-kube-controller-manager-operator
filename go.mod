@@ -6,6 +6,8 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gonum/graph v0.0.0-20190426092945-678096d81a4b
 	github.com/google/go-cmp v0.7.0
+	github.com/onsi/ginkgo/v2 v2.27.2
+	github.com/onsi/gomega v1.38.2
 	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
 	github.com/openshift/api v0.0.0-20260408160412-464776f95207
 	github.com/openshift/build-machinery-go v0.0.0-20250530140348-dc5b2804eeee
@@ -47,6 +49,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gonum/blas v0.0.0-20181208220705-f22b278b28ac // indirect
@@ -125,3 +128,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// The OpenShift fork of ginkgo exposes internal suite APIs required by
+// openshift-tests-extension (oteginkgo.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite).
+// Upstream ginkgo does not export these symbols (e.g. `Suite`); see https://github.com/openshift/onsi-ginkgo.
+replace github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20251001123353-fd5b1fb35db1

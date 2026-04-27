@@ -32,7 +32,7 @@ type policyTestCase struct {
 	denyAll   bool
 }
 
-var _ = g.Describe("[kube-controller-manager-operator] NetworkPolicy", func() {
+var _ = g.Describe("kube-controller-manager-operator NetworkPolicy", func() {
 	g.It("should ensure KCM NetworkPolicies are defined", func() {
 		testKCMNetworkPolicies()
 	})
