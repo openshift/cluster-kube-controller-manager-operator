@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	g "github.com/onsi/ginkgo/v2"
+
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	machineryerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +30,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOperatorNamespace(t *testing.T) {
+var _ = g.Describe("kube-controller-manager-operator", func() {
+	g.It("TestOperatorNamespace", func() {
+		testOperatorNamespace(g.GinkgoTB())
+	})
+
+	g.It("TestPodDisruptionBudgetAtLimitAlert [Serial]", func() {
+		testPodDisruptionBudgetAtLimitAlert(g.GinkgoTB())
+	})
+
+	g.It("TestTargetConfigController [Serial][Disruptive]", func() {
+		testTargetConfigController(g.GinkgoTB())
+	})
+
+	g.It("TestResourceSyncController [Serial][Disruptive]", func() {
+		testResourceSyncController(g.GinkgoTB())
+	})
+
+	g.It("TestKCMRecovery [Serial]", func() {
+		testKCMRecovery(g.GinkgoTB())
+	})
+
+	g.It("TestLogLevel [Serial]", func() {
+		testLogLevel(g.GinkgoTB())
+	})
+})
+
+func testOperatorNamespace(t testing.TB) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -44,8 +72,8 @@ func TestOperatorNamespace(t *testing.T) {
 	}
 }
 
-// TestPodDisruptionBudgetAtLimitAlert tests that PodDisruptionBudgetAtLimit alert behaves properly
-func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
+// testPodDisruptionBudgetAtLimitAlert tests that PodDisruptionBudgetAtLimit alert behaves properly
+func testPodDisruptionBudgetAtLimitAlert(t testing.TB) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -97,93 +125,91 @@ func TestPodDisruptionBudgetAtLimitAlert(t *testing.T) {
 	testTimeout := time.Second * 120
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			name := names.SimpleNameGenerator.GenerateName("pdbtest-")
-			_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: name,
-				},
+		name := names.SimpleNameGenerator.GenerateName("pdbtest-")
+		_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
 			},
-				metav1.CreateOptions{},
-			)
-			if err != nil {
-				t.Fatalf("could not create test namespace: %v", err)
-			}
-			defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
-			err = testlib.WaitForServiceAccountInNamespace(kubeClient, name, "default")
-			if err != nil {
-				t.Fatal(err)
-			}
+		},
+			metav1.CreateOptions{},
+		)
+		if err != nil {
+			t.Fatalf("could not create test namespace: %v", err)
+		}
+		defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+		err = testlib.WaitForServiceAccountInNamespace(kubeClient, name, "default")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			labels := map[string]string{"app": "pdbtest"}
-			err = pdbCreate(policyClient, name, test.minAvailable, test.maxUnavailable, labels)
-			if err != nil {
-				t.Fatal(err)
-			}
+		labels := map[string]string{"app": "pdbtest"}
+		err = pdbCreate(policyClient, name, test.minAvailable, test.maxUnavailable, labels)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-				if _, err := policyClient.PodDisruptionBudgets(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pbtest"}); err != nil {
-					return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
-				}
-				return true, nil
-			})
-			if err != nil {
-				t.Fatal(err)
+		err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
+			if _, err := policyClient.PodDisruptionBudgets(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pbtest"}); err != nil {
+				return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
 			}
-
-			if test.createPod {
-				err = podCreate(kubeClient, name, labels)
-				if err != nil {
-					t.Fatal(err)
-				}
-				var pods *corev1.PodList
-				// Poll to confirm pod is running
-				wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-					pods, err = kubeClient.CoreV1().Pods(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pdbtest"})
-					if err != nil {
-						return false, err
-					}
-					if len(pods.Items) > 0 && pods.Items[0].Status.Phase == corev1.PodRunning {
-						return true, nil
-					}
-					return false, nil
-				})
-			}
-
-			// Now check for alert
-			prometheusClient, err := metrics.NewPrometheusClient(ctx, kubeClient, routeClient)
-			if err != nil {
-				t.Fatalf("error creating route client for prometheus: %v", err)
-			}
-			var response model.Value
-			// Note: prometheus/client_golang Alerts method only works with the deprecated prometheus-k8s route.
-			// Our helper uses the thanos-querier route.  Because of this, have to pass the entire alert as a query.
-			// The thanos behavior is to error on partial response.
-			query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",severity=\"warning\"}==1", name, name)
-			err = wait.PollImmediate(time.Second*3, testTimeout, func() (bool, error) {
-				response, _, err = prometheusClient.Query(context.Background(), query, time.Now())
-				if err != nil {
-					return false, fmt.Errorf("error querying prometheus: %v", err)
-				}
-				if len(response.String()) == 0 {
-					return false, nil
-				}
-				return true, nil
-			})
-			if test.shouldAlert {
-				if err != nil {
-					t.Fatalf("error querying prometheus: %v", err)
-				}
-			} else {
-				if !errors.Is(err, wait.ErrWaitTimeout) {
-					t.Fatalf("expected timeout err as alert should not be received, got: %v", err)
-				}
-			}
+			return true, nil
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if test.createPod {
+			err = podCreate(kubeClient, name, labels)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var pods *corev1.PodList
+			// Poll to confirm pod is running
+			wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
+				pods, err = kubeClient.CoreV1().Pods(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pdbtest"})
+				if err != nil {
+					return false, err
+				}
+				if len(pods.Items) > 0 && pods.Items[0].Status.Phase == corev1.PodRunning {
+					return true, nil
+				}
+				return false, nil
+			})
+		}
+
+		// Now check for alert
+		prometheusClient, err := metrics.NewPrometheusClient(ctx, kubeClient, routeClient)
+		if err != nil {
+			t.Fatalf("error creating route client for prometheus: %v", err)
+		}
+		var response model.Value
+		// Note: prometheus/client_golang Alerts method only works with the deprecated prometheus-k8s route.
+		// Our helper uses the thanos-querier route.  Because of this, have to pass the entire alert as a query.
+		// The thanos behavior is to error on partial response.
+		query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",severity=\"warning\"}==1", name, name)
+		err = wait.PollImmediate(time.Second*3, testTimeout, func() (bool, error) {
+			response, _, err = prometheusClient.Query(context.Background(), query, time.Now())
+			if err != nil {
+				return false, fmt.Errorf("error querying prometheus: %v", err)
+			}
+			if len(response.String()) == 0 {
+				return false, nil
+			}
+			return true, nil
+		})
+		if test.shouldAlert {
+			if err != nil {
+				t.Fatalf("error querying prometheus: %v", err)
+			}
+		} else {
+			if !errors.Is(err, wait.ErrWaitTimeout) {
+				t.Fatalf("expected timeout err as alert should not be received, got: %v", err)
+			}
+		}
 	}
 }
 
-func TestTargetConfigController(t *testing.T) {
+func testTargetConfigController(t testing.TB) {
 	// This test deletes everything managed by the target config controller and expects it to be recreated
 	tests := []struct {
 		name         string
@@ -217,16 +243,14 @@ func TestTargetConfigController(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
-			if err != nil {
-				t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
-			}
-		})
+		err := testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
+		if err != nil {
+			t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
+		}
 	}
 }
 
-func TestResourceSyncController(t *testing.T) {
+func testResourceSyncController(t testing.TB) {
 	// This test deletes everything managed by the resource sync controller and expects it to be recreated
 	tests := []struct {
 		name         string
@@ -265,12 +289,10 @@ func TestResourceSyncController(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err = testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
-			if err != nil {
-				t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
-			}
-		})
+		err = testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
+		if err != nil {
+			t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
+		}
 	}
 }
 
@@ -293,7 +315,7 @@ func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config s
 	return err
 }
 
-func TestKCMRecovery(t *testing.T) {
+func testKCMRecovery(t testing.TB) {
 	// This is an e2e test to verify that KCM can recover from having its lease configmap deleted
 	// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
 	kubeConfig, err := testlib.NewClientConfigForTest()
@@ -327,6 +349,49 @@ func TestKCMRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func testLogLevel(t testing.TB) {
+	kubeConfig, err := testlib.NewClientConfigForTest()
+	require.NoError(t, err)
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	operatorClientSet, err := operatorv1client.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	kcmOperator := operatorClientSet.KubeControllerManagers()
+	kcmOperatorConfig, err := kcmOperator.Get(context.TODO(), "cluster", metav1.GetOptions{})
+	require.NoError(t, err)
+
+	kcmOperatorConfig.Spec.LogLevel = "Debug"
+	kcmOperator.Update(context.TODO(), kcmOperatorConfig, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	// wait for KCM pods to be successfully running
+	// then check that "v=4" was added to the appropriate containers
+	var lastListErr error
+	err = wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) {
+		var pods *corev1.PodList
+		pods, lastListErr = kubeClient.CoreV1().Pods(operatorclient.TargetNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=kube-controller-manager"})
+		if lastListErr != nil {
+			return false, nil
+		}
+		for _, pod := range pods.Items {
+			if pod.Status.Phase != corev1.PodRunning {
+				return false, nil
+			}
+			for _, container := range pod.Spec.Containers {
+				if container.Name == "kube-controller-manager-cert-syncer" {
+					continue
+				}
+				if !strings.Contains(container.Args[0], "v=4") {
+					return false, nil
+				}
+			}
+		}
+		return true, nil
+	})
+	require.NoError(t, lastListErr)
+	require.NoError(t, err)
 }
 
 func pdbCreate(client *policyclientv1.PolicyV1Client, name string, minAvailable int, maxUnavailable int, labels map[string]string) error {
@@ -390,47 +455,4 @@ func podCreate(client *kubernetes.Clientset, name string, labels map[string]stri
 	}
 	_, err := client.CoreV1().Pods(name).Create(context.Background(), pod, metav1.CreateOptions{})
 	return err
-}
-
-func TestLogLevel(t *testing.T) {
-	kubeConfig, err := testlib.NewClientConfigForTest()
-	require.NoError(t, err)
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	require.NoError(t, err)
-	operatorClientSet, err := operatorv1client.NewForConfig(kubeConfig)
-	require.NoError(t, err)
-	kcmOperator := operatorClientSet.KubeControllerManagers()
-	kcmOperatorConfig, err := kcmOperator.Get(context.TODO(), "cluster", metav1.GetOptions{})
-	require.NoError(t, err)
-
-	kcmOperatorConfig.Spec.LogLevel = "Debug"
-	kcmOperator.Update(context.TODO(), kcmOperatorConfig, metav1.UpdateOptions{})
-	require.NoError(t, err)
-
-	// wait for KCM pods to be successfully running
-	// then check that "v=4" was added to the appropriate containers
-	var lastListErr error
-	err = wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) {
-		var pods *corev1.PodList
-		pods, lastListErr = kubeClient.CoreV1().Pods(operatorclient.TargetNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=kube-controller-manager"})
-		if lastListErr != nil {
-			return false, nil
-		}
-		for _, pod := range pods.Items {
-			if pod.Status.Phase != corev1.PodRunning {
-				return false, nil
-			}
-			for _, container := range pod.Spec.Containers {
-				if container.Name == "kube-controller-manager-cert-syncer" {
-					continue
-				}
-				if !strings.Contains(container.Args[0], "v=4") {
-					return false, nil
-				}
-			}
-		}
-		return true, nil
-	})
-	require.NoError(t, lastListErr)
-	require.NoError(t, err)
 }
