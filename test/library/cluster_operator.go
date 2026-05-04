@@ -21,7 +21,7 @@ var (
 
 // WaitForKubeControllerManagerClusterOperator waits for ClusterOperator/kube-controller-manager to report
 // status as available, progressing, and failing as passed through arguments.
-func WaitForKubeControllerManagerClusterOperator(t *testing.T, ctx context.Context, client configclient.ConfigV1Interface, available, progressing, degraded configv1.ConditionStatus) {
+func WaitForKubeControllerManagerClusterOperator(t testing.TB, ctx context.Context, client configclient.ConfigV1Interface, available, progressing, degraded configv1.ConditionStatus) {
 	err := wait.Poll(WaitPollInterval, WaitPollTimeout, func() (bool, error) {
 		clusterOperator, err := client.ClusterOperators().Get(ctx, "kube-controller-manager", metav1.GetOptions{})
 		if errors.IsNotFound(err) {

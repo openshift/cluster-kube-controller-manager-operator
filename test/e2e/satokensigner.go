@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	g "github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/require"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,12 +16,17 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
-	test "github.com/openshift/cluster-kube-controller-manager-operator/test/library"
+	testlib "github.com/openshift/cluster-kube-controller-manager-operator/test/library"
 )
 
-func TestSATokenSignerControllerSyncCerts(t *testing.T) {
-	// initialize clients
-	kubeConfig, err := test.NewClientConfigForTest()
+var _ = g.Describe("kube-controller-manager-operator SA token signer", func() {
+	g.It("TestSATokenSignerControllerSyncCerts [Serial][Disruptive]", func() {
+		testSATokenSignerControllerSyncCerts(g.GinkgoTB())
+	})
+})
+
+func testSATokenSignerControllerSyncCerts(t testing.TB) {
+	kubeConfig, err := testlib.NewClientConfigForTest()
 	require.NoError(t, err)
 	kubeClient, err := clientcorev1.NewForConfig(kubeConfig)
 	require.NoError(t, err)
@@ -29,21 +35,14 @@ func TestSATokenSignerControllerSyncCerts(t *testing.T) {
 
 	ctx := context.Background()
 
-	// wait for the operator readiness
 	klog.Infof("Waiting for true, false, false")
-	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
+	testlib.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
 
 	klog.Infof("About to delete service-account-private-key secret")
 	err = kubeClient.Secrets(operatorclient.TargetNamespace).Delete(ctx, "service-account-private-key", metav1.DeleteOptions{})
 	require.NoError(t, err)
 
-	// wait for the operator reporting degraded
-	// TODO(jchaloup): analyse the original root cause and extend this test to provide more informed testing
-	// klog.Infof("Waiting for true, true, false")
-	// test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionTrue, configv1.ConditionFalse)
-
-	// and check for secret being synced from next-service-private-key
-	err = wait.Poll(test.WaitPollInterval, test.WaitPollTimeout, func() (bool, error) {
+	err = wait.Poll(testlib.WaitPollInterval, testlib.WaitPollTimeout, func() (bool, error) {
 		klog.Infof("Getting service-account-private-key secret")
 		_, err := kubeClient.Secrets(operatorclient.TargetNamespace).Get(ctx, "service-account-private-key", metav1.GetOptions{})
 		if err == nil {
@@ -58,5 +57,5 @@ func TestSATokenSignerControllerSyncCerts(t *testing.T) {
 	require.NoError(t, err)
 
 	klog.Infof("Waiting for true, false, false")
-	test.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
+	testlib.WaitForKubeControllerManagerClusterOperator(t, ctx, configClient, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse)
 }
