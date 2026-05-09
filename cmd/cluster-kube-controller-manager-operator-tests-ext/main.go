@@ -49,24 +49,33 @@ func prepareOperatorTestsRegistry() (*oteextension.Registry, error) {
 	registry := oteextension.NewRegistry()
 	extension := oteextension.NewExtension("openshift", "payload", "cluster-kube-controller-manager-operator")
 
-	// TODO: enable the parallel suite once we have enough non-conflicting non-disruptive tests
-	// to justify a separate job.
-	// extension.AddSuite(oteextension.Suite{
-	// 	Name:        "openshift/cluster-kube-controller-manager-operator/operator/parallel",
-	// 	Parallelism: 4,
-	// 	Qualifiers: []string{
-	// 		`!name.contains("[Serial]") && !name.contains("[Disruptive]")`,
-	// 	},
-	// })
+	// parallel suite runs non-serial, non-disruptive tests concurrently with parallelism of 4.
+	extension.AddSuite(oteextension.Suite{
+		Name:        "openshift/cluster-kube-controller-manager-operator/operator/parallel",
+		Parallelism: 4,
+		Qualifiers: []string{
+			`!name.contains("[Serial]") && !name.contains("[Disruptive]")`,
+		},
+	})
 
-	// TODO: add Qualifiers to filter by [Serial] or [Disruptive] once the parallel suite is enabled.
+	// disruptive suite runs serial or disruptive tests one at a time, may impact cluster stability.
 	extension.AddSuite(oteextension.Suite{
 		Name:             "openshift/cluster-kube-controller-manager-operator/operator/disruptive",
 		Parallelism:      1,
 		ClusterStability: oteextension.ClusterStabilityDisruptive,
-		// Qualifiers: []string{
-		// 	`name.contains("[Serial]") || name.contains("[Disruptive]")`,
-		// },
+		Qualifiers: []string{
+			`(name.contains("[Serial]") || name.contains("[Disruptive]")) && !name.contains("[preferred-host]")`,
+		},
+	})
+
+	// preferred-host suite runs tests that validate KCM communication over the preferred host to KAS.
+	extension.AddSuite(oteextension.Suite{
+		Name:             "openshift/cluster-kube-controller-manager-operator/operator/preferred-host",
+		Parallelism:      1,
+		ClusterStability: oteextension.ClusterStabilityDisruptive,
+		Qualifiers: []string{
+			`name.contains("[Serial]") && name.contains("[Disruptive]") && name.contains("[preferred-host]")`,
+		},
 	})
 
 	specs, err := oteginkgo.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite()

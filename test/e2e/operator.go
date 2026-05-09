@@ -39,17 +39,37 @@ var _ = g.Describe("kube-controller-manager-operator", func() {
 		testPodDisruptionBudgetAtLimitAlert(g.GinkgoTB())
 	})
 
-	g.It("TestTargetConfigController [Serial][Disruptive]", func() {
-		testTargetConfigController(g.GinkgoTB())
-	})
+	// This test deletes everything managed by the target config controller and expects it to be recreated
+	g.DescribeTable("TestTargetConfigController [Serial][Disruptive]",
+		func(namespace, resourceName string) {
+			testConfigMapDeletionCase(g.GinkgoTB(), namespace, resourceName)
+		},
+		g.Entry("KCM config", operatorclient.TargetNamespace, "config"),
+		g.Entry("cluster policy controller config", operatorclient.TargetNamespace, "cluster-policy-controller-config"),
+		g.Entry("csr-signer-ca", operatorclient.OperatorNamespace, "csr-signer-ca"),
+	)
 
-	g.It("TestResourceSyncController [Serial][Disruptive]", func() {
-		testResourceSyncController(g.GinkgoTB())
-	})
+	// This test deletes everything managed by the resource sync controller and expects it to be recreated
+	g.DescribeTable("TestResourceSyncController [Serial][Disruptive]",
+		func(namespace, resourceName string) {
+			testConfigMapDeletionCase(g.GinkgoTB(), namespace, resourceName)
+		},
+		g.Entry("csr-controller-ca", operatorclient.OperatorNamespace, "csr-controller-ca"),
+		g.Entry("service-ca", operatorclient.TargetNamespace, "service-ca"),
+		g.Entry("client-ca", operatorclient.TargetNamespace, "client-ca"),
+		g.Entry("aggregator-client-ca", operatorclient.TargetNamespace, "aggregator-client-ca"),
+	)
 
-	g.It("TestKCMRecovery [Serial]", func() {
-		testKCMRecovery(g.GinkgoTB())
-	})
+	// This test verifies that KCM can recover from having its lease deleted
+	// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
+	g.DescribeTable("TestKCMLeaseRecovery",
+		func(leaseName string) {
+			testKCMLeaseRecovery(g.GinkgoTB(), leaseName)
+		},
+		g.Entry("kube-controller-manager", "kube-controller-manager"),
+		g.Entry("cert-recovery-controller-lock", "cert-recovery-controller-lock"),
+		g.Entry("cluster-policy-controller-lock", "cluster-policy-controller-lock"),
+	)
 
 	g.It("TestLogLevel [Serial]", func() {
 		testLogLevel(g.GinkgoTB())
@@ -149,8 +169,13 @@ func testPodDisruptionBudgetAtLimitAlert(t testing.TB) {
 		}
 
 		err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-			if _, err := policyClient.PodDisruptionBudgets(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pbtest"}); err != nil {
+			pdb, err := policyClient.PodDisruptionBudgets(name).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
 				return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
+			}
+			// Confirm the PDB is being reconciled by checking ObservedGeneration
+			if pdb.Status.ObservedGeneration == 0 {
+				return false, nil
 			}
 			return true, nil
 		})
@@ -209,30 +234,8 @@ func testPodDisruptionBudgetAtLimitAlert(t testing.TB) {
 	}
 }
 
-func testTargetConfigController(t testing.TB) {
-	// This test deletes everything managed by the target config controller and expects it to be recreated
-	tests := []struct {
-		name         string
-		resourceName string
-		namespace    string
-	}{
-		{
-			name:         "targetconfigcontroller KCM config",
-			resourceName: "config",
-			namespace:    operatorclient.TargetNamespace,
-		},
-		{
-			name:         "targetconfigcontroller cluster policy controller config",
-			resourceName: "cluster-policy-controller-config",
-			namespace:    operatorclient.TargetNamespace,
-		},
-		{
-			name:         "targetconfigcontroller csr-signer-ca",
-			resourceName: "csr-signer-ca",
-			namespace:    operatorclient.OperatorNamespace,
-		},
-	}
-
+// testConfigMapDeletionCase deletes a configmap and expects it to be recreated by the responsible controller.
+func testConfigMapDeletionCase(t testing.TB, namespace, resourceName string) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -242,57 +245,9 @@ func testTargetConfigController(t testing.TB) {
 		t.Fatal(err)
 	}
 
-	for _, test := range tests {
-		err := testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
-		if err != nil {
-			t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
-		}
-	}
-}
-
-func testResourceSyncController(t testing.TB) {
-	// This test deletes everything managed by the resource sync controller and expects it to be recreated
-	tests := []struct {
-		name         string
-		resourceName string
-		namespace    string
-	}{
-		{
-			name:         "resourcesynccontroller csr-controller-ca",
-			resourceName: "csr-controller-ca",
-			namespace:    operatorclient.OperatorNamespace,
-		},
-		{
-			name:         "resourcesynccontroller service-ca",
-			resourceName: "service-ca",
-			namespace:    operatorclient.TargetNamespace,
-		},
-		{
-			name:         "resourcesynccontroller client-ca",
-			resourceName: "client-ca",
-			namespace:    operatorclient.TargetNamespace,
-		},
-		{
-			name:         "resourcesynccontroller aggregator-client-ca",
-			resourceName: "aggregator-client-ca",
-			namespace:    operatorclient.TargetNamespace,
-		},
-	}
-
-	kubeConfig, err := testlib.NewClientConfigForTest()
+	err = testConfigMapDeletion(kubeClient, namespace, resourceName)
 	if err != nil {
-		t.Fatal(err)
-	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, test := range tests {
-		err = testConfigMapDeletion(kubeClient, test.namespace, test.resourceName)
-		if err != nil {
-			t.Errorf("error waiting for creation of %s: %+v", test.resourceName, err)
-		}
+		t.Errorf("error waiting for creation of %s: %+v", resourceName, err)
 	}
 }
 
@@ -315,9 +270,9 @@ func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config s
 	return err
 }
 
-func testKCMRecovery(t testing.TB) {
-	// This is an e2e test to verify that KCM can recover from having its lease configmap deleted
-	// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
+// testKCMLeaseRecovery verifies that KCM can recover from having a lease deleted.
+// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
+func testKCMLeaseRecovery(t testing.TB, leaseName string) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -329,15 +284,15 @@ func testKCMRecovery(t testing.TB) {
 
 	ctx := context.Background()
 
-	// Try to delete the kube controller manager's lease object in kube-system
-	err = kubeClient.CoordinationV1().Leases("kube-system").Delete(ctx, "kube-controller-manager", metav1.DeleteOptions{})
+	// Try to delete the lease object in kube-system
+	err = kubeClient.CoordinationV1().Leases("kube-system").Delete(ctx, leaseName, metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check to see that the lease object then gets recreated
 	err = wait.Poll(time.Second*5, time.Second*300, func() (bool, error) {
-		_, err := kubeClient.CoordinationV1().Leases("kube-system").Get(ctx, "kube-controller-manager", metav1.GetOptions{})
+		_, err := kubeClient.CoordinationV1().Leases("kube-system").Get(ctx, leaseName, metav1.GetOptions{})
 		if machineryerrors.IsNotFound(err) {
 			return false, nil
 		}

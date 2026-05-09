@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	g "github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
@@ -40,10 +41,16 @@ var (
 	nsCreationPollInterval = 2 * time.Second
 )
 
+var _ = g.Describe("kube-controller-manager-operator [preferred-host]", func() {
+	g.It("TestKCMTalksOverPreferredHostToKAS [Serial][Disruptive]", func() {
+		testKCMTalksOverPreferredHostToKAS(g.GinkgoTB())
+	})
+})
+
 // TestKCMTalksOverPreferredHostToKAS points the KCM to a non available host
 // and sets unsupported-kube-api-over-localhost flag which changes it to use localhost instead.
 // It then waits for new KCM and tests if creating an SA works.
-func TestKCMTalksOverPreferredHostToKAS(t *testing.T) {
+func testKCMTalksOverPreferredHostToKAS(t testing.TB) {
 	// test data
 	kubeConfig, err := test.NewClientConfigForTest()
 	require.NoError(t, err)
@@ -83,7 +90,7 @@ func TestKCMTalksOverPreferredHostToKAS(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func readCurrentKubeAPIHostAndScheme(t *testing.T, openShiftClientSet configv1client.Interface) (string, string) {
+func readCurrentKubeAPIHostAndScheme(t testing.TB, openShiftClientSet configv1client.Interface) (string, string) {
 	infra, err := openShiftClientSet.ConfigV1().Infrastructures().Get(context.TODO(), "cluster", metav1.GetOptions{})
 	require.NoError(t, err)
 
@@ -109,7 +116,7 @@ func readCurrentKubeAPIHostAndScheme(t *testing.T, openShiftClientSet configv1cl
 // createTestingNS should be used by every test, note that we append a common prefix to the provided test name.
 // Please see NewFramework instead of using this directly.
 // note this method has been copied from k/k repo
-func createTestingNS(t *testing.T, baseName string, c clientset.Interface) (*v1.Namespace, error) {
+func createTestingNS(t testing.TB, baseName string, c clientset.Interface) (*v1.Namespace, error) {
 	// We don't use ObjectMeta.GenerateName feature, as in case of API call
 	// failure we don't know whether the namespace was created and what is its
 	// name.
