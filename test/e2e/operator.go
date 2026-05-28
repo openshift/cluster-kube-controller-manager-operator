@@ -35,41 +35,134 @@ var _ = g.Describe("kube-controller-manager-operator", func() {
 		testOperatorNamespace(g.GinkgoTB())
 	})
 
-	g.It("TestPodDisruptionBudgetAtLimitAlert [Serial]", func() {
-		testPodDisruptionBudgetAtLimitAlert(g.GinkgoTB())
+	// TestPodDisruptionBudgetAtLimitAlert tests that PodDisruptionBudgetAtLimit alert behaves properly
+	g.Context("TestPodDisruptionBudgetAtLimitAlert [Serial]", func() {
+		tests := []struct {
+			name           string
+			createPod      bool
+			shouldAlert    bool
+			minAvailable   int
+			maxUnavailable int
+		}{
+			// test PodDisruptionBudgetAtLimit alert exists when there is a pdb at limit
+			// See https://bugzilla.redhat.com/show_bug.cgi?id=1762888
+			{
+				name:         "should alert when pdb at limit",
+				createPod:    true,
+				shouldAlert:  true,
+				minAvailable: 1,
+			},
+			// test PodDisruptionBudgetAtLimit alert missing when no app exists (currentHealthy and desiredHealthy equal to 0)
+			// See https://bugzilla.redhat.com/show_bug.cgi?id=2053622
+			{
+				name:           "should not alert when pdb at limit but no app pods exist",
+				createPod:      false,
+				shouldAlert:    false,
+				maxUnavailable: 1,
+			},
+		}
+		for _, test := range tests {
+			test := test
+			g.It(test.name, func() {
+				testPodDisruptionBudgetAtLimitAlert(g.GinkgoTB(), test.createPod, test.shouldAlert, test.minAvailable, test.maxUnavailable)
+			})
+		}
 	})
 
 	// This test deletes everything managed by the target config controller and expects it to be recreated
-	g.DescribeTable("TestTargetConfigController [Serial][Disruptive]",
-		func(namespace, resourceName string) {
-			testConfigMapDeletionCase(g.GinkgoTB(), namespace, resourceName)
-		},
-		g.Entry("KCM config", operatorclient.TargetNamespace, "config"),
-		g.Entry("cluster policy controller config", operatorclient.TargetNamespace, "cluster-policy-controller-config"),
-		g.Entry("csr-signer-ca", operatorclient.OperatorNamespace, "csr-signer-ca"),
-	)
+	g.Context("TestTargetConfigController [Serial][Disruptive]", func() {
+		tests := []struct {
+			name         string
+			resourceName string
+			namespace    string
+		}{
+			{
+				name:         "KCM config",
+				resourceName: "config",
+				namespace:    operatorclient.TargetNamespace,
+			},
+			{
+				name:         "cluster policy controller config",
+				resourceName: "cluster-policy-controller-config",
+				namespace:    operatorclient.TargetNamespace,
+			},
+			{
+				name:         "csr-signer-ca",
+				resourceName: "csr-signer-ca",
+				namespace:    operatorclient.OperatorNamespace,
+			},
+		}
+		for _, test := range tests {
+			test := test
+			g.It(test.name, func() {
+				testConfigMapDeletionCase(g.GinkgoTB(), test.namespace, test.resourceName)
+			})
+		}
+	})
 
 	// This test deletes everything managed by the resource sync controller and expects it to be recreated
-	g.DescribeTable("TestResourceSyncController [Serial][Disruptive]",
-		func(namespace, resourceName string) {
-			testConfigMapDeletionCase(g.GinkgoTB(), namespace, resourceName)
-		},
-		g.Entry("csr-controller-ca", operatorclient.OperatorNamespace, "csr-controller-ca"),
-		g.Entry("service-ca", operatorclient.TargetNamespace, "service-ca"),
-		g.Entry("client-ca", operatorclient.TargetNamespace, "client-ca"),
-		g.Entry("aggregator-client-ca", operatorclient.TargetNamespace, "aggregator-client-ca"),
-	)
+	g.Context("TestResourceSyncController [Serial][Disruptive]", func() {
+		tests := []struct {
+			name         string
+			resourceName string
+			namespace    string
+		}{
+			{
+				name:         "csr-controller-ca",
+				resourceName: "csr-controller-ca",
+				namespace:    operatorclient.OperatorNamespace,
+			},
+			{
+				name:         "service-ca",
+				resourceName: "service-ca",
+				namespace:    operatorclient.TargetNamespace,
+			},
+			{
+				name:         "client-ca",
+				resourceName: "client-ca",
+				namespace:    operatorclient.TargetNamespace,
+			},
+			{
+				name:         "aggregator-client-ca",
+				resourceName: "aggregator-client-ca",
+				namespace:    operatorclient.TargetNamespace,
+			},
+		}
+		for _, test := range tests {
+			test := test
+			g.It(test.name, func() {
+				testConfigMapDeletionCase(g.GinkgoTB(), test.namespace, test.resourceName)
+			})
+		}
+	})
 
 	// This test verifies that KCM can recover from having its lease deleted
 	// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
-	g.DescribeTable("TestKCMLeaseRecovery",
-		func(leaseName string) {
-			testKCMLeaseRecovery(g.GinkgoTB(), leaseName)
-		},
-		g.Entry("kube-controller-manager", "kube-controller-manager"),
-		g.Entry("cert-recovery-controller-lock", "cert-recovery-controller-lock"),
-		g.Entry("cluster-policy-controller-lock", "cluster-policy-controller-lock"),
-	)
+	g.Context("TestKCMLeaseRecovery", func() {
+		tests := []struct {
+			name      string
+			leaseName string
+		}{
+			{
+				name:      "kube-controller-manager",
+				leaseName: "kube-controller-manager",
+			},
+			{
+				name:      "cert-recovery-controller-lock",
+				leaseName: "cert-recovery-controller-lock",
+			},
+			{
+				name:      "cluster-policy-controller-lock",
+				leaseName: "cluster-policy-controller-lock",
+			},
+		}
+		for _, test := range tests {
+			test := test
+			g.It(test.name, func() {
+				testKCMLeaseRecovery(g.GinkgoTB(), test.leaseName)
+			})
+		}
+	})
 
 	g.It("TestLogLevel [Serial]", func() {
 		testLogLevel(g.GinkgoTB())
@@ -92,8 +185,7 @@ func testOperatorNamespace(t testing.TB) {
 	}
 }
 
-// testPodDisruptionBudgetAtLimitAlert tests that PodDisruptionBudgetAtLimit alert behaves properly
-func testPodDisruptionBudgetAtLimitAlert(t testing.TB) {
+func testPodDisruptionBudgetAtLimitAlert(t testing.TB, createPod, shouldAlert bool, minAvailable, maxUnavailable int) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -116,125 +208,97 @@ func testPodDisruptionBudgetAtLimitAlert(t testing.TB) {
 
 	ctx := context.Background()
 
-	tests := []struct {
-		name           string
-		createPod      bool
-		shouldAlert    bool
-		minAvailable   int
-		maxUnavailable int
-	}{
-		// test PodDisruptionBudgetAtLimit alert exists when there is a pdb at limit
-		// See https://bugzilla.redhat.com/show_bug.cgi?id=1762888
-		{
-			name:         "should alert when pdb at limit",
-			createPod:    true,
-			shouldAlert:  true,
-			minAvailable: 1,
-		},
-		// test PodDisruptionBudgetAtLimit alert missing when no app exists (currentHealthy and desiredHealthy equal to 0)
-		// See https://bugzilla.redhat.com/show_bug.cgi?id=2053622
-		{
-			name:           "should not alert when pdb at limit but no app pods exist",
-			createPod:      false,
-			shouldAlert:    false,
-			maxUnavailable: 1,
-		},
-	}
-
-	// Warning: second test waits for this whole duration
+	// Warning: when shouldAlert is false, the test waits for this whole duration
 	testTimeout := time.Second * 120
 
-	for _, test := range tests {
-		name := names.SimpleNameGenerator.GenerateName("pdbtest-")
-		_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
+	name := names.SimpleNameGenerator.GenerateName("pdbtest-")
+	_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
 		},
-			metav1.CreateOptions{},
-		)
+	},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		t.Fatalf("could not create test namespace: %v", err)
+	}
+	defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	err = testlib.WaitForServiceAccountInNamespace(kubeClient, name, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	labels := map[string]string{"app": "pdbtest"}
+	err = pdbCreate(policyClient, name, minAvailable, maxUnavailable, labels)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
+		pdb, err := policyClient.PodDisruptionBudgets(name).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			t.Fatalf("could not create test namespace: %v", err)
+			return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
 		}
-		defer kubeClient.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
-		err = testlib.WaitForServiceAccountInNamespace(kubeClient, name, "default")
+		// Confirm the PDB is being reconciled by checking ObservedGeneration
+		if pdb.Status.ObservedGeneration == 0 {
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if createPod {
+		err = podCreate(kubeClient, name, labels)
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		labels := map[string]string{"app": "pdbtest"}
-		err = pdbCreate(policyClient, name, test.minAvailable, test.maxUnavailable, labels)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-			pdb, err := policyClient.PodDisruptionBudgets(name).Get(ctx, name, metav1.GetOptions{})
+		var pods *corev1.PodList
+		// Poll to confirm pod is running
+		wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
+			pods, err = kubeClient.CoreV1().Pods(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pdbtest"})
 			if err != nil {
-				return false, fmt.Errorf("waiting for poddisruptionbudget: %w", err)
+				return false, err
 			}
-			// Confirm the PDB is being reconciled by checking ObservedGeneration
-			if pdb.Status.ObservedGeneration == 0 {
-				return false, nil
+			if len(pods.Items) > 0 && pods.Items[0].Status.Phase == corev1.PodRunning {
+				return true, nil
 			}
-			return true, nil
+			return false, nil
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
+	}
 
-		if test.createPod {
-			err = podCreate(kubeClient, name, labels)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var pods *corev1.PodList
-			// Poll to confirm pod is running
-			wait.PollImmediate(time.Second*1, testTimeout, func() (bool, error) {
-				pods, err = kubeClient.CoreV1().Pods(name).List(ctx, metav1.ListOptions{LabelSelector: "app=pdbtest"})
-				if err != nil {
-					return false, err
-				}
-				if len(pods.Items) > 0 && pods.Items[0].Status.Phase == corev1.PodRunning {
-					return true, nil
-				}
-				return false, nil
-			})
-		}
-
-		// Now check for alert
-		prometheusClient, err := metrics.NewPrometheusClient(ctx, kubeClient, routeClient)
+	// Now check for alert
+	prometheusClient, err := metrics.NewPrometheusClient(ctx, kubeClient, routeClient)
+	if err != nil {
+		t.Fatalf("error creating route client for prometheus: %v", err)
+	}
+	var response model.Value
+	// Note: prometheus/client_golang Alerts method only works with the deprecated prometheus-k8s route.
+	// Our helper uses the thanos-querier route.  Because of this, have to pass the entire alert as a query.
+	// The thanos behavior is to error on partial response.
+	query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",severity=\"warning\"}==1", name, name)
+	err = wait.PollImmediate(time.Second*3, testTimeout, func() (bool, error) {
+		response, _, err = prometheusClient.Query(context.Background(), query, time.Now())
 		if err != nil {
-			t.Fatalf("error creating route client for prometheus: %v", err)
+			return false, fmt.Errorf("error querying prometheus: %v", err)
 		}
-		var response model.Value
-		// Note: prometheus/client_golang Alerts method only works with the deprecated prometheus-k8s route.
-		// Our helper uses the thanos-querier route.  Because of this, have to pass the entire alert as a query.
-		// The thanos behavior is to error on partial response.
-		query := fmt.Sprintf("ALERTS{alertname=\"PodDisruptionBudgetAtLimit\",alertstate=\"pending\",namespace=\"%s\",poddisruptionbudget=\"%s\",prometheus=\"openshift-monitoring/k8s\",severity=\"warning\"}==1", name, name)
-		err = wait.PollImmediate(time.Second*3, testTimeout, func() (bool, error) {
-			response, _, err = prometheusClient.Query(context.Background(), query, time.Now())
-			if err != nil {
-				return false, fmt.Errorf("error querying prometheus: %v", err)
-			}
-			if len(response.String()) == 0 {
-				return false, nil
-			}
-			return true, nil
-		})
-		if test.shouldAlert {
-			if err != nil {
-				t.Fatalf("error querying prometheus: %v", err)
-			}
-		} else {
-			if !errors.Is(err, wait.ErrWaitTimeout) {
-				t.Fatalf("expected timeout err as alert should not be received, got: %v", err)
-			}
+		if len(response.String()) == 0 {
+			return false, nil
+		}
+		return true, nil
+	})
+	if shouldAlert {
+		if err != nil {
+			t.Fatalf("error querying prometheus: %v", err)
+		}
+	} else {
+		if !errors.Is(err, wait.ErrWaitTimeout) {
+			t.Fatalf("expected timeout err as alert should not be received, got: %v", err)
 		}
 	}
 }
 
-// testConfigMapDeletionCase deletes a configmap and expects it to be recreated by the responsible controller.
 func testConfigMapDeletionCase(t testing.TB, namespace, resourceName string) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
@@ -270,8 +334,6 @@ func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config s
 	return err
 }
 
-// testKCMLeaseRecovery verifies that KCM can recover from having a lease deleted.
-// See https://bugzilla.redhat.com/show_bug.cgi?id=1744984
 func testKCMLeaseRecovery(t testing.TB, leaseName string) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
