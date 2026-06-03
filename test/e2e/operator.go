@@ -141,25 +141,29 @@ var _ = g.Describe("kube-controller-manager-operator", func() {
 	g.Context("TestKCMLeaseRecovery", func() {
 		tests := []struct {
 			name      string
+			namespace string
 			leaseName string
 		}{
 			{
 				name:      "kube-controller-manager",
+				namespace: "kube-system",
 				leaseName: "kube-controller-manager",
 			},
 			{
 				name:      "cert-recovery-controller-lock",
+				namespace: operatorclient.TargetNamespace,
 				leaseName: "cert-recovery-controller-lock",
 			},
 			{
 				name:      "cluster-policy-controller-lock",
+				namespace: operatorclient.TargetNamespace,
 				leaseName: "cluster-policy-controller-lock",
 			},
 		}
 		for _, test := range tests {
 			test := test
 			g.It(test.name, func() {
-				testKCMLeaseRecovery(g.GinkgoTB(), test.leaseName)
+				testKCMLeaseRecovery(g.GinkgoTB(), test.namespace, test.leaseName)
 			})
 		}
 	})
@@ -334,7 +338,7 @@ func testConfigMapDeletion(kubeClient *kubernetes.Clientset, namespace, config s
 	return err
 }
 
-func testKCMLeaseRecovery(t testing.TB, leaseName string) {
+func testKCMLeaseRecovery(t testing.TB, namespace, leaseName string) {
 	kubeConfig, err := testlib.NewClientConfigForTest()
 	if err != nil {
 		t.Fatal(err)
@@ -346,15 +350,15 @@ func testKCMLeaseRecovery(t testing.TB, leaseName string) {
 
 	ctx := context.Background()
 
-	// Try to delete the lease object in kube-system
-	err = kubeClient.CoordinationV1().Leases("kube-system").Delete(ctx, leaseName, metav1.DeleteOptions{})
+	// Try to delete the lease object
+	err = kubeClient.CoordinationV1().Leases(namespace).Delete(ctx, leaseName, metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check to see that the lease object then gets recreated
 	err = wait.Poll(time.Second*5, time.Second*300, func() (bool, error) {
-		_, err := kubeClient.CoordinationV1().Leases("kube-system").Get(ctx, leaseName, metav1.GetOptions{})
+		_, err := kubeClient.CoordinationV1().Leases(namespace).Get(ctx, leaseName, metav1.GetOptions{})
 		if machineryerrors.IsNotFound(err) {
 			return false, nil
 		}
