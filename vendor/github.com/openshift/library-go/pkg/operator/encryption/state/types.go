@@ -1,8 +1,11 @@
 package state
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 )
@@ -14,6 +17,11 @@ const (
 	KubernetesDescriptionScaryValue = `WARNING: DO NOT EDIT.
 Altering of the encryption secrets will render you cluster inaccessible.
 Catastrophic data loss can occur from the most minor changes.`
+
+	// secretDataKeySeparator separates the secret name from the data key.
+	// Underscore is used because it is forbidden in Kubernetes secret/configmap
+	// names, preventing collisions.
+	secretDataKeySeparator = "_"
 )
 
 // GroupResourceState represents, for a single group resource, the write and read keys in a
@@ -40,8 +48,108 @@ type KeyState struct {
 	InternalReason string
 	// the user via unsupportConfigOverrides.encryption.reason triggered this key.
 	ExternalReason string
-	// Encoded KMSConfiguration that stores the KMS related fields
-	KMSConfiguration *apiserverconfigv1.KMSConfiguration
+	// stores all the KMS encryption mode related configurations
+	KMS *KMSState
+}
+
+func (k *KeyState) HasKMSEncryption() bool {
+	return k != nil && k.KMS != nil && k.KMS.Encryption != nil
+}
+
+func (k *KeyState) HasKMSPlugin() bool {
+	return k != nil && k.KMS != nil && k.KMS.Plugin != (configv1.KMSPluginConfig{})
+}
+
+func (k *KeyState) HasKMSSecretData() bool {
+	return k != nil && k.KMS != nil && len(k.KMS.PluginSecretData.entries) > 0
+}
+
+// KMSState stores all KMS encryption mode related configurations
+type KMSState struct {
+	// Encoded EncryptionConfig that stores the KMS related fields
+	Encryption *apiserverconfigv1.KMSConfiguration
+
+	// Plugin stores KMS plugin specific configurations
+	Plugin configv1.KMSPluginConfig
+
+	// PluginSecretData stores data key-value pairs fetched from referenced secrets.
+	PluginSecretData KMSSecretData
+}
+
+// KMSSecretData stores data key-value pairs fetched from referenced secrets.
+// entries maps secret names to their data key-value pairs.
+type KMSSecretData struct {
+	entries map[string]map[string][]byte
+}
+
+// Get returns the value for the given secretName and dataKey. It returns false if
+// secretName or dataKey is empty, if Entries is nil, or if the key does not exist.
+func (d *KMSSecretData) Get(secretName, dataKey string) ([]byte, bool) {
+	if len(secretName) == 0 || len(dataKey) == 0 {
+		return nil, false
+	}
+	if d.entries == nil {
+		return nil, false
+	}
+	secretEntries, ok := d.entries[secretName]
+	if !ok {
+		return nil, false
+	}
+	value, ok := secretEntries[dataKey]
+	return value, ok
+}
+
+func (d *KMSSecretData) Set(secretName, dataKey string, value []byte) error {
+	if len(secretName) == 0 || len(dataKey) == 0 || len(value) == 0 {
+		return fmt.Errorf("secretName, dataKey, and value must not be empty")
+	}
+	if strings.Contains(secretName, "_") {
+		return fmt.Errorf("secret name %q must not contain underscores", secretName)
+	}
+	if d.entries == nil {
+		d.entries = map[string]map[string][]byte{}
+	}
+	if d.entries[secretName] == nil {
+		d.entries[secretName] = map[string][]byte{}
+	}
+	d.entries[secretName][dataKey] = value
+	return nil
+}
+
+// SetFromRawKey splits a combined key of the form "secretName_dataKey"
+// and stores the value.
+func (d *KMSSecretData) SetFromRawKey(rawKey string, value []byte) error {
+	parts := strings.SplitN(rawKey, secretDataKeySeparator, 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid combined key %q: expected format {secretName}%s{dataKey}", rawKey, secretDataKeySeparator)
+	}
+	return d.Set(parts[0], parts[1], value)
+}
+
+// FlatEntry returns the combined key "secretName_dataKey" used in flat representations.
+//
+// Note:
+//
+// It does not validate inputs. The callers are expected to use Set,
+// which rejects empty values and underscores in secretName.
+func (d *KMSSecretData) FlatEntry(secretName, dataKey string) string {
+	return secretName + secretDataKeySeparator + dataKey
+}
+
+// FlatEntries returns the stored data as a flat map keyed by "secretName_dataKey".
+// "_" separates secretName from dataKey because "_" is forbidden in
+// Kubernetes secret names, making the split unambiguous.
+func (d *KMSSecretData) FlatEntries() map[string][]byte {
+	if d.entries == nil {
+		return nil
+	}
+	result := map[string][]byte{}
+	for secretName, keys := range d.entries {
+		for dataKey, value := range keys {
+			result[d.FlatEntry(secretName, dataKey)] = value
+		}
+	}
+	return result
 }
 
 type MigrationState struct {
