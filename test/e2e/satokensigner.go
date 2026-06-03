@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	g "github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/require"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,7 +19,13 @@ import (
 	test "github.com/openshift/cluster-kube-controller-manager-operator/test/library"
 )
 
-func TestSATokenSignerControllerSyncCerts(t *testing.T) {
+var _ = g.Describe("kube-controller-manager-operator SA token signer", func() {
+	g.It("TestSATokenSignerControllerSyncCerts [Serial][Disruptive]", func() {
+		testSATokenSignerControllerSyncCerts(g.GinkgoTB())
+	})
+})
+
+func testSATokenSignerControllerSyncCerts(t testing.TB) {
 	// initialize clients
 	kubeConfig, err := test.NewClientConfigForTest()
 	require.NoError(t, err)
