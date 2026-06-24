@@ -24,12 +24,15 @@ This operator manages the lifecycle of the **kube-controller-manager** static po
 | `openshift-config` | User-specified global config (consumed, never written) |
 | `openshift-config-managed` | Machine-specified global config (consumed, never written) |
 | `kube-system` | Kubernetes system namespace (watched) |
+| `openshift-infra` | OpenShift infrastructure namespace (created and watched) |
 
 ## Component Overview
 
 The operator follows the **library-go static pod operator pattern**: observe cluster config, generate target config, create revisions, install static pods. All controllers use the library-go factory pattern with informer-driven work queues.
 
 This operator runs at CVO **run-level 25** (`0000_25_*` manifest prefix), meaning it upgrades *after* the kube-apiserver operator (run-level 20). This ordering is required because KCM must be N-1 compatible with the API server during upgrades.
+
+The operator process **exits on feature gate changes** — library-go's `NewFeatureGateAccess` calls `os.Exit(0)` if the resolved feature gate set changes, forcing a restart with the new gates. This is by design, not a crash.
 
 ```
  Cluster Config Resources              KubeControllerManager CR
@@ -59,7 +62,7 @@ This operator runs at CVO **run-level 25** (`0000_25_*` manifest prefix), meanin
 
 | Controller | Purpose | Key Watches | Key Outputs |
 |-----------|---------|-------------|-------------|
-| **ConfigObserver** | Observes cluster-wide config and writes `.status.observedConfig` on the CR | Infrastructure, Networks, FeatureGates, Proxies, Nodes, APIServers | ObservedConfig JSON on KubeControllerManager CR |
+| **ConfigObserver** | Observes cluster-wide config and writes `.status.observedConfig` on the CR. Runs two separate feature gate observers: one for KCM (filters out OpenShift-only gates) and one for CPC (unfiltered). | Infrastructure, Networks, FeatureGates, Proxies, Nodes, APIServers | ObservedConfig JSON on KubeControllerManager CR |
 | **TargetConfigController** | Renders KCM config, kubeconfig, pod template, and supporting ConfigMaps/Secrets | KubeControllerManager CR, Infrastructure | `config`, `controller-manager-kubeconfig`, `kube-controller-manager-pod` ConfigMaps; `csr-signer` Secret |
 | **ResourceSyncController** | Copies Secrets and ConfigMaps from global config namespaces to the target namespace | ConfigMaps/Secrets in `openshift-config`, `openshift-config-managed` | Synced copies in target namespace (`client-ca`, `service-ca`, etc.) |
 | **CertRotationController** | Rotates the CSR signing CA and leaf certificates | Secrets/ConfigMaps in operator and target namespaces, FeatureGates | `csr-signer-signer` CA, `csr-signer` leaf cert, `csr-controller-signer-ca` bundle |
@@ -85,7 +88,7 @@ This operator runs at CVO **run-level 25** (`0000_25_*` manifest prefix), meanin
 - **StaticResourceController** applies RBAC, namespace, network policies, and service accounts (uses `bindata.Asset`). Includes conditional vSphere resources.
 - **TargetConfigController** applies the pod template, config, kubeconfig, and recycler config (uses `bindata.MustAsset`).
 
-**Revision-tracked ConfigMaps:** `kube-controller-manager-pod`, `config`, `cluster-policy-controller-config`, `controller-manager-kubeconfig`, `cloud-config`, `serviceaccount-ca`, `service-ca`, `recycler-config`.
+**Revision-tracked ConfigMaps:** `kube-controller-manager-pod`, `config`, `cluster-policy-controller-config`, `controller-manager-kubeconfig`, `kube-controller-cert-syncer-kubeconfig`, `cloud-config`, `serviceaccount-ca`, `service-ca`, `recycler-config`.
 
 **Revision-tracked Secrets:** `service-account-private-key`, `serving-cert`, `localhost-recovery-client-token`.
 
@@ -141,3 +144,5 @@ With the `ConfigurablePKI` feature gate enabled ([enhancements#1882](https://git
 6. **ObservedConfig indirection:** Rather than reading cluster config directly in the target config controller, a separate ConfigObserver writes a merged JSON blob to `.status.observedConfig` on the CR. This decouples config sources from config consumers and makes the effective config inspectable via `oc get kubecontrollermanager cluster -o jsonpath='{.status.observedConfig}'`.
 
 7. **24-hour bootstrap signer with operator takeover:** The installer deliberately creates a short-lived CSR signer (24h) to minimize trust window during bootstrap. This operator's cert rotation controller takes ownership and issues a longer-lived replacement, ensuring the cluster transitions from minimal-trust bootstrap to managed cert lifecycle.
+
+8. **UseMoreSecureServiceCA bypasses ObservedConfig (tech debt):** The TargetConfigController reads `.spec.useMoreSecureServiceCA` directly from the operator spec rather than going through the ObservedConfig pattern. This is acknowledged in code as needing migration to a config observer, but requires changes to the observedConfig format.
