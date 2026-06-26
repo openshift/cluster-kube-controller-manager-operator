@@ -93,12 +93,12 @@ spec:
 
 Currently the operator log levels correspond to:
 
-| logLevel | log level |
-| -------- | --------- |
-| Normal   | 2         |
-| Debug    | 4         |
-| Trace    | 6         |
-| TraceAll | 8         |
+| operatorLogLevel | log level |
+| ---------------- | --------- |
+| Normal           | 2         |
+| Debug            | 4         |
+| Trace            | 6         |
+| TraceAll         | 8         |
 
 
 ```
@@ -167,38 +167,8 @@ $ OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=docker.io/<user>/origin-release:lates
 
 ## Tests
 
-This repository is compatible with the [OpenShift Tests Extension (OTE)](https://github.com/openshift-eng/openshift-tests-extension) framework.
+See the [OpenShift Tests Extension (OTE)](CONTRIBUTING.md#openshift-tests-extension-ote) section in `CONTRIBUTING.md` for instructions on building and running tests.
 
-### Building the test binary
+## Contributing
 
-```bash
-make build
-```
-
-### Running test suites and tests
-
-```bash
-# Run a specific test suite
-./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/operator/parallel
-
-# Run with parallel execution (4 workers)
-./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/operator/parallel -c 4
-
-# Run with JUnit output
-./cluster-kube-controller-manager-operator-tests-ext run-suite openshift/cluster-kube-controller-manager-operator/operator/parallel --junit-path "${ARTIFACT_DIR}/junit.xml"
-
-# Run a specific test
-./cluster-kube-controller-manager-operator-tests-ext run-test "test-name"
-```
-
-### Listing available tests and suites
-
-```bash
-# List all test suites
-./cluster-kube-controller-manager-operator-tests-ext list suites
-
-# List tests in a suite
-./cluster-kube-controller-manager-operator-tests-ext list tests --suite=openshift/cluster-kube-controller-manager-operator/operator/parallel
-```
-
-For more information about the OTE framework, see the [openshift-tests-extension documentation](https://github.com/openshift-eng/openshift-tests-extension).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
