@@ -171,7 +171,7 @@ func isRequiredConfigPresent(config []byte) error {
 
 	existingConfig := map[string]interface{}{}
 	if err := json.NewDecoder(bytes.NewBuffer(config)).Decode(&existingConfig); err != nil {
-		return fmt.Errorf("error parsing config, %v", err)
+		return fmt.Errorf("error parsing config: %w", err)
 	}
 
 	requiredPaths := [][]string{
@@ -184,7 +184,7 @@ func isRequiredConfigPresent(config []byte) error {
 	for _, requiredPath := range requiredPaths {
 		configVal, found, err := unstructured.NestedFieldNoCopy(existingConfig, requiredPath...)
 		if err != nil {
-			return fmt.Errorf("error reading %v from config, %v", strings.Join(requiredPath, "."), err)
+			return fmt.Errorf("error reading %v from config: %w", strings.Join(requiredPath, "."), err)
 		}
 		if !found {
 			return fmt.Errorf("%v missing from config", strings.Join(requiredPath, "."))
@@ -208,42 +208,42 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 
 	_, _, err := manageKubeControllerManagerConfig(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap", err))
 	}
 	_, _, err = manageClusterPolicyControllerConfig(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/cluster-policy-controller-config", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/cluster-policy-controller-config", err))
 	}
 	_, _, err = manageRecycler(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder(), c.toolsImagePullSpec)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/recycler-config", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/recycler-config", err))
 	}
 	_, _, err = ManageCSRIntermediateCABundle(ctx, c.secretLister, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-intermediate-ca", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/csr-intermediate-ca", err))
 	}
 	_, _, err = ManageCSRCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/csr-controller-ca", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/csr-controller-ca", err))
 	}
 	_, requeueDelay, _, err := ManageCSRSigner(ctx, c.secretLister, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "secrets/csr-signer", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "secrets/csr-signer", err))
 	}
 	if requeueDelay > 0 {
 		syncCtx.Queue().AddAfter(syncCtx.QueueKey(), requeueDelay)
 	}
 	_, _, err = manageServiceAccountCABundle(ctx, c.configMapLister, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/serviceaccount-ca", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/serviceaccount-ca", err))
 	}
 	err = ensureLocalhostRecoverySAToken(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "serviceaccount/localhost-recovery-client", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "serviceaccount/localhost-recovery-client", err))
 	}
 	_, _, err = manageControllerManagerKubeconfig(ctx, c.kubeClient.CoreV1(), c.infrastuctureLister, syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/controller-manager-kubeconfig", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/controller-manager-kubeconfig", err))
 	}
 
 	// Allow the addition of the service ca to token secrets to be enabled by setting an
@@ -258,7 +258,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 			EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade bool
 		}{}
 		if err := json.Unmarshal(operatorSpec.UnsupportedConfigOverrides.Raw, &cmConfigOverride); err != nil {
-			errors = append(errors, fmt.Errorf("failed to load EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade from UnsupportedConfigOverride: %v", err))
+			errors = append(errors, fmt.Errorf("failed to load EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade from UnsupportedConfigOverride: %w", err))
 		} else {
 			addServingServiceCAToTokenSecrets = cmConfigOverride.EnableDeprecatedAndRemovedServiceCAKeyUntilNextRelease_ThisMakesClusterImpossibleToUpgrade
 		}
@@ -266,12 +266,12 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 
 	_, _, err = managePod(ctx, c.kubeClient.CoreV1(), c.kubeClient.CoreV1(), syncCtx.Recorder(), operatorSpec, c.targetImagePullSpec, c.operatorImagePullSpec, c.clusterPolicyControllerPullSpec, c.operatorImageVersion, addServingServiceCAToTokenSecrets, useSecureServiceCA)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/kube-controller-manager-pod", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/kube-controller-manager-pod", err))
 	}
 
 	err = ensureKubeControllerManagerTrustedCA(ctx, c.kubeClient.CoreV1(), syncCtx.Recorder())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/trusted-ca-bundle", err))
+		errors = append(errors, fmt.Errorf("%q: %w", "configmap/trusted-ca-bundle", err))
 	}
 
 	// The operator is not upgradeable if serving service CA addition to token secrets is enabled
@@ -333,7 +333,7 @@ func createTargetConfigController(ctx context.Context, syncCtx factory.SyncConte
 func removeCloudControllerOwnerCondition(ctx context.Context, c TargetConfigController) error {
 	_, status, _, err := c.operatorClient.GetStaticPodOperatorState()
 	if err != nil {
-		return fmt.Errorf("could not get operator state: %v", err)
+		return fmt.Errorf("could not get operator state: %w", err)
 	}
 
 	// If the condition does not exist, our work here is done.
@@ -583,7 +583,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 	if kubeControllerManagerConfigMap != nil {
 		var kubeControllerManagerConfig map[string]interface{}
 		if err := yaml.Unmarshal([]byte(kubeControllerManagerConfigMap.Data["config.yaml"]), &kubeControllerManagerConfig); err != nil {
-			return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
+			return nil, false, fmt.Errorf("failed to unmarshal the kube-controller-manager config: %w", err)
 		}
 		if extendedArguments := GetKubeControllerManagerArgs(kubeControllerManagerConfig); len(extendedArguments) > 0 {
 			kcmContainerArgsWithLoglevel[0] += " " + strings.Join(extendedArguments, " ")
@@ -592,17 +592,17 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 
 	var observedConfig map[string]interface{}
 	if err := yaml.Unmarshal(operatorSpec.ObservedConfig.Raw, &observedConfig); err != nil {
-		return nil, false, fmt.Errorf("failed to unmarshal the observedConfig: %v", err)
+		return nil, false, fmt.Errorf("failed to unmarshal the observedConfig: %w", err)
 	}
 
 	cipherSuites, cipherSuitesFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "cipherSuites")
 	if err != nil {
-		return nil, false, fmt.Errorf("couldn't get the servingInfo.cipherSuites config from observedConfig: %v", err)
+		return nil, false, fmt.Errorf("couldn't get the servingInfo.cipherSuites config from observedConfig: %w", err)
 	}
 
 	minTLSVersion, minTLSVersionFound, err := unstructured.NestedString(observedConfig, "servingInfo", "minTLSVersion")
 	if err != nil {
-		return nil, false, fmt.Errorf("couldn't get the servingInfo.minTLSVersion config from observedConfig: %v", err)
+		return nil, false, fmt.Errorf("couldn't get the servingInfo.minTLSVersion config from observedConfig: %w", err)
 	}
 
 	if cipherSuitesFound && len(cipherSuites) > 0 {
@@ -617,7 +617,7 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 
 	proxyConfig, _, err := unstructured.NestedStringMap(observedConfig, "targetconfigcontroller", "proxy")
 	if err != nil {
-		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %v", err)
+		return nil, false, fmt.Errorf("couldn't get the proxy config from observedConfig: %w", err)
 	}
 
 	proxyEnvVars := proxyMapToEnvVars(proxyConfig)

@@ -237,13 +237,13 @@ func (r *renderOpts) Run() error {
 		}
 		err = discoverRestrictedCIDRs(clusterConfigFileData, &renderConfig)
 		if err != nil {
-			return fmt.Errorf("unable to parse restricted CIDRs from config: %v", err)
+			return fmt.Errorf("unable to parse restricted CIDRs from config: %w", err)
 		}
 	}
 
 	featureGates, err := r.generic.FeatureGates()
 	if err != nil {
-		return fmt.Errorf("error getting FeatureGates: %v", err)
+		return fmt.Errorf("error getting FeatureGates: %w", err)
 	}
 	if err := setFeatureGatesFromAccessor(&renderConfig, featureGates); err != nil {
 		return err
@@ -282,7 +282,7 @@ func (r *renderOpts) Run() error {
 	// we need to parse and pass them explicitly
 	var kubeControllerManagerConfig map[string]interface{}
 	if err := yaml.Unmarshal(renderConfig.FileConfig.BootstrapConfig, &kubeControllerManagerConfig); err != nil {
-		return fmt.Errorf("failed to unmarshal the kube-controller-manager config: %v", err)
+		return fmt.Errorf("failed to unmarshal the kube-controller-manager config: %w", err)
 	}
 	extendedArguments := targetconfigcontroller.GetKubeControllerManagerArgs(kubeControllerManagerConfig)
 	for _, arg := range extendedArguments {
@@ -291,7 +291,7 @@ func (r *renderOpts) Run() error {
 
 	// add additional kubeconfig asset
 	if kubeConfig, err := r.readBootstrapSecretsKubeconfig(); err != nil {
-		return fmt.Errorf("failed to read %s/kubeconfig: %v", r.manifest.SecretsHostPath, err)
+		return fmt.Errorf("failed to read %s/kubeconfig: %w", r.manifest.SecretsHostPath, err)
 	} else {
 		renderConfig.Assets["kubeconfig"] = kubeConfig
 	}
@@ -305,7 +305,7 @@ func (r *renderOpts) Run() error {
 		renderConfig.ClusterPolicyControllerFileConfig.BootstrapConfig,
 		0644,
 	); err != nil {
-		return fmt.Errorf("failed to write merged config to %q: %v", r.clusterPolicyControllerConfigOutputFile, err)
+		return fmt.Errorf("failed to write merged config to %q: %w", r.clusterPolicyControllerConfigOutputFile, err)
 	}
 
 	return nil

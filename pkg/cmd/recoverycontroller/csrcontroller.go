@@ -144,7 +144,7 @@ func (c *CSRController) processNextItem(ctx context.Context) bool {
 		return true
 	}
 
-	utilruntime.HandleError(fmt.Errorf("%v failed with : %w", key, err))
+	utilruntime.HandleError(fmt.Errorf("%v failed with: %w", key, err))
 	c.queue.AddRateLimited(key)
 
 	return true
