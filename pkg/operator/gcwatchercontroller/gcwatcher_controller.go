@@ -242,7 +242,7 @@ func (c *GarbageCollectorWatcherController) getAlertingRulesCached(ctx context.C
 	rules, err := c.promConnectivity.client.Rules(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("error fetching rules: %v", err)
+		return nil, fmt.Errorf("error fetching rules: %w", err)
 	}
 
 	c.alertingRulesCache = extractAlertingRules(requiredAlertsSet, rules)
@@ -285,7 +285,7 @@ func checkFiringAlerts(ctx context.Context, requiredAlertsSet sets.String, prome
 		klog.Warningf("received warnings when querying alerts: %v\n", strings.Join(warnings, ", "))
 	}
 	if err != nil {
-		return fmt.Errorf("error querying alerts: %v", err)
+		return fmt.Errorf("error querying alerts: %w", err)
 	}
 	queryResultVector, ok := queryResultVal.(prometheusmodel.Vector)
 	if !ok {
