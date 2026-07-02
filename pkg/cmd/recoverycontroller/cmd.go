@@ -57,6 +57,7 @@ func NewCertRecoveryControllerCommand(ctx context.Context) *cobra.Command {
 	// TODO: Remove when the internal logic can start serving without extension-apiserver-authentication
 	//  	 and live reload extension-apiserver-authentication after it is available
 	ccc.DisableServing = true
+	ccc.UserAgentSuffix = "cert-recovery"
 
 	cmd := ccc.NewCommandWithContext(ctx)
 	cmd.Use = "cert-recovery-controller"

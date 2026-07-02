@@ -3,11 +3,12 @@ package controllercmd
 import (
 	"context"
 	"fmt"
-	"k8s.io/utils/clock"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
+
+	"k8s.io/utils/clock"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apiserver/pkg/server/healthz"
@@ -55,6 +56,13 @@ type ControllerCommandConfig struct {
 	// DisableLeaderElection allows leader election to be suspended
 	DisableLeaderElection bool
 
+	// SkipInClusterAuthenticationLookup skips the synchronous read of the
+	// extension-apiserver-authentication configmap during serving setup.
+	// Use this for sidecar controllers that serve metrics/health but don't
+	// need request-header (front-proxy) authentication from the aggregation layer.
+	// Bearer-token authentication via TokenReview is preserved.
+	SkipInClusterAuthenticationLookup bool
+
 	// LeaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership. This is measured against time of
 	// last observed ack.
@@ -74,6 +82,10 @@ type ControllerCommandConfig struct {
 	ComponentOwnerReference *corev1.ObjectReference
 	healthChecks            []healthz.HealthChecker
 	eventRecorderOptions    record.CorrelatorOptions
+
+	// UserAgentSuffix is appended to the default UserAgent on REST clients,
+	// making requests from this component distinguishable.
+	UserAgentSuffix string
 }
 
 // NewControllerConfig returns a new ControllerCommandConfig which can be used to wire up all the boiler plate of a controller
@@ -280,7 +292,7 @@ func (c *ControllerCommandConfig) AddDefaultRotationToConfig(config *operatorv1a
 			config.ServingInfo.CertFile = filepath.Join(temporaryCertDir, "tls.crt")
 			config.ServingInfo.KeyFile = filepath.Join(temporaryCertDir, "tls.key")
 			// nothing can trust this, so we don't really care about hostnames
-			servingCert, err := ca.MakeServerCert(sets.New("localhost"), 30)
+			servingCert, err := ca.MakeServerCert(sets.New("localhost"), time.Hour*24*30)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -333,12 +345,16 @@ func (c *ControllerCommandConfig) StartController(ctx context.Context) error {
 		WithHealthChecks(c.healthChecks...).
 		WithEventRecorderOptions(c.eventRecorderOptions).
 		WithRestartOnChange(exitOnChangeReactorCh, startingFileContent, observedFiles...).
-		WithComponentOwnerReference(c.ComponentOwnerReference)
+		WithComponentOwnerReference(c.ComponentOwnerReference).
+		WithUserAgentSuffix(c.UserAgentSuffix)
 
 	if !c.DisableServing {
 		builder = builder.WithServer(config.ServingInfo, config.Authentication, config.Authorization)
 		if c.EnableHTTP2 {
 			builder = builder.WithHTTP2()
+		}
+		if c.SkipInClusterAuthenticationLookup {
+			builder = builder.WithSkipInClusterAuthenticationLookup()
 		}
 	}
 
