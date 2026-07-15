@@ -249,7 +249,7 @@ github.com/openshift-eng/openshift-tests-extension/pkg/ginkgo
 github.com/openshift-eng/openshift-tests-extension/pkg/junit
 github.com/openshift-eng/openshift-tests-extension/pkg/util/sets
 github.com/openshift-eng/openshift-tests-extension/pkg/version
-# github.com/openshift/api v0.0.0-20260408160412-464776f95207
+# github.com/openshift/api v0.0.0-20260521125114-09730f85d883
 ## explicit; go 1.25.0
 github.com/openshift/api
 github.com/openshift/api/annotations
@@ -338,7 +338,7 @@ github.com/openshift/build-machinery-go/make/targets/golang
 github.com/openshift/build-machinery-go/make/targets/openshift
 github.com/openshift/build-machinery-go/make/targets/openshift/operator
 github.com/openshift/build-machinery-go/scripts
-# github.com/openshift/client-go v0.0.0-20260330134249-7e1499aaacd7
+# github.com/openshift/client-go v0.0.0-20260512113608-deb4dc54551a
 ## explicit; go 1.25.0
 github.com/openshift/client-go/config/applyconfigurations/config/v1
 github.com/openshift/client-go/config/applyconfigurations/config/v1alpha1
@@ -367,7 +367,7 @@ github.com/openshift/client-go/route/applyconfigurations/route/v1
 github.com/openshift/client-go/route/clientset/versioned
 github.com/openshift/client-go/route/clientset/versioned/scheme
 github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
-# github.com/openshift/library-go v0.0.0-20260409165127-c57da2bf5720
+# github.com/openshift/library-go v0.0.0-20260409165127-c57da2bf5720 => github.com/tchap/library-go v0.0.0-20260603115914-0690a6474e6d
 ## explicit; go 1.25.0
 github.com/openshift/library-go/pkg/apiserver/jsonpatch
 github.com/openshift/library-go/pkg/assets
@@ -430,6 +430,7 @@ github.com/openshift/library-go/pkg/operator/staticpod/internal
 github.com/openshift/library-go/pkg/operator/staticpod/internal/atomicdir
 github.com/openshift/library-go/pkg/operator/staticpod/internal/atomicdir/types
 github.com/openshift/library-go/pkg/operator/staticpod/internal/flock
+github.com/openshift/library-go/pkg/operator/staticpod/internal/fsutil
 github.com/openshift/library-go/pkg/operator/staticpod/prune
 github.com/openshift/library-go/pkg/operator/staticpod/startupmonitor/annotations
 github.com/openshift/library-go/pkg/operator/staticresourcecontroller
@@ -1597,3 +1598,4 @@ sigs.k8s.io/structured-merge-diff/v6/value
 ## explicit; go 1.22
 sigs.k8s.io/yaml
 # github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20251001123353-fd5b1fb35db1
+# github.com/openshift/library-go => github.com/tchap/library-go v0.0.0-20260603115914-0690a6474e6d

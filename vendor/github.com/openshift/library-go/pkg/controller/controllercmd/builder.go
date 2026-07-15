@@ -3,11 +3,12 @@ package controllercmd
 import (
 	"context"
 	"fmt"
-	"k8s.io/utils/clock"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
@@ -104,6 +105,12 @@ type ControllerBuilder struct {
 
 	// Allow enabling HTTP2
 	enableHTTP2 bool
+
+	skipInClusterAuthLookup bool
+
+	// userAgentSuffix is appended to the default UserAgent string on REST
+	// clients created by this builder. Set via WithUserAgent.
+	userAgentSuffix string
 }
 
 type TopologyDetector interface {
@@ -214,6 +221,13 @@ func (b *ControllerBuilder) WithHTTP2() *ControllerBuilder {
 	return b
 }
 
+// WithSkipInClusterAuthenticationLookup skips the synchronous read of the
+// extension-apiserver-authentication configmap during serving setup.
+func (b *ControllerBuilder) WithSkipInClusterAuthenticationLookup() *ControllerBuilder {
+	b.skipInClusterAuthLookup = true
+	return b
+}
+
 // WithHealthChecks adds a list of healthchecks to the server
 func (b *ControllerBuilder) WithHealthChecks(healthChecks ...healthz.HealthChecker) *ControllerBuilder {
 	b.healthChecks = append(b.healthChecks, healthChecks...)
@@ -242,6 +256,13 @@ func (b *ControllerBuilder) WithEventRecorderOptions(options record.CorrelatorOp
 	return b
 }
 
+// WithUserAgentSuffix appends the given suffix to the default UserAgent on REST
+// clients created by this builder, making requests distinguishable by component.
+func (b *ControllerBuilder) WithUserAgentSuffix(suffix string) *ControllerBuilder {
+	b.userAgentSuffix = suffix
+	return b
+}
+
 // WithComponentOwnerReference overrides controller reference resolution for event recording
 func (b *ControllerBuilder) WithComponentOwnerReference(reference *corev1.ObjectReference) *ControllerBuilder {
 	b.componentOwnerReference = reference
@@ -253,6 +274,10 @@ func (b *ControllerBuilder) Run(ctx context.Context, config *unstructured.Unstru
 	clientConfig, err := b.getClientConfig()
 	if err != nil {
 		return err
+	}
+
+	if len(b.userAgentSuffix) > 0 {
+		rest.AddUserAgent(clientConfig, b.userAgentSuffix)
 	}
 
 	if b.fileObserver != nil {
@@ -311,7 +336,7 @@ func (b *ControllerBuilder) Run(ctx context.Context, config *unstructured.Unstru
 
 	var server *genericapiserver.GenericAPIServer
 	if b.servingInfo != nil {
-		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, *b.authorizationConfig, kubeConfig, kubeClient, b.leaderElection, b.enableHTTP2, b.versionInfo)
+		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, *b.authorizationConfig, kubeConfig, kubeClient, b.leaderElection, b.enableHTTP2, b.skipInClusterAuthLookup, b.versionInfo)
 		if err != nil {
 			return err
 		}
