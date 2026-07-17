@@ -17,14 +17,16 @@ This operator manages the lifecycle of the **kube-controller-manager** static po
 
 ## Namespace Map
 
-| Namespace | Role |
-|-----------|------|
-| `openshift-kube-controller-manager-operator` | Operator pod, signing CAs, staging secrets |
-| `openshift-kube-controller-manager` | Target — static pod, revisioned ConfigMaps/Secrets |
-| `openshift-config` | User-specified global config (consumed, never written) |
-| `openshift-config-managed` | Machine-specified global config (consumed, never written) |
-| `kube-system` | Kubernetes system namespace (watched) |
-| `openshift-infra` | OpenShift infrastructure namespace (created and watched) |
+| Namespace | Constant | Role |
+|-----------|----------|------|
+| `openshift-kube-controller-manager-operator` | `OperatorNamespace` | Operator pod, signing CAs, staging secrets |
+| `openshift-kube-controller-manager` | `TargetNamespace` | Target — static pod, revisioned ConfigMaps/Secrets |
+| `openshift-config` | `GlobalUserSpecifiedConfigNamespace` | User-specified global config (consumed, never written) |
+| `openshift-config-managed` | `GlobalMachineSpecifiedConfigNamespace` | Machine-specified global config (consumed, never written) |
+| `kube-system` | — | Kubernetes system namespace (watched) |
+| `openshift-infra` | — | OpenShift infrastructure namespace (created and watched) |
+
+Constants are defined in `pkg/operator/operatorclient/interfaces.go`.
 
 ## Component Overview
 
@@ -128,6 +130,14 @@ With the `ConfigurablePKI` feature gate enabled ([enhancements#1882](https://git
 - **Unit tests** (`pkg/...`): ConfigObserver logic, target config rendering, cert rotation edge cases. Run with `make test-unit`.
 - **E2E tests** (`test/e2e/...`): Validate operator behavior on a live cluster — status reporting, static pod rollouts, network policy enforcement. Run with `make test-e2e`.
 - **OTE framework**: Tests are registered with [openshift-tests-extension](https://github.com/openshift-eng/openshift-tests-extension) for CI integration. Suite: `openshift/cluster-kube-controller-manager-operator/operator/parallel`.
+
+## Recovery Controller
+
+`pkg/cmd/recoverycontroller/` provides a certificate recovery mechanism for when CSR signing certificates have expired. It runs the cert rotation controller in `RefreshOnlyWhenExpired` mode to regenerate expired certificates, and includes a CSR approval controller that auto-approves kubelet CSRs signed by the recovered signer. Runs as a container in the static pod via the `cert-recovery-controller` subcommand.
+
+## Render Command
+
+`pkg/cmd/render/` is a bootstrap manifest renderer used during cluster installation. It takes installer-provided inputs (cloud provider config, feature gates, cluster CIDRs, images) and renders the initial set of manifests needed to bootstrap the kube-controller-manager before the operator is running. Templates live in `bindata/bootkube/`.
 
 ## Design Decisions
 
