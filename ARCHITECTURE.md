@@ -148,3 +148,21 @@ The default kube-controller-manager configuration lives in `bindata/assets/confi
 | `ClusterOperatorStatusController` | Reports operator status, versions, and related objects to `ClusterOperator/kube-controller-manager` |
 | `GarbageCollectorWatcherController` | Monitors garbage collector sync failures via Prometheus metrics on the kube-controller-manager |
 | `LatencyProfileController` | Manages latency profile configuration, coordinates with the installer to reject extreme profiles during transitions |
+
+## Design Decisions
+
+1. **Static pod pattern over Deployment:** The kube-controller-manager runs as a static pod managed by kubelet, not as a Deployment. This avoids a circular dependency — KCM manages controllers that Deployments depend on (e.g., service account token controller). The operator writes pod manifests that kubelet picks up directly.
+
+2. **Revision-based rollouts:** Configuration changes create new revisions (numbered copies of ConfigMaps/Secrets). The installer controller rolls out one node at a time by writing a new static pod manifest referencing the latest revision. This provides rollback capability and audit trail.
+
+3. **Cluster-policy-controller as a sidecar:** The cluster-policy-controller ([openshift/cluster-policy-controller](https://github.com/openshift/cluster-policy-controller)) runs as a container in the KCM static pod rather than as a separate Deployment. This was a deliberate decision made for OpenShift 4.3 (PR #297, October 2019). The primary driver is a **bootstrap chicken-and-egg problem**: CPC's controllers (namespace SCC allocation, quota reconciliation, PSA label syncing) must be running before any Deployments can be scheduled — pods cannot be created without UID range and SELinux label allocation. Placing these controllers in a static pod breaks the circular dependency. The KCM pod was chosen because CPC shares the same service account (`system:kube-controller-manager`), RBAC, certificates, kubeconfig, and leader election namespace, avoiding infrastructure duplication.
+
+4. **5-minute SA key promotion delay:** New service account signing keys are staged in `next-service-account-private-key` for 5 minutes before promotion. This gives the kube-apiserver time to observe the new public key via the `sa-token-signing-certs` bundle, preventing token validation failures during rotation.
+
+5. **Bootstrap node departure gate:** SA token key rotation is blocked until the bootstrap node has left the cluster. The bootstrap node uses a different signing key; rotating before it departs could cause token validation failures for workloads it started.
+
+6. **ObservedConfig indirection:** Rather than reading cluster config directly in the target config controller, a separate ConfigObserver writes a merged JSON blob to `.status.observedConfig` on the CR. This decouples config sources from config consumers and makes the effective config inspectable via `oc get kubecontrollermanager cluster -o jsonpath='{.status.observedConfig}'`.
+
+7. **24-hour bootstrap signer with operator takeover:** The installer deliberately creates a short-lived CSR signer (24h) to minimize trust window during bootstrap. This operator's cert rotation controller takes ownership and issues a longer-lived replacement, ensuring the cluster transitions from minimal-trust bootstrap to managed cert lifecycle.
+
+8. **UseMoreSecureServiceCA bypasses ObservedConfig (tech debt):** The TargetConfigController reads `.spec.useMoreSecureServiceCA` directly from the operator spec rather than going through the ObservedConfig pattern. This is acknowledged in code as needing migration to a config observer, but requires changes to the observedConfig format.

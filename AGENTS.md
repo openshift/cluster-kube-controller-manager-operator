@@ -54,13 +54,34 @@ Config observers follow a specific pattern: each observer function receives the 
 - **Platform conditionals:** vSphere legacy cloud provider resources are only deployed when `Infrastructure.Status.PlatformStatus.Type == VSpherePlatformType`
 - **Upstream changes:** controllers that wrap library-go functionality should have fixes made upstream in [library-go](https://github.com/openshift/library-go), not here
 
+## Critical Rules
+
+1. **Never edit `vendor/` directly.** Change `go.mod`, then `go mod tidy && go mod vendor`. Always commit vendor changes separately from code changes for reviewable diffs.
+
+2. **Static pod template changes affect all control plane nodes.** `bindata/assets/kube-controller-manager/pod.yaml` defines four containers (kube-controller-manager, cluster-policy-controller, cert-syncer, recovery-controller). Changes here trigger rolling restarts across control plane.
+
+3. **CVO manifest ordering matters.** Files in `manifests/` are prefixed `0000_25_` for run-level 25. This operator must upgrade after kube-apiserver (run-level 20). Don't change the prefix.
+
+4. **Cert rotation has safety gates.** The SA token signer waits for bootstrap node departure and uses a 5-minute promotion delay. Don't bypass these — they prevent token validation failures cluster-wide.
+
+5. **This operator does not run in HyperShift.** The operator Deployment is excluded from hosted control plane topologies. HyperShift's control-plane-operator manages KCM directly.
+
+6. **Feature gate changes cause operator exit.** The operator process calls `os.Exit(0)` when the resolved feature gate set changes (by design, via library-go). This is a restart, not a crash.
+
+## What NOT to Do
+
+- **Don't read cluster config directly in TargetConfigController.** Use the ObservedConfig pattern — ConfigObserver writes to the CR status, TargetConfigController reads from there.
+- **Don't add HyperShift logic.** This operator is standalone-only. HyperShift has its own KCM management.
+- **Don't modify `pkg/operator/configobservation/network/` without networking team review.** It has separate OWNERS.
+- **Don't skip `make verify` before submitting.** CI runs gofmt, govet, and Go version checks.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines. Key rules:
 
 - Do not modify files under `vendor/`. Use `go mod tidy && go mod vendor`.
 - `bindata/assets.go` uses Go's `embed` directive to embed asset files — update the embedded files, not this file.
-- Write unit tests for every change. E2E tests for significant features.
+- Write unit tests for behavior and implementation changes. E2E tests for significant features. Documentation-only changes need `make verify` to pass.
 - Backwards compatibility matters — deprecate before removing.
 - Before modifying the operator API, ensure there is a corresponding enhancement proposal in [openshift/enhancements](https://github.com/openshift/enhancements). API changes require design review and approval.
 
