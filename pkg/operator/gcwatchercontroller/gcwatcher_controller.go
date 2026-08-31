@@ -239,7 +239,7 @@ func (c *GarbageCollectorWatcherController) getAlertingRulesCached(ctx context.C
 		return c.alertingRulesCache, nil
 	}
 
-	rules, err := c.promConnectivity.client.Rules(ctx)
+	rules, err := c.promConnectivity.client.Rules(ctx, nil)
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching rules: %w", err)

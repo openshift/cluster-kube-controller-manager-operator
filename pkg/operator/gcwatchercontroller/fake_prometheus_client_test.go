@@ -34,6 +34,10 @@ type fakePrometheusClient struct {
 	queryErr       error
 }
 
+func (f fakePrometheusClient) FormatQuery(ctx context.Context, query string) (string, error) {
+	panic("implement me")
+}
+
 func (f fakePrometheusClient) Query(ctx context.Context, query string, ts time.Time, opts ...prometheusv1.Option) (prometheusmodel.Value, prometheusv1.Warnings, error) {
 	return f.queryResultVal, nil, f.queryErr
 }
@@ -62,7 +66,7 @@ func (f fakePrometheusClient) Flags(ctx context.Context) (prometheusv1.FlagsResu
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, options ...prometheusv1.Option) ([]string, prometheusv1.Warnings, error) {
+func (f fakePrometheusClient) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time, options ...prometheusv1.Option) (prometheusmodel.LabelNames, prometheusv1.Warnings, error) {
 	panic("implement me")
 }
 
@@ -94,7 +98,7 @@ func (f fakePrometheusClient) Snapshot(ctx context.Context, skipHead bool) (prom
 	panic("implement me")
 }
 
-func (f fakePrometheusClient) Rules(ctx context.Context) (prometheusv1.RulesResult, error) {
+func (f fakePrometheusClient) Rules(ctx context.Context, groups []string) (prometheusv1.RulesResult, error) {
 	panic("implement me")
 }
 
@@ -111,6 +115,10 @@ func (f fakePrometheusClient) Metadata(ctx context.Context, metric string, limit
 }
 
 func (f fakePrometheusClient) TSDB(ctx context.Context, options ...prometheusv1.Option) (prometheusv1.TSDBResult, error) {
+	panic("implement me")
+}
+
+func (f fakePrometheusClient) TSDBBlocks(ctx context.Context) (prometheusv1.TSDBBlocksResult, error) {
 	panic("implement me")
 }
 
