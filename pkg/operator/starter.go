@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -21,6 +22,7 @@ import (
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/targetconfigcontroller"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/condition"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/latencyprofilecontroller"
@@ -43,6 +45,8 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 )
+
+const guardControllerDegradedConditionType = "GuardControllerDegraded"
 
 func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
 	// This kube client use protobuf, do not use it for CR
@@ -249,7 +253,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		versionRecorder,
 		cc.EventRecorder,
 		cc.Clock,
-	)
+	).WithDegradedInertia(newDegradedInertia())
 
 	certRotationController, err := certrotationcontroller.NewCertRotationController(
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformersForNamespaces),
@@ -309,6 +313,28 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	<-ctx.Done()
 	return nil
+}
+
+func newDegradedInertia() status.Inertia {
+	return status.MustNewInertia(
+		2*time.Minute,
+		// Nodes may temporarily become unready during upgrades while the machine/kubelet restarts.
+		// Use a longer inertia to avoid flapping the ClusterOperator Degraded condition.
+		inertiaForCondition(condition.NodeControllerDegradedConditionType, 10*time.Minute),
+		// Similarly, applying static pods to nodes that are being restarted may temporarily fail.
+		// Use a longer inertia to avoid flapping the ClusterOperator Degraded condition.
+		inertiaForCondition(condition.StaticPodsDegradedConditionType, 10*time.Minute),
+		// Guard pods and PDBs may temporarily fail to reconcile during upgrades while nodes restart.
+		// Use a longer inertia to avoid flapping the ClusterOperator Degraded condition.
+		inertiaForCondition(guardControllerDegradedConditionType, 10*time.Minute),
+	).Inertia
+}
+
+func inertiaForCondition(cond string, duration time.Duration) status.InertiaCondition {
+	return status.InertiaCondition{
+		ConditionTypeMatcher: regexp.MustCompile("^" + cond + "$"),
+		Duration:             duration,
+	}
 }
 
 // deploymentConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.
