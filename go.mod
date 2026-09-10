@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.39.0
 	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
 	github.com/openshift/api v0.0.0-20260805215214-cfb63858e9d7
-	github.com/openshift/build-machinery-go v0.0.0-20250530140348-dc5b2804eeee
+	github.com/openshift/build-machinery-go v0.0.0-20260902143904-520f675c892b
 	github.com/openshift/client-go v0.0.0-20260806041845-b74fb348f1e7
 	github.com/openshift/library-go v0.0.0-20260820084800-0387a1950a96
 	github.com/prometheus/client_golang v1.23.2
