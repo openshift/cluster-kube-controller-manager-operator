@@ -85,6 +85,7 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		operatorclient.GlobalUserSpecifiedConfigNamespace,
 		operatorclient.OperatorNamespace,
 		operatorclient.TargetNamespace,
+		nodeLeaseNamespace,
 	)
 
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
@@ -148,10 +149,20 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		return err
 	}
 
+	csrInformers := NewKubeletClientCSRApproverInformers(kubeClient)
+	kubeletClientCSRApprover := NewKubeletClientCSRApprover(
+		kubeClient,
+		kubeInformersForNamespaces,
+		csrInformers,
+		o.controllerContext.EventRecorder,
+		clock,
+	)
+
 	// We can't start informers until after the resources have been requested. Now is the time.
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
+	csrInformers.Start(ctx.Done())
 
 	// FIXME: These are missing a wait group to track goroutines and handle graceful termination
 	// (@deads2k wants time to think it through)
@@ -161,6 +172,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 
 	go func() {
 		csrController.Run(ctx)
+	}()
+
+	go func() {
+		kubeletClientCSRApprover.Run(ctx, 1)
 	}()
 
 	<-ctx.Done()
