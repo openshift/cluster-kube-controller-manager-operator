@@ -18,6 +18,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
@@ -77,6 +78,11 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 	kubeClient, err := kubernetes.NewForConfig(o.controllerContext.ProtoKubeConfig)
 	if err != nil {
 		return fmt.Errorf("can't build kubernetes client: %w", err)
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(o.controllerContext.KubeConfig)
+	if err != nil {
+		return fmt.Errorf("can't build dynamic client: %w", err)
 	}
 
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
@@ -158,12 +164,24 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		clock,
 	)
 
+	servingCSRInformers := NewKubeletServingCSRApproverInformers(kubeClient)
+	kubeletServingCSRApprover := NewKubeletServingCSRApprover(
+		kubeClient,
+		dynamicClient,
+		kubeInformersForNamespaces,
+		csrInformers,
+		servingCSRInformers,
+		o.controllerContext.EventRecorder,
+		clock,
+	)
+
 	// We can't start informers until after the resources have been requested. Now is the time.
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 	csrInformers.Start(ctx.Done())
 	leaseInformers.Start(ctx.Done())
+	servingCSRInformers.Start(ctx.Done())
 
 	// FIXME: These are missing a wait group to track goroutines and handle graceful termination
 	// (@deads2k wants time to think it through)
@@ -177,6 +195,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 
 	go func() {
 		kubeletClientCSRApprover.Run(ctx, 1)
+	}()
+
+	go func() {
+		kubeletServingCSRApprover.Run(ctx, 1)
 	}()
 
 	<-ctx.Done()

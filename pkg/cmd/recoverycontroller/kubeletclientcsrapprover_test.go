@@ -302,7 +302,7 @@ func approvals(t *testing.T, client *fake.Clientset) []string {
 			if c.Type == certificatesv1.CertificateDenied {
 				t.Fatalf("CSR %s was denied", csr.Name)
 			}
-			if c.Type == certificatesv1.CertificateApproved && c.Reason == KubeletClientCSRRecoveryApproveReason && c.Status == corev1.ConditionTrue {
+			if c.Type == certificatesv1.CertificateApproved && c.Reason == KubeletCSRRecoveryApproveReason && c.Status == corev1.ConditionTrue {
 				approved = true
 			}
 		}

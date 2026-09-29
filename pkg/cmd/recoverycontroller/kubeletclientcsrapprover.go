@@ -2,8 +2,6 @@ package recoverycontroller
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"reflect"
 	"sort"
@@ -28,7 +26,6 @@ import (
 	"k8s.io/utils/clock"
 
 	"github.com/openshift/library-go/pkg/controller/factory"
-	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
@@ -36,19 +33,8 @@ import (
 )
 
 const (
-	// NodeClientCertRecoveryConfigMapName is the opt-in toggle. When the ConfigMap exists in
-	// openshift-config with data.enabled == "true", the recovery controller approves kubelet
-	// client CSRs for nodes that can no longer authenticate (see kubeletClientCSRApprover).
-	NodeClientCertRecoveryConfigMapName = "node-client-cert-recovery"
-	nodeClientCertRecoveryEnabledKey    = "enabled"
-
-	// KubeletClientCSRRecoveryApproveReason is set on the Approved condition of CSRs approved by this controller.
-	KubeletClientCSRRecoveryApproveReason = "KCMRecoveryApprove"
-
 	kubeletClientSignerName  = certificatesv1.KubeAPIServerClientKubeletSignerName
 	nodeBootstrapperUsername = "system:serviceaccount:openshift-machine-config-operator:node-bootstrapper"
-	nodeUserPrefix           = "system:node:"
-	nodeGroup                = "system:nodes"
 	nodeLeaseNamespace       = corev1.NamespaceNodeLease
 
 	// heartbeatStaleAfter is how long a node's kubelet must have gone without a heartbeat before the
@@ -56,10 +42,6 @@ const (
 	// in kube-node-lease every ~10s; it is unrelated to leader-election Leases. A healthy node never
 	// gets here.
 	heartbeatStaleAfter = 5 * time.Minute
-	// resyncInterval re-evaluates heartbeat staleness, which changes with time rather than with events.
-	// After a power-off the heartbeats are already stale, and new CSRs and the csr-signer update trigger
-	// a sync directly. Under a minute, library-go emits a FastControllerResync warning on every start.
-	resyncInterval = time.Minute
 
 	kubeletClientCSRApproverName = "KubeletClientCSRRecoveryApprover"
 )
@@ -160,7 +142,7 @@ func NewKubeletClientCSRApprover(
 func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncContext) error {
 	// 1. Toggle: log and emit an Event only when it flips on or off (sync runs at least every
 	// minute, so not on every sync). While off, stop here with no API calls.
-	enabled, err := c.toggleEnabled()
+	enabled, err := nodeCertRecoveryEnabled(c.configMapLister)
 	if err != nil {
 		return err
 	}
@@ -203,7 +185,7 @@ func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncConte
 	// 3. Approve nothing until csr-signer is valid again; otherwise kube-controller-manager can't
 	// sign what we approve and backs off.
 	now := c.clock.Now()
-	if ok, reason := c.signerValid(now); !ok {
+	if ok, reason := csrSignerValid(c.secretLister, now); !ok {
 		klog.Infof("Not approving %d pending kubelet client CSRs yet: %s", countCSRs(candidates), reason)
 		return nil
 	}
@@ -241,36 +223,6 @@ func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncConte
 		}
 	}
 	return utilerrors.NewAggregate(errs)
-}
-
-func (c *kubeletClientCSRApprover) toggleEnabled() (bool, error) {
-	cm, err := c.configMapLister.ConfigMaps(operatorclient.GlobalUserSpecifiedConfigNamespace).Get(NodeClientCertRecoveryConfigMapName)
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return cm.Data[nodeClientCertRecoveryEnabledKey] == "true", nil
-}
-
-// signerValid reports whether the csr-signer that kube-controller-manager signs with is currently valid.
-// After a long power-off the kubelets submit CSRs minutes before this controller regenerates the expired
-// signer; approving earlier makes kube-controller-manager fail to sign and back off for up to ~16 minutes.
-func (c *kubeletClientCSRApprover) signerValid(now time.Time) (bool, string) {
-	secret, err := c.secretLister.Secrets(operatorclient.TargetNamespace).Get("csr-signer")
-	if err != nil {
-		return false, fmt.Sprintf("cannot read %s/csr-signer: %v", operatorclient.TargetNamespace, err)
-	}
-	certs, err := crypto.CertsFromPEM(secret.Data[corev1.TLSCertKey])
-	if err != nil || len(certs) == 0 {
-		return false, fmt.Sprintf("cannot parse %s/csr-signer: %v", operatorclient.TargetNamespace, err)
-	}
-	if now.Before(certs[0].NotBefore) || !now.Before(certs[0].NotAfter) {
-		return false, fmt.Sprintf("%s/csr-signer is not valid now (valid %s to %s)", operatorclient.TargetNamespace,
-			certs[0].NotBefore.UTC().Format(time.RFC3339), certs[0].NotAfter.UTC().Format(time.RFC3339))
-	}
-	return true, ""
 }
 
 // nodeNeedsClientCert returns the time of the node's last heartbeat when the Node exists, isn't being
@@ -333,26 +285,13 @@ func heartbeatStaleSince(lease *coordinationv1.Lease, now time.Time) (time.Time,
 	return lastHeartbeat, ""
 }
 
-// approve adds an Approved condition through the approval subresource. A CSR deleted in the
-// meantime is ignored. Any other error, including a Conflict, is returned so the sync is retried,
-// and the retry skips the CSR if someone else approved or denied it meanwhile.
+// approve approves csr and reports it in the log and as an Event.
 func (c *kubeletClientCSRApprover) approve(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, nodeName string, heartbeatAge time.Duration) error {
-	csr = csr.DeepCopy()
 	message := fmt.Sprintf("Approved by the kube-controller-manager cert-recovery-controller: node %s has not sent a heartbeat for %s and %s/%s is enabled",
 		nodeName, heartbeatAge.Round(time.Second), operatorclient.GlobalUserSpecifiedConfigNamespace, NodeClientCertRecoveryConfigMapName)
-	csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-		Type:           certificatesv1.CertificateApproved,
-		Status:         corev1.ConditionTrue,
-		Reason:         KubeletClientCSRRecoveryApproveReason,
-		Message:        message,
-		LastUpdateTime: metav1.NewTime(c.clock.Now()),
-	})
-	_, err := c.kubeClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csr.Name, csr, metav1.UpdateOptions{})
-	switch {
-	case apierrors.IsNotFound(err):
-		return nil
-	case err != nil:
-		return fmt.Errorf("failed to approve CSR %s for node %s: %w", csr.Name, nodeName, err)
+	approved, err := approveCSR(ctx, c.kubeClient, csr, nodeName, message, c.clock.Now())
+	if !approved || err != nil {
+		return err
 	}
 	klog.Infof("Approved CSR %s for node %s (no heartbeat for %s)", csr.Name, nodeName, heartbeatAge.Round(time.Second))
 	c.recorder.Eventf("KubeletClientCSRApproved", "Approved kubelet client CSR %s for node %s: it has not sent a heartbeat for %s", csr.Name, nodeName, heartbeatAge.Round(time.Second))
@@ -373,18 +312,13 @@ func recoveryClientCSRNodeName(csr *certificatesv1.CertificateSigningRequest) (s
 	if !nodeBootstrapperGroups.Equal(sets.New(csr.Spec.Groups...)) {
 		return "", fmt.Errorf("unexpected groups %v", csr.Spec.Groups)
 	}
-	usages := sets.New(csr.Spec.Usages...)
-	if len(usages) != len(csr.Spec.Usages) || (!usages.Equal(kubeletClientUsages) && !usages.Equal(kubeletClientUsagesLegacy)) {
+	if !usagesMatch(csr.Spec.Usages, kubeletClientUsages, kubeletClientUsagesLegacy) {
 		return "", fmt.Errorf("unexpected usages %v", csr.Spec.Usages)
 	}
 	// The x509 request asks for exactly a node identity (O=system:nodes, CN=system:node:<name>), no SANs.
-	block, _ := pem.Decode(csr.Spec.Request)
-	if block == nil || block.Type != "CERTIFICATE REQUEST" {
-		return "", fmt.Errorf("request is not a PEM-encoded CERTIFICATE REQUEST")
-	}
-	x509cr, err := x509.ParseCertificateRequest(block.Bytes)
+	x509cr, err := parseCSRRequest(csr)
 	if err != nil {
-		return "", fmt.Errorf("cannot parse request: %w", err)
+		return "", err
 	}
 	if !reflect.DeepEqual([]string{nodeGroup}, x509cr.Subject.Organization) {
 		return "", fmt.Errorf("organization is %v", x509cr.Subject.Organization)
@@ -397,15 +331,6 @@ func recoveryClientCSRNodeName(csr *certificatesv1.CertificateSigningRequest) (s
 		return "", fmt.Errorf("common name is %q", x509cr.Subject.CommonName)
 	}
 	return nodeName, nil
-}
-
-func isApprovedOrDenied(csr *certificatesv1.CertificateSigningRequest) bool {
-	for _, condition := range csr.Status.Conditions {
-		if condition.Type == certificatesv1.CertificateApproved || condition.Type == certificatesv1.CertificateDenied {
-			return true
-		}
-	}
-	return false
 }
 
 func countCSRs(byNode map[string][]*certificatesv1.CertificateSigningRequest) int {
