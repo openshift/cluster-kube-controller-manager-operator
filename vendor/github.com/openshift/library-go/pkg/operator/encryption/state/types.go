@@ -1,13 +1,15 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
+
+	"github.com/openshift/library-go/pkg/operator/encryption/kms"
 )
 
 // These annotations try to scare anyone away from editing the encryption secrets.  It is trivial for
@@ -57,7 +59,7 @@ func (k *KeyState) HasKMSEncryption() bool {
 }
 
 func (k *KeyState) HasKMSPlugin() bool {
-	return k != nil && k.KMS != nil && k.KMS.Plugin != (configv1.KMSPluginConfig{})
+	return k != nil && k.KMS != nil && k.KMS.Plugin != (kms.KMSPluginConfig{})
 }
 
 func (k *KeyState) HasKMSSecretData() bool {
@@ -68,19 +70,64 @@ func (k *KeyState) HasKMSConfigMapData() bool {
 	return k != nil && k.KMS != nil && len(k.KMS.PluginConfigMapData.entries) > 0
 }
 
+// RemoteKey returns the remote key rotation state. Non-KMS keys have no remote key.
+func (k *KeyState) RemoteKey() RemoteKeyState {
+	if k == nil || k.KMS == nil {
+		return RemoteKeyState{}
+	}
+	return k.KMS.RemoteKey
+}
+
+// RemoteKeyState is the in-memory view of remote key rotation annotations.
+type RemoteKeyState struct {
+	// TargetRemoteKeyID is the target remote KMS key ID to migrate toward.
+	// Will be empty before successful preflight, otherwise it is always set to what health check observes.
+	TargetRemoteKeyID string
+	// MigratedRemoteKeyID is the last fully migrated remote KMS key ID. Meaning it is empty until the first
+	// SVM ran successfully.
+	MigratedRemoteKeyID string
+	// ConvergedAt records when a candidate remote key ID first achieved cluster convergence. This is used to determine
+	// when the five-minute grace period for apiservers start. Only non-zero when a new target remote key was observed
+	// across all health reports.
+	ConvergedAt time.Time
+	// ConvergedID is the candidate remote key ID the converged-at timestamp belongs to. This is used to track what remote
+	// key triggered the convergence timer. This is used to determine whether the remote key was changed during the convergence.
+	// Only non-empty when a new target remote key was observed across all health reports.
+	ConvergedID string
+}
+
+// Validate checks whether the remote key state is coherent. Returns a descriptive error when it is not.
+func (rk RemoteKeyState) Validate() error {
+	if rk.ConvergedAt.IsZero() != (rk.ConvergedID == "") {
+		return errors.New("RemoteKeyState requires convergedAt and convergedId both set, or default")
+	}
+	return nil
+}
+
+// NeedsRemoteKeyMigration reports whether a target remote key has not yet been
+// migrated. An unset migrated ID belongs to initial migration, not rotation.
+func (rk RemoteKeyState) NeedsRemoteKeyMigration() bool {
+	return rk.TargetRemoteKeyID != "" &&
+		rk.MigratedRemoteKeyID != "" &&
+		rk.TargetRemoteKeyID != rk.MigratedRemoteKeyID
+}
+
 // KMSState stores all KMS encryption mode related configurations
 type KMSState struct {
 	// Encoded EncryptionConfig that stores the KMS related fields
 	Encryption *apiserverconfigv1.KMSConfiguration
 
 	// Plugin stores KMS plugin specific configurations
-	Plugin configv1.KMSPluginConfig
+	Plugin kms.KMSPluginConfig
 
 	// PluginSecretData stores data key-value pairs fetched from referenced secrets.
 	PluginSecretData KMSReferenceData
 
 	// PluginConfigMapData stores data key-value pairs fetched from referenced configmaps.
 	PluginConfigMapData KMSReferenceData
+
+	// RemoteKey tracks KMS remote key rotation annotations on the backing secret.
+	RemoteKey RemoteKeyState
 }
 
 // KMSReferenceData stores data key-value pairs fetched from referenced secrets or configmaps.
