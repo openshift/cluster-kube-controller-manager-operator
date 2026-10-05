@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -16,18 +17,283 @@ import (
 	"time"
 
 	"github.com/openshift/api/annotations"
+	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-kube-controller-manager-operator/pkg/operator/operatorclient"
 	"github.com/openshift/library-go/pkg/crypto"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 )
+
+var (
+	codec = scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
+)
+
+// fakeResourceSyncer implements resourcesynccontroller.ResourceSyncer for testing
+type fakeResourceSyncer struct{}
+
+func (f *fakeResourceSyncer) SyncConfigMap(destination, source resourcesynccontroller.ResourceLocation) error {
+	return nil
+}
+
+func (f *fakeResourceSyncer) SyncSecret(destination, source resourcesynccontroller.ResourceLocation) error {
+	return nil
+}
+
+// fakeSyncContext implements factory.SyncContext for testing
+type fakeSyncContext struct {
+	recorder events.Recorder
+}
+
+func (f *fakeSyncContext) Queue() workqueue.RateLimitingInterface {
+	return nil
+}
+
+func (f *fakeSyncContext) QueueKey() string {
+	return ""
+}
+
+func (f *fakeSyncContext) Recorder() events.Recorder {
+	return f.recorder
+}
+
+// fakeOperatorClientWrapper wraps StaticPodOperatorClient to add UpdateOperatorSpec support
+type fakeOperatorClientWrapper struct {
+	v1helpers.StaticPodOperatorClient
+}
+
+func (w *fakeOperatorClientWrapper) UpdateOperatorSpec(ctx context.Context, resourceVersion string, spec *operatorv1.OperatorSpec) (*operatorv1.OperatorSpec, string, error) {
+	// Simulate kube-apiserver behavior: convert Object to Raw if Raw is nil
+	if spec.ObservedConfig.Object != nil && len(spec.ObservedConfig.Raw) == 0 {
+		rawBytes, err := json.Marshal(spec.ObservedConfig.Object)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to marshal ObservedConfig.Object to Raw: %v", err)
+		}
+		spec.ObservedConfig.Raw = rawBytes
+	}
+
+	// The library-go fake doesn't support UpdateOperatorSpec, so we call UpdateStaticPodOperatorSpec instead
+	currentSpec, _, _, err := w.StaticPodOperatorClient.GetStaticPodOperatorState()
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Update only the OperatorSpec portion
+	currentSpec.OperatorSpec = *spec
+	_, _, err = w.StaticPodOperatorClient.UpdateStaticPodOperatorSpec(ctx, resourceVersion, currentSpec)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return spec, resourceVersion, nil
+}
+
+// newAPIServerWithTLSGroups creates an APIServer with a custom TLS security profile
+// The MinTLSVersion is always set to VersionTLS12 and ciphers are predefined.
+// Pass nil for groups to create a profile without groups.
+func newAPIServerWithTLSGroups(groups []configv1.TLSGroup) *configv1.APIServer {
+	return &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Ciphers: []string{
+							"ECDHE-ECDSA-AES128-GCM-SHA256",
+							"ECDHE-RSA-AES128-GCM-SHA256",
+						},
+						MinTLSVersion: configv1.VersionTLS12,
+						Groups:        groups,
+					},
+				},
+			},
+		},
+	}
+}
+
+// setupFakeClients creates fake Kubernetes and config clients with required resources for testing
+func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
+	kubernetes.Interface,
+	v1helpers.KubeInformersForNamespaces,
+	configinformers.SharedInformerFactory,
+) {
+	// Create required resources in the target namespace
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "localhost-recovery-client",
+			Namespace: operatorclient.TargetNamespace,
+			UID:       "test-uid",
+		},
+	}
+	token := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "localhost-recovery-client-token",
+			Namespace: operatorclient.TargetNamespace,
+			Annotations: map[string]string{
+				corev1.ServiceAccountUIDKey: "test-uid",
+			},
+		},
+		Data: map[string][]byte{
+			"token":  []byte("test-token"),
+			"ca.crt": []byte("test-ca"),
+		},
+	}
+
+	// Create required ConfigMaps for manageServiceAccountCABundle
+	testCA, err := crypto.MakeSelfSignedCAConfig("test-ca", 24*time.Hour)
+	if err != nil {
+		t.Fatalf("failed to create test CA: %v", err)
+	}
+	testCACertPEM, _, err := testCA.GetPEMBytes()
+	if err != nil {
+		t.Fatalf("failed to get CA PEM bytes: %v", err)
+	}
+
+	kubeAPIServerServerCA := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-apiserver-server-ca",
+			Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+		},
+		Data: map[string]string{
+			"ca-bundle.crt": string(testCACertPEM),
+		},
+	}
+	defaultIngressCert := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default-ingress-cert",
+			Namespace: operatorclient.GlobalMachineSpecifiedConfigNamespace,
+		},
+		Data: map[string]string{
+			"ca-bundle.crt": string(testCACertPEM),
+		},
+	}
+
+	fakeKubeClient := fake.NewSimpleClientset(sa, token, kubeAPIServerServerCA, defaultIngressCert)
+	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
+		fakeKubeClient,
+		operatorclient.GlobalUserSpecifiedConfigNamespace,
+		operatorclient.GlobalMachineSpecifiedConfigNamespace,
+		operatorclient.TargetNamespace,
+		operatorclient.OperatorNamespace,
+	)
+
+	// Create Infrastructure object
+	infrastructure := &configv1.Infrastructure{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Status: configv1.InfrastructureStatus{
+			APIServerInternalURL: "https://127.0.0.1:443",
+			InfrastructureName:   "test-cluster",
+		},
+	}
+
+	// Create Network object
+	network := &configv1.Network{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.NetworkSpec{
+			ClusterNetwork: []configv1.ClusterNetworkEntry{
+				{CIDR: "10.128.0.0/14"},
+			},
+			ServiceNetwork: []string{"172.30.0.0/16"},
+		},
+		Status: configv1.NetworkStatus{
+			ClusterNetwork: []configv1.ClusterNetworkEntry{
+				{CIDR: "10.128.0.0/14"},
+			},
+			ServiceNetwork: []string{"172.30.0.0/16"},
+		},
+	}
+
+	// Create Proxy object
+	proxy := &configv1.Proxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+	}
+
+	// Create Node object
+	node := &configv1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+	}
+
+	// Build list of objects to pre-populate the fake config client
+	configObjects := []runtime.Object{infrastructure, network, proxy, node}
+	if apiServer != nil {
+		configObjects = append(configObjects, apiServer)
+	}
+	fakeConfigClient := configfake.NewSimpleClientset(configObjects...)
+	configInformers := configinformers.NewSharedInformerFactory(fakeConfigClient, 0)
+
+	// Populate required informer caches
+	configInformers.Config().V1().Infrastructures().Informer().GetIndexer().Add(infrastructure)
+	configInformers.Config().V1().Networks().Informer().GetIndexer().Add(network)
+	configInformers.Config().V1().Proxies().Informer().GetIndexer().Add(proxy)
+	configInformers.Config().V1().Nodes().Informer().GetIndexer().Add(node)
+	if apiServer != nil {
+		configInformers.Config().V1().APIServers().Informer().GetIndexer().Add(apiServer)
+	}
+
+	return fakeKubeClient, kubeInformersForNamespaces, configInformers
+}
+
+// fakeOperatorLister implements cache.GenericLister for testing
+type fakeOperatorLister struct{}
+
+func (f *fakeOperatorLister) List(selector labels.Selector) (ret []runtime.Object, err error) {
+	return nil, nil
+}
+
+func (f *fakeOperatorLister) Get(name string) (runtime.Object, error) {
+	// Return a default KubeControllerManager object as unstructured
+	kcm := &operatorv1.KubeControllerManager{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: operatorv1.KubeControllerManagerSpec{
+			UseMoreSecureServiceCA: true,
+		},
+	}
+	// Convert to unstructured
+	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(kcm)
+	if err != nil {
+		return nil, err
+	}
+	return &unstructured.Unstructured{Object: unstructuredObj}, nil
+}
+
+func (f *fakeOperatorLister) ByNamespace(namespace string) cache.GenericNamespaceLister {
+	return nil
+}
+
+// decodeKCMPod extracts and decodes the controller manager pod from a ConfigMap
+func decodeKCMPod(t *testing.T, configMap *corev1.ConfigMap) *corev1.Pod {
+	t.Helper()
+	rawPod, exist := configMap.Data["pod.yaml"]
+	if !exist {
+		t.Fatal("didn't find pod.yaml")
+	}
+
+	actualPod := &corev1.Pod{}
+	if err := runtime.DecodeInto(codec, []byte(rawPod), actualPod); err != nil {
+		t.Fatal(err)
+	}
+
+	return actualPod
+}
 
 func TestIsRequiredConfigPresent(t *testing.T) {
 	tests := []struct {
@@ -1072,6 +1338,191 @@ func TestManageCSRCABundle(t *testing.T) {
 			if test.expectedChanged {
 				events := recorder.Events()
 				require.NotEmpty(t, events)
+			}
+		})
+	}
+}
+
+
+func TestInt32sToStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int32
+		expected []string
+	}{
+		{
+			name:     "empty slice",
+			input:    []int32{},
+			expected: []string{},
+		},
+		{
+			name:     "single value",
+			input:    []int32{29},
+			expected: []string{"29"},
+		},
+		{
+			name:     "multiple values",
+			input:    []int32{29, 23, 24},
+			expected: []string{"29", "23", "24"},
+		},
+		{
+			name:     "with negative values",
+			input:    []int32{-1, 0, 100},
+			expected: []string{"-1", "0", "100"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := int32sToStrings(tt.input)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("int32sToStrings(%v) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestManagePod_TLSGroupsInjection(t *testing.T) {
+	tests := []struct {
+		name                    string
+		apiServer               *configv1.APIServer
+		featureGateEnabled      bool
+		expectedCurvePreference string
+		expectCurveArg          bool
+	}{
+		{
+			name: "TLS groups injected when feature gate enabled",
+			apiServer: newAPIServerWithTLSGroups([]configv1.TLSGroup{
+				configv1.TLSGroupX25519,
+				configv1.TLSGroupSecP256r1,
+				configv1.TLSGroupSecP384r1,
+			}),
+			featureGateEnabled:      true,
+			expectedCurvePreference: "--tls-curve-preferences=29,23,24",
+			expectCurveArg:          true,
+		},
+		{
+			name: "TLS groups not injected when feature gate disabled",
+			apiServer: newAPIServerWithTLSGroups([]configv1.TLSGroup{
+				configv1.TLSGroupX25519,
+				configv1.TLSGroupSecP256r1,
+				configv1.TLSGroupSecP384r1,
+			}),
+		},
+		{
+			name:               "no TLS groups in profile",
+			apiServer:          newAPIServerWithTLSGroups(nil),
+			featureGateEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			// setup operator client with wrapper to support UpdateOperatorSpec
+			fakeOperatorClient := &fakeOperatorClientWrapper{
+				StaticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
+					&operatorv1.StaticPodOperatorSpec{
+						OperatorSpec: operatorv1.OperatorSpec{},
+					},
+					&operatorv1.StaticPodOperatorStatus{
+						OperatorStatus: operatorv1.OperatorStatus{},
+					},
+					nil,
+					nil,
+				),
+			}
+
+			// setup fake clients with all required resources
+			fakeKubeClient, kubeInformersForNamespaces, configInformers := setupFakeClients(t, tt.apiServer)
+
+			// create event recorder
+			eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
+
+			// Create feature gate based on test case
+			var featureGates featuregates.FeatureGateAccess
+			if tt.featureGateEnabled {
+				featureGates = featuregates.NewHardcodedFeatureGateAccess([]configv1.FeatureGateName{"TLSGroupPreferences"}, nil)
+			} else {
+				featureGates = featuregates.NewHardcodedFeatureGateAccess(nil, []configv1.FeatureGateName{"TLSGroupPreferences"})
+			}
+
+			// Create config observer - this registers event handlers with informers
+			configObserver, err := configobservercontroller.NewConfigObserver(
+				fakeOperatorClient,
+				configInformers,
+				kubeInformersForNamespaces,
+				&fakeResourceSyncer{},
+				featureGates,
+				eventRecorder,
+			)
+			if err != nil {
+				t.Fatalf("failed to create config observer: %v", err)
+			}
+
+			// Create a fake lister that returns the operator
+			operatorLister := &fakeOperatorLister{}
+
+			// Create target config controller
+			targetConfigController := NewTargetConfigController(
+				"test-image",
+				"test-operator-image",
+				"test-cluster-policy-controller-image",
+				"test-tools-image",
+				"0.0.1-snapshot",
+				kubeInformersForNamespaces,
+				fakeOperatorClient,
+				operatorLister,
+				fakeKubeClient,
+				configInformers.Config().V1().Infrastructures(),
+				eventRecorder,
+			)
+
+			// Start informers after controllers have registered their event handlers
+			kubeInformersForNamespaces.Start(ctx.Done())
+			configInformers.Start(ctx.Done())
+
+			// Run config observer sync to update observed config in operator spec
+			if err := configObserver.Sync(ctx, &fakeSyncContext{recorder: eventRecorder}); err != nil {
+				t.Logf("WARNING: config observer sync returned error: %v", err)
+			}
+
+			// Run target config controller sync to trigger the full production code path
+			if err := targetConfigController.Sync(ctx, &fakeSyncContext{recorder: eventRecorder}); err != nil {
+				t.Fatalf("targetConfigController.Sync failed: %v", err)
+			}
+
+			// Read the generated ConfigMap from the fake kube client
+			actualConfigMap, err := fakeKubeClient.CoreV1().ConfigMaps(operatorclient.TargetNamespace).Get(ctx, "kube-controller-manager-pod", metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("failed to get kube-controller-manager-pod ConfigMap: %v", err)
+			}
+
+			actualPod := decodeKCMPod(t, actualConfigMap)
+
+			// Check container args for TLS curve preferences
+			foundCurvePreference := false
+
+			for _, arg := range actualPod.Spec.Containers[0].Args {
+				if strings.Contains(arg, "--tls-curve-preferences=") {
+					foundCurvePreference = true
+					if tt.expectCurveArg {
+						if !strings.Contains(arg, tt.expectedCurvePreference) {
+							t.Errorf("Expected curve preference arg to contain %q, got %q", tt.expectedCurvePreference, arg)
+						}
+					} else {
+						t.Errorf("Did not expect --tls-curve-preferences arg but found %q", arg)
+					}
+				}
+			}
+
+			if tt.expectCurveArg && !foundCurvePreference {
+				t.Errorf("Expected to find --tls-curve-preferences arg but didn't")
+			}
+			if !tt.expectCurveArg && foundCurvePreference {
+				t.Errorf("Did not expect to find --tls-curve-preferences arg but found one")
 			}
 		})
 	}
