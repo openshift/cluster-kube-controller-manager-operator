@@ -2,6 +2,7 @@ package configobservercontroller
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/api/features"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	libgoapiserver "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
+	"github.com/openshift/library-go/pkg/operator/configobserver/controllermanager"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	nodeobserver "github.com/openshift/library-go/pkg/operator/configobserver/node"
 	"github.com/openshift/library-go/pkg/operator/configobserver/proxy"
@@ -44,6 +46,17 @@ func NewConfigObserver(
 	eventRecorder events.Recorder,
 ) (*ConfigObserver, error) {
 
+	// The ControllerManager config CRD is gated behind the ControllerManagerConfig
+	// feature gate. The operator's starter waits for the initial feature gates to be
+	// observed before constructing this controller, so the gate can be resolved
+	// synchronously here; the feature gate accessor restarts the process whenever the
+	// gates change, so this evaluation self-heals.
+	featureGates, err := featureGateAccessor.CurrentFeatureGates()
+	if err != nil {
+		return nil, err
+	}
+	controllerManagerConfigEnabled := featureGates.Enabled(features.FeatureGateControllerManagerConfig)
+
 	interestingNamespaces := []string{
 		operatorclient.GlobalUserSpecifiedConfigNamespace,
 		operatorclient.GlobalMachineSpecifiedConfigNamespace,
@@ -62,6 +75,9 @@ func NewConfigObserver(
 		configinformers.Config().V1().Networks().Informer(),
 		configinformers.Config().V1().Nodes().Informer(),
 		configinformers.Config().V1().Proxies().Informer(),
+	}
+	if controllerManagerConfigEnabled {
+		informers = append(informers, configinformers.Config().V1alpha1().ControllerManagers().Informer())
 	}
 	for _, ns := range interestingNamespaces {
 		informers = append(informers, kubeInformersForNamespaces.InformersFor(ns).Core().V1().ConfigMaps().Informer())
@@ -83,72 +99,88 @@ func NewConfigObserver(
 		node.LatencyConfigs,
 	)
 
+	listers := configobservation.Listers{
+		FeatureGateLister_:    configinformers.Config().V1().FeatureGates().Lister(),
+		InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
+		NetworkLister:         configinformers.Config().V1().Networks().Lister(),
+		NodeLister_:           configinformers.Config().V1().Nodes().Lister(),
+		ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
+		APIServerLister_:      configinformers.Config().V1().APIServers().Lister(),
+
+		ResourceSync:     resourceSyncer,
+		ConfigMapLister_: kubeInformersForNamespaces.ConfigMapLister(),
+	}
+
+	preRunCachesSynced := append(configMapPreRunCacheSynced,
+		operatorClient.Informer().HasSynced,
+
+		kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
+		kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
+
+		configinformers.Config().V1().FeatureGates().Informer().HasSynced,
+		configinformers.Config().V1().Infrastructures().Informer().HasSynced,
+		configinformers.Config().V1().Networks().Informer().HasSynced,
+		configinformers.Config().V1().Nodes().Informer().HasSynced,
+		configinformers.Config().V1().Proxies().Informer().HasSynced,
+	)
+
+	observers := []configobserver.ObserveConfigFunc{
+		cloudprovider.NewCloudProviderObserver(
+			"openshift-kube-controller-manager",
+			false,
+		),
+
+		// this is picked up by the kube-controller-manager container
+		featuregates.NewObserveFeatureFlagsFunc(
+			nil,
+			openShiftOnlyFeatureGates,
+			[]string{"extendedArguments", "feature-gates"},
+			featureGateAccessor,
+		),
+
+		// this is picked up by the cluster-policy-controller container
+		featuregates.NewObserveFeatureFlagsFunc(
+			nil,
+			nil,
+			[]string{"featureGates"},
+			featureGateAccessor,
+		),
+		network.ObserveClusterCIDRs,
+		network.ObserveServiceClusterIPRanges,
+		nodeobserver.NewLatencyProfileObserver(
+			node.LatencyConfigs,
+			[]nodeobserver.ShouldSuppressConfigUpdatesFunc{
+				// for multiple suppressor(s) being called in this observer
+				// the more important one: the extreme profile suppressor,
+				// will resolve first; extreme profile suppression would take
+				// priority over different config profile suppressor.
+				extremeProfileSuppressor,
+				differentConfigProfileSuppressor,
+			},
+		),
+		proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
+		serviceca.ObserveServiceCA,
+		clustername.ObserveInfraID,
+		libgoapiserver.ObserveTLSSecurityProfile,
+	}
+
+	if controllerManagerConfigEnabled {
+		listers.ControllerManagerLister_ = configinformers.Config().V1alpha1().ControllerManagers().Lister()
+		preRunCachesSynced = append(preRunCachesSynced, configinformers.Config().V1alpha1().ControllerManagers().Informer().HasSynced)
+		// this is picked up by the kube-controller-manager container as the
+		// --disable-force-detach-on-timeout flag
+		observers = append(observers, controllermanager.ObserveVolumeForceDetach)
+	}
+	listers.PreRunCachesSynced = preRunCachesSynced
+
 	c := &ConfigObserver{
 		Controller: configobserver.NewConfigObserver(
 			"kube-controller-manager",
 			operatorClient,
 			eventRecorder,
-			configobservation.Listers{
-				FeatureGateLister_:    configinformers.Config().V1().FeatureGates().Lister(),
-				InfrastructureLister_: configinformers.Config().V1().Infrastructures().Lister(),
-				NetworkLister:         configinformers.Config().V1().Networks().Lister(),
-				NodeLister_:           configinformers.Config().V1().Nodes().Lister(),
-				ProxyLister_:          configinformers.Config().V1().Proxies().Lister(),
-				APIServerLister_:      configinformers.Config().V1().APIServers().Lister(),
-
-				ResourceSync:     resourceSyncer,
-				ConfigMapLister_: kubeInformersForNamespaces.ConfigMapLister(),
-				PreRunCachesSynced: append(configMapPreRunCacheSynced,
-					operatorClient.Informer().HasSynced,
-
-					kubeInformersForNamespaces.InformersFor(operatorclient.GlobalUserSpecifiedConfigNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
-					kubeInformersForNamespaces.InformersFor(operatorclient.TargetNamespace).Core().V1().ConfigMaps().Informer().HasSynced,
-
-					configinformers.Config().V1().FeatureGates().Informer().HasSynced,
-					configinformers.Config().V1().Infrastructures().Informer().HasSynced,
-					configinformers.Config().V1().Networks().Informer().HasSynced,
-					configinformers.Config().V1().Nodes().Informer().HasSynced,
-					configinformers.Config().V1().Proxies().Informer().HasSynced,
-				),
-			},
+			listers,
 			informers,
-			cloudprovider.NewCloudProviderObserver(
-				"openshift-kube-controller-manager",
-				false,
-			),
-
-			// this is picked up by the kube-controller-manager container
-			featuregates.NewObserveFeatureFlagsFunc(
-				nil,
-				openShiftOnlyFeatureGates,
-				[]string{"extendedArguments", "feature-gates"},
-				featureGateAccessor,
-			),
-
-			// this is picked up by the cluster-policy-controller container
-			featuregates.NewObserveFeatureFlagsFunc(
-				nil,
-				nil,
-				[]string{"featureGates"},
-				featureGateAccessor,
-			),
-			network.ObserveClusterCIDRs,
-			network.ObserveServiceClusterIPRanges,
-			nodeobserver.NewLatencyProfileObserver(
-				node.LatencyConfigs,
-				[]nodeobserver.ShouldSuppressConfigUpdatesFunc{
-					// for multiple suppressor(s) being called in this observer
-					// the more important one: the extreme profile suppressor,
-					// will resolve first; extreme profile suppression would take
-					// priority over different config profile suppressor.
-					extremeProfileSuppressor,
-					differentConfigProfileSuppressor,
-				},
-			),
-			proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
-			serviceca.ObserveServiceCA,
-			clustername.ObserveInfraID,
-			libgoapiserver.ObserveTLSSecurityProfile,
+			observers...,
 		),
 	}
 
