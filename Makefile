@@ -24,6 +24,8 @@ $(call build-image,ocp-cluster-kube-controller-manager-operator,$(IMAGE_REGISTRY
 
 $(call verify-golang-versions,Dockerfile.rhel7)
 
+build: GO_BUILD_FLAGS += -tags=no_openssl
+
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS :=-race -timeout=30m
 test-e2e: test-unit
