@@ -5,6 +5,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+	configlistersv1alpha1 "github.com/openshift/client-go/config/listers/config/v1alpha1"
 	"github.com/openshift/library-go/pkg/operator/configobserver/cloudprovider"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 )
@@ -12,13 +13,14 @@ import (
 var _ cloudprovider.InfrastructureLister = &Listers{}
 
 type Listers struct {
-	FeatureGateLister_    configlistersv1.FeatureGateLister
-	InfrastructureLister_ configlistersv1.InfrastructureLister
-	NetworkLister         configlistersv1.NetworkLister
-	NodeLister_           configlistersv1.NodeLister
-	ProxyLister_          configlistersv1.ProxyLister
-	ConfigMapLister_      corev1listers.ConfigMapLister
-	APIServerLister_      configlistersv1.APIServerLister
+	FeatureGateLister_       configlistersv1.FeatureGateLister
+	InfrastructureLister_    configlistersv1.InfrastructureLister
+	NetworkLister            configlistersv1.NetworkLister
+	NodeLister_              configlistersv1.NodeLister
+	ProxyLister_             configlistersv1.ProxyLister
+	ConfigMapLister_         corev1listers.ConfigMapLister
+	APIServerLister_         configlistersv1.APIServerLister
+	ControllerManagerLister_ configlistersv1alpha1.ControllerManagerLister
 
 	ResourceSync       resourcesynccontroller.ResourceSyncer
 	PreRunCachesSynced []cache.InformerSynced
@@ -54,4 +56,8 @@ func (l Listers) ConfigMapLister() corev1listers.ConfigMapLister {
 
 func (l Listers) APIServerLister() configlistersv1.APIServerLister {
 	return l.APIServerLister_
+}
+
+func (l Listers) ControllerManagerLister() configlistersv1alpha1.ControllerManagerLister {
+	return l.ControllerManagerLister_
 }
