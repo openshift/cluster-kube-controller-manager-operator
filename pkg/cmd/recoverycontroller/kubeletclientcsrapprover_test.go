@@ -174,7 +174,11 @@ type fixture struct {
 	deletingNodes []string
 	csrs          []*certificatesv1.CertificateSigningRequest
 	reactor       clienttesting.ReactionFunc
-	wasOnline     bool
+	// configMapReactor handles updates of the toggle ConfigMap.
+	configMapReactor clienttesting.ReactionFunc
+	wasOnline        bool
+	// enabledSince is when the approver saw the toggle turned on, if wasOnline; testNow if unset.
+	enabledSince time.Time
 }
 
 func enabledToggle(value string) *corev1.ConfigMap {
@@ -233,8 +237,10 @@ func (f fixture) run(t *testing.T) (*fake.Clientset, events.InMemoryRecorder, *k
 	secretIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	leaseIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	csrIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	var objs []runtime.Object
 	if f.toggle != nil {
 		_ = cmIndexer.Add(f.toggle)
+		objs = append(objs, f.toggle)
 	}
 	if f.signer != nil {
 		_ = secretIndexer.Add(f.signer)
@@ -242,7 +248,6 @@ func (f fixture) run(t *testing.T) (*fake.Clientset, events.InMemoryRecorder, *k
 	for _, l := range f.leases {
 		_ = leaseIndexer.Add(l)
 	}
-	var objs []runtime.Object
 	for _, n := range f.nodes {
 		objs = append(objs, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: n}})
 	}
@@ -258,6 +263,9 @@ func (f fixture) run(t *testing.T) (*fake.Clientset, events.InMemoryRecorder, *k
 	if f.reactor != nil {
 		client.PrependReactor("update", "certificatesigningrequests", f.reactor)
 	}
+	if f.configMapReactor != nil {
+		client.PrependReactor("update", "configmaps", f.configMapReactor)
+	}
 	client.ClearActions()
 	recorder := events.NewInMemoryRecorder("test", &fakePassiveClock{now: testNow})
 	c := &kubeletClientCSRApprover{
@@ -269,6 +277,12 @@ func (f fixture) run(t *testing.T) (*fake.Clientset, events.InMemoryRecorder, *k
 		clock:           &fakePassiveClock{now: testNow},
 		recorder:        recorder,
 		enabled:         f.wasOnline,
+	}
+	if f.wasOnline {
+		c.enabledSince = f.enabledSince
+		if c.enabledSince.IsZero() {
+			c.enabledSince = testNow
+		}
 	}
 	err := c.sync(context.Background(), nil)
 	return client, recorder, c, err
@@ -524,6 +538,127 @@ func TestKubeletClientCSRApproverEnabledEventOncePerTransition(t *testing.T) {
 	}
 	if got := eventReasons(recorder); !equalStrings(got, []string{"NodeCertRecoveryEnabled"}) {
 		t.Fatalf("events %v, want a single NodeCertRecoveryEnabled", got)
+	}
+}
+
+// configMapUpdates returns the toggle ConfigMaps written, in order.
+func configMapUpdates(client *fake.Clientset) []*corev1.ConfigMap {
+	var updates []*corev1.ConfigMap
+	for _, a := range client.Actions() {
+		if a.GetVerb() == "update" && a.GetResource().Resource == "configmaps" {
+			updates = append(updates, a.(clienttesting.UpdateAction).GetObject().(*corev1.ConfigMap))
+		}
+	}
+	return updates
+}
+
+func TestKubeletClientCSRApproverAutoDisable(t *testing.T) {
+	windowOver := testNow.Add(-autoDisableAfter)
+	stale := func(t *testing.T, enabledSince time.Time) fixture {
+		return fixture{toggle: enabledToggle("true"), signer: validSigner(t), leases: []*coordinationv1.Lease{lease("master-0", &staleHeartbeat)}, nodes: []string{"master-0"},
+			csrs:      []*certificatesv1.CertificateSigningRequest{newCSR(t, csrOpts{name: "csr-a", cn: "system:node:master-0", created: testNow.Add(-3 * time.Minute)})},
+			wasOnline: true, enabledSince: enabledSince}
+	}
+	conflict := func(clienttesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewConflict(schema.GroupResource{Resource: "configmaps"}, NodeCertRecoveryConfigMapName, nil)
+	}
+
+	tests := []struct {
+		name         string
+		fixture      func(t *testing.T) fixture
+		wantApproved []string
+		wantDisabled bool
+		wantEvents   []string
+		wantErr      bool
+	}{
+		{
+			name:         "on for just under the window: approves as usual",
+			fixture:      func(t *testing.T) fixture { return stale(t, windowOver.Add(time.Second)) },
+			wantApproved: []string{"csr-a"},
+			wantEvents:   []string{"KubeletClientCSRApproved"},
+		},
+		{
+			name:         "on for the window: turned off and nothing approved",
+			fixture:      func(t *testing.T) fixture { return stale(t, windowOver) },
+			wantDisabled: true,
+			wantEvents:   []string{"NodeCertRecoveryAutoDisabled"},
+		},
+		{
+			name: "seen on for the first time, e.g. after a restart: counting starts now",
+			fixture: func(t *testing.T) fixture {
+				f := stale(t, time.Time{})
+				f.wasOnline = false
+				return f
+			},
+			wantApproved: []string{"csr-a"},
+			wantEvents:   []string{"NodeCertRecoveryEnabled", "KubeletClientCSRApproved"},
+		},
+		{
+			name: "turning off fails: error, nothing approved",
+			fixture: func(t *testing.T) fixture {
+				f := stale(t, windowOver)
+				f.configMapReactor = conflict
+				return f
+			},
+			wantDisabled: true,
+			wantErr:      true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, recorder, _, err := tt.fixture(t).run(t)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("sync error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got := approvals(t, client); !equalStrings(got, tt.wantApproved) {
+				t.Fatalf("approved %v, want %v", got, tt.wantApproved)
+			}
+			updates := configMapUpdates(client)
+			switch {
+			case !tt.wantDisabled && len(updates) > 0:
+				t.Fatalf("toggle written: %v", updates)
+			case tt.wantDisabled && (len(updates) != 1 || updates[0].Data["enabled"] != "false"):
+				t.Fatalf("toggle written as %v, want enabled \"false\" once", updates)
+			}
+			if got := eventReasons(recorder); !equalStrings(got, tt.wantEvents) {
+				t.Fatalf("events %v, want %v", got, tt.wantEvents)
+			}
+		})
+	}
+}
+
+// After turning the toggle off, the next sync sees it off without a second, generic Event. Turned on
+// again, it's counted from then and turned off once more a window later.
+func TestKubeletClientCSRApproverAutoDisableThenRearm(t *testing.T) {
+	f := fixture{toggle: enabledToggle("true"), wasOnline: true, enabledSince: testNow.Add(-autoDisableAfter)}
+	client, recorder, c, err := f.run(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock := &fakePassiveClock{now: testNow}
+	c.clock = clock
+	for _, step := range []struct {
+		toggle *corev1.ConfigMap
+		at     time.Time
+	}{
+		{configMapUpdates(client)[0], testNow},
+		{enabledToggle("true"), testNow.Add(time.Hour)},
+		{enabledToggle("true"), testNow.Add(time.Hour + autoDisableAfter - time.Second)},
+		{enabledToggle("true"), testNow.Add(time.Hour + autoDisableAfter)},
+	} {
+		indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+		_ = indexer.Add(step.toggle)
+		c.configMapLister = corev1listers.NewConfigMapLister(indexer)
+		clock.now = step.at
+		if err := c.sync(context.Background(), nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := eventReasons(recorder); !equalStrings(got, []string{"NodeCertRecoveryAutoDisabled", "NodeCertRecoveryEnabled", "NodeCertRecoveryAutoDisabled"}) {
+		t.Fatalf("events %v", got)
+	}
+	if n := len(configMapUpdates(client)); n != 2 {
+		t.Fatalf("toggle written %d times, want twice", n)
 	}
 }
 

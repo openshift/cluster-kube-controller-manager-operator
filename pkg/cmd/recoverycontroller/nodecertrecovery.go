@@ -25,9 +25,15 @@ import (
 const (
 	// NodeCertRecoveryConfigMapName is the opt-in toggle. When the ConfigMap exists in
 	// openshift-config with data.enabled == "true", the recovery controller approves kubelet
-	// client CSRs for nodes that can no longer authenticate (see kubeletClientCSRApprover).
+	// client CSRs for nodes that can no longer authenticate (see kubeletClientCSRApprover). The
+	// approver sets enabled to "false" autoDisableAfter after it saw the toggle turned on.
 	NodeCertRecoveryConfigMapName = "node-cert-recovery"
 	nodeCertRecoveryEnabledKey    = "enabled"
+
+	// autoDisableAfter is how long the toggle stays on. After a power-off it's counted from the
+	// power-on, so nodes powered on later at the same site still recover; in CI every node recovered
+	// within minutes.
+	autoDisableAfter = 24 * time.Hour
 
 	// KubeletCSRRecoveryApproveReason is set on the Approved condition of CSRs this controller approves.
 	KubeletCSRRecoveryApproveReason = "KCMRecoveryApprove"
@@ -41,17 +47,28 @@ const (
 	resyncInterval = time.Minute
 )
 
-// nodeCertRecoveryEnabled reports whether the toggle ConfigMap exists and has enabled == "true".
-// Anything else, including a missing ConfigMap, means off.
-func nodeCertRecoveryEnabled(configMapLister corev1listers.ConfigMapLister) (bool, error) {
+// nodeCertRecoveryToggle returns the toggle ConfigMap, or nil if there is none.
+func nodeCertRecoveryToggle(configMapLister corev1listers.ConfigMapLister) (*corev1.ConfigMap, error) {
 	cm, err := configMapLister.ConfigMaps(operatorclient.GlobalUserSpecifiedConfigNamespace).Get(NodeCertRecoveryConfigMapName)
 	if apierrors.IsNotFound(err) {
-		return false, nil
+		return nil, nil
 	}
+	return cm, err
+}
+
+// toggleEnabled reports whether the toggle ConfigMap has enabled == "true". Anything else, including
+// a missing ConfigMap, means off.
+func toggleEnabled(cm *corev1.ConfigMap) bool {
+	return cm != nil && cm.Data[nodeCertRecoveryEnabledKey] == "true"
+}
+
+// nodeCertRecoveryEnabled reports whether the toggle ConfigMap exists and has enabled == "true".
+func nodeCertRecoveryEnabled(configMapLister corev1listers.ConfigMapLister) (bool, error) {
+	cm, err := nodeCertRecoveryToggle(configMapLister)
 	if err != nil {
 		return false, err
 	}
-	return cm.Data[nodeCertRecoveryEnabledKey] == "true", nil
+	return toggleEnabled(cm), nil
 }
 
 // csrSignerValid reports whether the csr-signer that kube-controller-manager signs with is currently valid.
