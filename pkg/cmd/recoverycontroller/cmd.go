@@ -18,6 +18,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
@@ -85,6 +86,7 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		operatorclient.GlobalUserSpecifiedConfigNamespace,
 		operatorclient.OperatorNamespace,
 		operatorclient.TargetNamespace,
+		corev1.NamespaceNodeLease,
 	)
 
 	operatorClient, dynamicInformers, err := genericoperatorclient.NewStaticPodOperatorClient(
@@ -148,10 +150,20 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 		return err
 	}
 
+	csrInformers := NewKubeletClientCSRApproverInformers(kubeClient)
+	kubeletClientCSRApprover := NewKubeletClientCSRApprover(
+		kubeClient,
+		kubeInformersForNamespaces,
+		csrInformers,
+		o.controllerContext.EventRecorder,
+		clock,
+	)
+
 	// We can't start informers until after the resources have been requested. Now is the time.
 	kubeInformersForNamespaces.Start(ctx.Done())
 	dynamicInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
+	csrInformers.Start(ctx.Done())
 
 	// FIXME: These are missing a wait group to track goroutines and handle graceful termination
 	// (@deads2k wants time to think it through)
@@ -161,6 +173,10 @@ func (o *Options) Run(ctx context.Context, clock clock.Clock) error {
 
 	go func() {
 		csrController.Run(ctx)
+	}()
+
+	go func() {
+		kubeletClientCSRApprover.Run(ctx, 1)
 	}()
 
 	<-ctx.Done()
