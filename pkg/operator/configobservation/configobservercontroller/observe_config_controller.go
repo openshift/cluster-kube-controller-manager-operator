@@ -161,7 +161,28 @@ func NewConfigObserver(
 		proxy.NewProxyObserveFunc([]string{"targetconfigcontroller", "proxy"}),
 		serviceca.ObserveServiceCA,
 		clustername.ObserveInfraID,
-		libgoapiserver.ObserveTLSSecurityProfile,
+		func(listers configobserver.Listers, recorder events.Recorder, existingConfig map[string]interface{}) (observedConfig map[string]interface{}, errs []error) {
+			featureGate, err := featureGateAccessor.CurrentFeatureGates()
+			if err != nil {
+				return existingConfig, append(errs, err)
+			}
+			if featureGate.Enabled(features.FeatureGateTLSGroupPreferences) {
+				return libgoapiserver.ObserveTLSSecurityProfileWithGroupPaths(
+					listers,
+					recorder,
+					existingConfig,
+					[]string{"servingInfo", "minTLSVersion"},
+					[]string{"servingInfo", "cipherSuites"},
+					[]string{"servingInfo", "groups"},
+				)
+			} else {
+				return libgoapiserver.ObserveTLSSecurityProfile(
+					listers,
+					recorder,
+					existingConfig,
+				)
+			}
+		},
 	}
 
 	if controllerManagerConfigEnabled {

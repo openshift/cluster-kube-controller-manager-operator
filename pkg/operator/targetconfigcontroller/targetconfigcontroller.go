@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -372,14 +373,61 @@ func manageKubeControllerManagerConfig(ctx context.Context, client corev1client.
 	return resourceapply.ApplyConfigMap(ctx, client, recorder, requiredConfigMap)
 }
 
+// createCurvePreferencesOverride reads servingInfo.groups from observedConfig and creates
+// a JSON override containing servingInfo.curvePreferences to be passed to MergePrunedConfigMap.
+// This avoids modifying the observedConfig or deserializing the final ConfigMap.
+func createCurvePreferencesOverride(observedConfigRaw []byte) ([]byte, error) {
+	if len(observedConfigRaw) == 0 {
+		return nil, nil
+	}
+
+	var observedConfig map[string]interface{}
+	if err := json.Unmarshal(observedConfigRaw, &observedConfig); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal observedConfig: %w", err)
+	}
+
+	// Check if servingInfo.groups exists
+	groups, groupsFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "groups")
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get servingInfo.groups from observedConfig: %w", err)
+	}
+
+	if !groupsFound || len(groups) == 0 {
+		return nil, nil
+	}
+
+	// Convert groups to curve preferences
+	curvePreferences, unrecognizedGroups := crypto.TLSGroupsToCurvePreferences(groups)
+	if len(unrecognizedGroups) > 0 {
+		return nil, fmt.Errorf("unrecognized groups when reading curve preferences: %v", unrecognizedGroups)
+	}
+
+	// If conversion resulted in empty list, return nil to avoid explicitly resetting the field
+	if len(curvePreferences) == 0 {
+		return nil, nil
+	}
+
+	// Create override with servingInfo.curvePreferences and remove groups
+	// (groups is not part of the upstream Kubernetes ServingInfo type)
+	override := map[string]interface{}{
+		"servingInfo": map[string]interface{}{
+			"curvePreferences": curvePreferences,
+			"groups":           nil, // Remove groups field from final config
+		},
+	}
+
+	overrideJSON, err := json.Marshal(override)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal curvePreferences override: %w", err)
+	}
+
+	return overrideJSON, nil
+}
+
 func manageClusterPolicyControllerConfig(ctx context.Context, client corev1client.CoreV1Interface, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/kube-controller-manager/cluster-policy-controller-cm.yaml"))
 	defaultConfig := bindata.MustAsset("assets/config/default-cluster-policy-controller-config.yaml")
 	kcmService := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/kube-controller-manager/svc.yaml"))
-	configYamls := [][]byte{
-		defaultConfig,
-		operatorSpec.ObservedConfig.Raw,
-	}
 
 	servingCertName := ""
 	if kcmService.Annotations != nil {
@@ -394,7 +442,26 @@ func manageClusterPolicyControllerConfig(ctx context.Context, client corev1clien
 
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, false, err
-	} else if apierrors.IsNotFound(err) {
+	}
+
+	// Create curve preferences override from servingInfo.groups in observedConfig
+	curvePreferencesOverride, curveErr := createCurvePreferencesOverride(operatorSpec.ObservedConfig.Raw)
+	if curveErr != nil {
+		return nil, false, curveErr
+	}
+
+	// Build the list of config sources to merge
+	configYamls := [][]byte{
+		defaultConfig,
+		operatorSpec.ObservedConfig.Raw,
+	}
+
+	// Add curvePreferences override if it exists (after observedConfig so it takes precedence)
+	if curvePreferencesOverride != nil {
+		configYamls = append(configYamls, curvePreferencesOverride)
+	}
+
+	if apierrors.IsNotFound(err) {
 		// Should only apply when starting the cluster so cluster-policy-controller is able to annotate openshift-service-ca namespace.
 		// Then service-ca controller should start and create serving-cert.
 		// We will put the serving-cert into the config as soon as it appears which will then trigger new installer.
@@ -503,6 +570,14 @@ func manageRecycler(ctx context.Context, configMapsGetter corev1client.ConfigMap
 	return resourceapply.ApplyConfigMap(ctx, configMapsGetter, recorder, requiredCM)
 }
 
+func int32sToStrings(nums []int32) []string {
+	strs := make([]string, len(nums))
+	for i, n := range nums {
+		strs[i] = strconv.Itoa(int(n))
+	}
+	return strs
+}
+
 func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGetter, secretsGetter corev1client.SecretsGetter, recorder events.Recorder, operatorSpec *operatorv1.StaticPodOperatorSpec, imagePullSpec, operatorImagePullSpec, clusterPolicyControllerPullSpec, operatorImageVersion string, addServingServiceCAToTokenSecrets, useSecureServiceCA bool) (*corev1.ConfigMap, bool, error) {
 	required := resourceread.ReadPodV1OrDie(bindata.MustAsset("assets/kube-controller-manager/pod.yaml"))
 	// TODO: If the image pull spec is not specified, the "${IMAGE}" will be used as value and the pod will fail to start.
@@ -605,12 +680,27 @@ func managePod(ctx context.Context, configMapsGetter corev1client.ConfigMapsGett
 		return nil, false, fmt.Errorf("couldn't get the servingInfo.minTLSVersion config from observedConfig: %w", err)
 	}
 
+	groups, groupsFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "groups")
+	if err != nil {
+		return nil, false, fmt.Errorf("couldn't get the servingInfo.groups config from observedConfig: %w", err)
+	}
+
 	if cipherSuitesFound && len(cipherSuites) > 0 {
 		kcmContainerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-cipher-suites=%s", strings.Join(cipherSuites, ","))
 	}
 
 	if minTLSVersionFound && len(minTLSVersion) > 0 {
 		kcmContainerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-min-version=%s", minTLSVersion)
+	}
+
+	if groupsFound && len(groups) > 0 {
+		curvePreferences, unrecognizedGroups := crypto.TLSGroupsToCurvePreferences(groups)
+		if len(unrecognizedGroups) > 0 {
+			return nil, false, fmt.Errorf("unrecognized groups when reading curve preferences: %v", unrecognizedGroups)
+		}
+		if len(curvePreferences) > 0 {
+			kcmContainerArgsWithLoglevel[0] += fmt.Sprintf(" --tls-curve-preferences=%s", strings.Join(int32sToStrings(curvePreferences), ","))
+		}
 	}
 
 	kcmContainerArgsWithLoglevel[0] = strings.TrimSpace(kcmContainerArgsWithLoglevel[0])
