@@ -1,5 +1,8 @@
 apiVersion: openshiftcontrolplane.config.openshift.io/v1
 kind: OpenShiftControllerManagerConfig
+controllers:
+- "*"
+- "-openshift.io/podsecurity-admission-label-syncer"
 servingInfo:
   bindAddress: 127.0.0.1:10357
   bindNetwork: tcp
