@@ -181,6 +181,7 @@ func NewConfigObserver(
 				}
 
 				defer func() {
+					unstructured.RemoveNestedField(existingConfig, tempKCMGroupsField)
 					unstructured.RemoveNestedField(observedConfig, tempKCMGroupsField)
 				}()
 
