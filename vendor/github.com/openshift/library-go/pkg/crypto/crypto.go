@@ -471,11 +471,17 @@ func CurvePreferencesToGroups[T int64 | string](
 		var cpInt64 int64
 		switch any(t).(type) {
 		case int64:
-			v, ok := cpRaw.(int64)
-			if !ok {
+			// May be float64 when unmarshalled from YAML into an interface{} target
+			if fv, ok := cpRaw.(float64); ok {
+				if fv != float64(int64(fv)) {
+					return nil, fmt.Errorf("invalid curve preference at %v: non-integral float64 value %v", sourcePath, fv)
+				}
+				cpInt64 = int64(fv)
+			} else if v, ok := cpRaw.(int64); ok {
+				cpInt64 = v
+			} else {
 				return nil, fmt.Errorf("invalid curve preference type at %v: expected int64, got %T", sourcePath, cpRaw)
 			}
-			cpInt64 = v
 		case string:
 			v, ok := cpRaw.(string)
 			if !ok {
@@ -486,6 +492,10 @@ func CurvePreferencesToGroups[T int64 | string](
 				return nil, fmt.Errorf("invalid curve preference string at %v: %w", sourcePath, err)
 			}
 			cpInt64 = parsed
+		}
+
+		if cpInt64 < 0 || cpInt64 > 65535 {
+			return nil, fmt.Errorf("curve preference value %d at %v is out of range for uint16 (0-65535)", cpInt64, sourcePath)
 		}
 
 		curveID := tls.CurveID(cpInt64)
