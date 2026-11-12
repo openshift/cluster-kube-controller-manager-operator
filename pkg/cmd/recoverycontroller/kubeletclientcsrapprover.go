@@ -52,7 +52,8 @@ const (
 // renewing the node's Lease in kube-node-lease. Node conditions can't tell: see nodeNeedsClientCert.
 //
 // It is opt-in (NodeCertRecoveryConfigMapName) and approve-only: it never denies, so a human or
-// machine-approver can still act on anything it leaves alone.
+// machine-approver can still act on anything it leaves alone. It also turns the toggle off once it
+// has been on for autoDisableAfter (see autoDisable).
 type kubeletClientCSRApprover struct {
 	kubeClient      kubernetes.Interface
 	csrLister       certificateslisters.CertificateSigningRequestLister
@@ -62,9 +63,11 @@ type kubeletClientCSRApprover struct {
 	clock           clock.PassiveClock
 	recorder        events.Recorder
 
-	// enabled is the toggle state seen by the last sync, so on/off changes are logged and reported
-	// once. It needs no lock: the controller runs with a single worker.
+	// enabled is the toggle state seen by the last sync, so turning it on or off is logged and
+	// reported once. Neither field needs a lock: the controller runs with a single worker.
 	enabled bool
+	// enabledSince is when the toggle was last seen turned on.
+	enabledSince time.Time
 }
 
 // NewKubeletClientCSRApproverInformers returns an informer factory for kubelet client CSRs only. CSRs
@@ -120,16 +123,23 @@ func NewKubeletClientCSRApprover(
 // below must pass; a CSR that fails one is left for the next sync or for a human.
 func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncContext) error {
 	// 1. Toggle: log and emit an Event only when it flips on or off (sync runs at least every
-	// minute, so not on every sync). While off, stop here with no API calls.
-	enabled, err := nodeCertRecoveryEnabled(c.configMapLister)
+	// minute, so not on every sync), and note when it was turned on, for step 2. While off, stop here
+	// with no API calls.
+	toggle, err := nodeCertRecoveryToggle(c.configMapLister)
 	if err != nil {
 		return err
 	}
+	enabled := toggleEnabled(toggle)
+	now := c.clock.Now()
 	if enabled != c.enabled {
 		c.enabled = enabled
 		if enabled {
-			klog.Infof("Kubelet client CSR recovery approval is enabled by %s/%s", operatorclient.GlobalUserSpecifiedConfigNamespace, NodeCertRecoveryConfigMapName)
-			c.recorder.Eventf("NodeCertRecoveryEnabled", "Kubelet client CSR recovery approval enabled by ConfigMap %s/%s", operatorclient.GlobalUserSpecifiedConfigNamespace, NodeCertRecoveryConfigMapName)
+			c.enabledSince = now
+			disableAt := now.Add(autoDisableAfter).UTC().Format(time.RFC3339)
+			klog.Infof("Kubelet client CSR recovery approval is enabled by %s/%s; it will be turned off after %s",
+				operatorclient.GlobalUserSpecifiedConfigNamespace, NodeCertRecoveryConfigMapName, disableAt)
+			c.recorder.Eventf("NodeCertRecoveryEnabled", "Kubelet client CSR recovery approval enabled by ConfigMap %s/%s; it will be turned off after %s",
+				operatorclient.GlobalUserSpecifiedConfigNamespace, NodeCertRecoveryConfigMapName, disableAt)
 		} else {
 			klog.Infof("Kubelet client CSR recovery approval is disabled")
 			c.recorder.Eventf("NodeCertRecoveryDisabled", "Kubelet client CSR recovery approval disabled")
@@ -139,7 +149,12 @@ func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncConte
 		return nil
 	}
 
-	// 2. Collect pending CSRs shaped like a kubelet re-bootstrapping with the
+	// 2. Once the toggle has been on for autoDisableAfter, turn it off and approve nothing more.
+	if disabled, err := c.autoDisable(ctx, toggle, now); disabled || err != nil {
+		return err
+	}
+
+	// 3. Collect pending CSRs shaped like a kubelet re-bootstrapping with the
 	// node-bootstrapper credential, grouped by the node they ask to become.
 	csrs, err := c.csrLister.List(labels.Everything())
 	if err != nil {
@@ -161,15 +176,14 @@ func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncConte
 		return nil
 	}
 
-	// 3. Approve nothing until csr-signer is valid again; otherwise kube-controller-manager can't
+	// 4. Approve nothing until csr-signer is valid again; otherwise kube-controller-manager can't
 	// sign what we approve and backs off.
-	now := c.clock.Now()
 	if ok, reason := csrSignerValid(c.secretLister, now); !ok {
 		klog.Warningf("Not approving %d pending kubelet client CSRs yet: %s", countCSRs(candidates), reason)
 		return nil
 	}
 
-	// 4. Per node: continue only if its kubelet has stopped sending heartbeats and the Node exists and
+	// 5. Per node: continue only if its kubelet has stopped sending heartbeats and the Node exists and
 	// isn't being deleted. An error for one node doesn't stop the others; they're returned together
 	// so the sync is retried.
 	nodeNames := sets.List(sets.KeySet(candidates))
@@ -184,7 +198,7 @@ func (c *kubeletClientCSRApprover) sync(ctx context.Context, _ factory.SyncConte
 			klog.V(4).Infof("Not approving %d pending client CSRs for node %s: %s", len(candidates[nodeName]), nodeName, reason)
 			continue
 		}
-		// 5. Approve the node's CSRs oldest first.
+		// 6. Approve the node's CSRs oldest first.
 		nodeCSRs := candidates[nodeName]
 		sort.Slice(nodeCSRs, func(i, j int) bool { return nodeCSRs[i].CreationTimestamp.Before(&nodeCSRs[j].CreationTimestamp) })
 		for _, csr := range nodeCSRs {
@@ -249,6 +263,28 @@ func heartbeatStaleSince(lease *coordinationv1.Lease, now time.Time) (*time.Time
 		return nil, fmt.Sprintf("node sent a heartbeat %s ago", age.Round(time.Second))
 	}
 	return &lastHeartbeat, ""
+}
+
+// autoDisable turns the toggle off once this approver has seen it on for autoDisableAfter. The start
+// time is kept in memory: after a power-off the count starts at the power-on, when the approver starts
+// again, and any restart starts it again, which can only leave the toggle on longer. It reports
+// whether it turned the toggle off.
+func (c *kubeletClientCSRApprover) autoDisable(ctx context.Context, toggle *corev1.ConfigMap, now time.Time) (bool, error) {
+	if now.Before(c.enabledSince.Add(autoDisableAfter)) {
+		return false, nil
+	}
+	cm := toggle.DeepCopy()
+	cm.Data[nodeCertRecoveryEnabledKey] = "false"
+	if _, err := c.kubeClient.CoreV1().ConfigMaps(cm.Namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
+		return false, fmt.Errorf("failed to turn off ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
+	}
+	// Mark it off now, so the next sync doesn't also report it as NodeCertRecoveryDisabled.
+	c.enabled = false
+	after := fmt.Sprintf("%gh", autoDisableAfter.Hours())
+	klog.Infof("Kubelet client CSR recovery approval turned off after %s: on since %s", after, c.enabledSince.UTC().Format(time.RFC3339))
+	c.recorder.Eventf("NodeCertRecoveryAutoDisabled", "Kubelet client CSR recovery approval turned off after %s; set enabled to \"true\" in ConfigMap %s/%s to turn it on again",
+		after, cm.Namespace, cm.Name)
+	return true, nil
 }
 
 // approve approves csr and reports it in the log and as an Event.

@@ -40,7 +40,7 @@ func TestParseCSRRequest(t *testing.T) {
 	}
 }
 
-func TestNodeCertRecoveryEnabled(t *testing.T) {
+func TestNodeCertRecoveryToggle(t *testing.T) {
 	otherNamespace := enabledToggle("true")
 	otherNamespace.Namespace = operatorclient.TargetNamespace
 	noKey := enabledToggle("true")
@@ -63,11 +63,11 @@ func TestNodeCertRecoveryEnabled(t *testing.T) {
 			if tc.configMap != nil {
 				_ = indexer.Add(tc.configMap)
 			}
-			got, err := nodeCertRecoveryEnabled(corev1listers.NewConfigMapLister(indexer))
+			toggle, err := nodeCertRecoveryToggle(corev1listers.NewConfigMapLister(indexer))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != tc.want {
+			if got := toggleEnabled(toggle); got != tc.want {
 				t.Fatalf("enabled = %v, want %v", got, tc.want)
 			}
 		})
