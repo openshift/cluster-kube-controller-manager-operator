@@ -9,9 +9,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.40.0
 	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
-	github.com/openshift/api v0.0.0-20261006163836-502232e87aad
+	github.com/openshift/api v0.0.0-20261023091600-9809689a2448
 	github.com/openshift/build-machinery-go v0.0.0-20260902143904-520f675c892b
-	github.com/openshift/client-go v0.0.0-20261006222332-348fc1ca8bb1
+	github.com/openshift/client-go v0.0.0-20261026144452-41e357d76bc8
 	github.com/openshift/library-go v0.0.0-20261016185738-b2ae89191cc2
 	github.com/prometheus/client_golang v1.24.0
 	github.com/prometheus/common v0.70.0
@@ -142,4 +142,7 @@ require (
 // The OpenShift fork of ginkgo exposes internal suite APIs required by
 // openshift-tests-extension (oteginkgo.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite).
 // Upstream ginkgo does not export these symbols (e.g. `Suite`); see https://github.com/openshift/onsi-ginkgo.
-replace github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20260922200432-2b15107f443d
+replace (
+	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20260922200432-2b15107f443d
+	github.com/openshift/library-go => github.com/ingvagabund/library-go v0.0.0-20261109125250-291438a1f56a
+)
