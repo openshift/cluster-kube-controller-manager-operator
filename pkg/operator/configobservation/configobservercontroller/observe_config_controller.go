@@ -167,21 +167,17 @@ func NewConfigObserver(
 				return existingConfig, append(errs, err)
 			}
 			if featureGate.Enabled(features.FeatureGateTLSGroupPreferences) {
-				return libgoapiserver.ObserveTLSSecurityProfileWithGroupPaths(
-					listers,
-					recorder,
-					existingConfig,
-					[]string{"servingInfo", "minTLSVersion"},
-					[]string{"servingInfo", "cipherSuites"},
-					[]string{"servingInfo", "groups"},
-				)
-			} else {
-				return libgoapiserver.ObserveTLSSecurityProfile(
+				return libgoapiserver.ObserveTLSSecurityProfileWithGroupsConversion(
 					listers,
 					recorder,
 					existingConfig,
 				)
 			}
+			return libgoapiserver.ObserveTLSSecurityProfile(
+				listers,
+				recorder,
+				existingConfig,
+			)
 		},
 	}
 
